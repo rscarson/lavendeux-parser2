@@ -1,9 +1,9 @@
 SCRIPT = {LINE+}
 
-LINE = {
-    EOL
-    | EXPRESSION ~ EOL
+LINE = {
+    EXPRESSION ~ EOL
     | EXPRESSION ~ "@" ~ identifier ~ EOL
+    | EOL
 }
 
 EXPRESSION = {
