@@ -30,7 +30,7 @@ define_node!(
 
         Ok(base)
     },
-    value = |this: &mut IndexingExpression, state: &mut State| {
+    value = |this: &IndexingExpression, state: &mut State| {
         let base = this.base.get_value(state)?;
         let index = this.index.get_value(state)?;
 

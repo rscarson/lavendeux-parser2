@@ -70,7 +70,7 @@ pub trait AstNode: std::fmt::Display + std::fmt::Debug {
     fn from_pair(input: Pair<Rule>) -> Result<Node, Error>
     where
         Self: Sized;
-    fn get_value(&mut self, state: &mut State) -> Result<Value, Error>;
+    fn get_value(&self, state: &mut State) -> Result<Value, Error>;
     fn token(&self) -> &Token;
     fn boxed(self) -> Node
     where

@@ -19,7 +19,7 @@ macro_rules! define_node {
                 ($new_hnd)(input)
             }
 
-            fn get_value(&mut self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
+            fn get_value(&self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
                 state.check_timer()?;
                 ($get_hnd)(self, state)
             }
@@ -62,7 +62,7 @@ macro_rules! define_node {
                 ($new_hnd)(input)
             }
 
-            fn get_value(&mut self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
+            fn get_value(&self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
                 state.check_timer()?;
                 ($get_hnd)(self, state)
             }

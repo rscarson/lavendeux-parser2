@@ -51,9 +51,9 @@ define_node!(
         }.boxed())
     },
 
-    value = |call: &mut FunctionCall, state: &mut State| {
+    value = |call: &FunctionCall, state: &mut State| {
         if call.name == "help" {
-            let filter = if let Some(mut s) = call.arguments.pop() {
+            let filter = if let Some(s) = call.arguments.last() {
                 Some(s.get_value(state)?.to_string())
             } else {
                 None
@@ -68,7 +68,7 @@ define_node!(
 
         // Collect arguments
         let mut arguments = Vec::new();
-        for argument in call.arguments.iter_mut() {
+        for argument in call.arguments.iter() {
             arguments.push(argument.get_value(state)?);
         }
 

@@ -63,9 +63,9 @@ define_node!(
         Ok(expr.boxed())
     },
 
-    value = |this: &mut ArithmeticExpression, state: &mut State| {
-        let mut operands = this.operand_stack.iter_mut().rev().peekable();
-        let mut operators = this.operator_stack.iter_mut().rev().peekable();
+    value = |this: &ArithmeticExpression, state: &mut State| {
+        let mut operands = this.operand_stack.iter().rev().peekable();
+        let mut operators = this.operator_stack.iter().rev().peekable();
 
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
@@ -98,7 +98,7 @@ define_node!(
             Ok(expression)
         }
     },
-    value = |this: &mut ArithmeticNegExpression, state: &mut State| {
+    value = |this: &ArithmeticNegExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
         let value = Value::arithmetic_op(&value, &value.clone(), ArithmeticOperation::Negate)?;
         Ok(value)

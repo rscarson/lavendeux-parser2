@@ -50,12 +50,6 @@ impl State {
         ApiManager::default_apis(&mut instance);
         std_functions::register_all(&mut instance.std_functions);
 
-        instance.set_user_function(UserFunction::new(
-            "fun", 
-            vec!["iterations".to_string(), "depth".to_string()], 
-            "depth == 1 ? for i in 0..iterations do i : for d in 1..(depth-1) do fun(iterations, d)".to_string()
-        ).unwrap());
-
         instance
     }
 

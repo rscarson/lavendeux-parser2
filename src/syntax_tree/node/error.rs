@@ -11,7 +11,7 @@ macro_rules! error_node {
             $name,
             rules = [$rule],
             new = |_: pest::iterators::Pair<Rule>| { Err(Error::$name) },
-            value = |_: &mut Self, _state: &mut crate::State| {
+            value = |_: &Self, _state: &mut crate::State| {
                 Err(Error::Internal(
                     "Attempt to get value from an error".to_string(),
                 ))

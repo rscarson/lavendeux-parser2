@@ -32,8 +32,8 @@ define_node!(
         }.boxed())
     },
 
-    value = |script: &mut Script, state: &mut State| {
-        let values = script.statements.iter_mut().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
+    value = |script: &Script, state: &mut State| {
+        let values = script.statements.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
         Ok(Value::Array(values.into()))
     }
 );
@@ -71,8 +71,8 @@ define_node!(
         }
     },
 
-    value = |line: &mut Line, state: &mut State| {
-        if let Some(expression) = &mut line.expression {
+    value = |line: &Line, state: &mut State| {
+        if let Some(expression) = &line.expression {
             let value = expression.get_value(state)?;
             if let Some(decorator) = &line.decorator {
                 let result = state.decorate(decorator, line.token(), value)?;
@@ -117,7 +117,7 @@ define_node!(
 
         Ok(if_false)
     },
-    value = |ternary: &mut TernaryExpression, state: &mut State| {
+    value = |ternary: &TernaryExpression, state: &mut State| {
         let condition = ternary.condition.get_value(state)?;
         let condition = *condition.as_a::<Bool>()?.inner();
         if condition {
@@ -152,7 +152,7 @@ define_node!(
         }.boxed())
     },
 
-    value = |for_loop: &mut ForLoopExpression, state: &mut State| {
+    value = |for_loop: &ForLoopExpression, state: &mut State| {
         let iterable = for_loop.iterable.get_value(state)?;
 
         match iterable.own_type() {

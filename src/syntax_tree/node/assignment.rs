@@ -44,7 +44,7 @@ define_node!(
         }.boxed())
     },
 
-    value = |assignment: &mut FunctionAssignment, state: &mut State| {
+    value = |assignment: &FunctionAssignment, state: &mut State| {
         let function = UserFunction::new(&assignment.name, assignment.arguments.clone(), assignment.expression.clone())?;
         state.set_user_function(function);
         Ok(Value::from(assignment.expression.clone()))
@@ -66,7 +66,7 @@ define_node!(
         let value = children.next().unwrap().to_ast_node()?;
         Ok(Self { name, value, token }.boxed())
     },
-    value = |assignment: &mut VariableAssignment, state: &mut State| {
+    value = |assignment: &VariableAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
         state.set_variable(&assignment.name, value.clone());
         Ok(value)
@@ -103,11 +103,11 @@ define_node!(
         }.boxed())
     },
 
-    value = |assignment: &mut IndexAssignment, state: &mut State| {
+    value = |assignment: &IndexAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
 
         // The last index is the one that will be used to set the value
-        let mut indices = assignment.indices.iter_mut().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
+        let mut indices = assignment.indices.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
         let final_index = indices.pop().unwrap();
 
         // Move through the indices to get the final pointer
@@ -154,7 +154,7 @@ define_node!(
         }.boxed())
     },
 
-    value = |assignment: &mut DestructuringAssignment, state: &mut State| {
+    value = |assignment: &DestructuringAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
         let values = value.as_a::<Array>()?.inner().clone();
         if values.len() != assignment.names.len() {

@@ -87,7 +87,7 @@ define_node!(
 
         Ok(Self { value, token }.boxed())
     },
-    value = |this: &mut ValueLiteral, _state: &mut State| { Ok(this.value.clone()) }
+    value = |this: &ValueLiteral, _state: &mut State| { Ok(this.value.clone()) }
 );
 
 impl ValueLiteral {
@@ -118,23 +118,23 @@ define_node!(
 
         Ok(Self { value, token }.boxed())
     },
-    value = |this: &mut ConstantValue, _state: &mut State| { Ok(this.value.clone()) }
+    value = |this: &ConstantValue, _state: &mut State| { Ok(this.value.clone()) }
 );
 
 define_node!(
     Identifier { name: String },
     rules = [identifier],
     new = |input: Pair<Rule>| {
-        let token = input.to_token();
+        let mut token = input.to_token();
         let name = input.as_str().to_string();
+        token.references = Some(name.clone());
 
         Ok(Self { name, token }.boxed())
     },
-    value = |this: &mut Identifier, state: &mut State| {
+    value = |this: &Identifier, state: &mut State| {
         let value = state.get_variable(&this.name).ok_or(Error::VariableName {
             name: this.name.clone(),
         })?;
-        this.token.references = Some(this.name.clone());
         Ok(value)
     }
 );
@@ -155,8 +155,8 @@ define_node!(
         Ok(Self { elements, token }.boxed())
     },
 
-    value = |this: &mut ArrayValue, state: &mut State| {
-        let values = this.elements.iter_mut().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
+    value = |this: &ArrayValue, state: &mut State| {
+        let values = this.elements.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
         Ok(Value::Array(values.into()))
     }
 );
@@ -181,9 +181,9 @@ define_node!(
         Ok(Self { pairs, token }.boxed())
     },
 
-    value = |this: &mut ObjectValue, state: &mut State| {
+    value = |this: &ObjectValue, state: &mut State| {
         let mut object = ObjectInner::new();
-        for (key, value) in &mut this.pairs {
+        for (key, value) in &this.pairs {
             let key = key.get_value(state)?;
             let value = value.get_value(state)?;
             object.insert(key, value)?;
@@ -209,7 +209,7 @@ define_node!(
 
         Ok(Self { start, end, token }.boxed())
     },
-    value = |this: &mut RangeValue, state: &mut State| {
+    value = |this: &RangeValue, state: &mut State| {
         let start = this.start.get_value(state)?;
         let end = this.end.get_value(state)?;
 
@@ -283,7 +283,7 @@ define_node!(
         }
         .boxed())
     },
-    value = |this: &mut CastingExpression, state: &mut State| {
+    value = |this: &CastingExpression, state: &mut State| {
         let value = this.value.get_value(state)?;
         Ok(value.as_type(this.target_type)?)
     }
@@ -314,8 +314,8 @@ define_node!(
         .boxed())
     },
 
-    value = |this: &mut DeleteExpression, state: &mut State| {
-        let mut indices = this.indices.iter_mut().map(|i| i.get_value(state)).collect::<Result<Vec<_>, _>>()?;
+    value = |this: &DeleteExpression, state: &mut State| {
+        let mut indices = this.indices.iter().map(|i| i.get_value(state)).collect::<Result<Vec<_>, _>>()?;
         if let Some(final_idx) = indices.pop() {
             let mut value = state.get_variable(&this.src).ok_or(Error::VariableName {
                 name: this.src.clone(),

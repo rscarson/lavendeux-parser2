@@ -48,9 +48,9 @@ define_node!(
 
         Ok(expr.boxed())
     },
-    value = |this: &mut BitwiseExpression, state: &mut State| {
-        let mut operands = this.operand_stack.iter_mut().rev().peekable();
-        let mut operators = this.operator_stack.iter_mut().rev().peekable();
+    value = |this: &BitwiseExpression, state: &mut State| {
+        let mut operands = this.operand_stack.iter().rev().peekable();
+        let mut operators = this.operator_stack.iter().rev().peekable();
 
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
@@ -83,7 +83,7 @@ define_node!(
             Ok(expression)
         }
     },
-    value = |this: &mut BitwiseNotExpression, state: &mut State| {
+    value = |this: &BitwiseNotExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
         let value = Value::bitwise_op(&value, &value.clone(), BitwiseOperation::Not)?;
         Ok(value)

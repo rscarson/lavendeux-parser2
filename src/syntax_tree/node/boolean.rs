@@ -51,9 +51,9 @@ define_node!(
 
         Ok(expr.boxed())
     },
-    value = |this: &mut BooleanExpression, state: &mut State| {
-        let mut operands = this.operand_stack.iter_mut().rev().peekable();
-        let mut operators = this.operator_stack.iter_mut().rev().peekable();
+    value = |this: &BooleanExpression, state: &mut State| {
+        let mut operands = this.operand_stack.iter().rev().peekable();
+        let mut operators = this.operator_stack.iter().rev().peekable();
 
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
@@ -86,7 +86,7 @@ define_node!(
             Ok(expression)
         }
     },
-    value = |this: &mut BooleanNotExpression, state: &mut State| {
+    value = |this: &BooleanNotExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
         let value = Value::boolean_op(&value, &value.clone(), BooleanOperation::Not)?;
         Ok(value)
@@ -138,7 +138,7 @@ define_node!(
         }
         .boxed())
     },
-    value = |this: &mut MatchingExpression, state: &mut State| {
+    value = |this: &MatchingExpression, state: &mut State| {
         let value = this.value.get_value(state)?;
         let pattern = this.pattern.get_value(state)?;
         Ok(Value::matching_op(&value, &pattern, this.operation)?)
