@@ -58,9 +58,7 @@ define_node!(
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
             let right = operands.next().unwrap().get_value(state)?;
-            print!("BooleanExpression: {:?} {:?} {:?}", left, op, right);
             left = Value::boolean_op(&left, &right, *op)?;
-            println!(" = {:?}", left);
         }
 
         Ok(left)

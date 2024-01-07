@@ -2,8 +2,6 @@ use crate::syntax_tree::node::*;
 use crate::{Error, Node, State, Token, Value};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
-use polyvalue::types::Array;
-use polyvalue::ValueTrait;
 
 /// Lavendeux's parser
 /// We will not directly expose this to the user, but instead use it to
@@ -121,68 +119,5 @@ pub fn parse_input(input: &str, rule: Rule) -> Result<Node, Error> {
         Err(Error::Internal(format!(
             "Grammar issue; empty input should be valid",
         )))
-    }
-}
-
-pub struct Lavendeux(State);
-impl Lavendeux {
-    /// Create a new Lavendeux instance
-    /// The instance will have a new state
-    pub fn new() -> Self {
-        Self::with_state(State::new())
-    }
-
-    /// Create a new Lavendeux instance with a given state
-    pub fn with_state(state: State) -> Self {
-        Self(state)
-    }
-
-    /// Evaluate the given input against a state
-    pub fn eval(input: &str, state: &mut State) -> Result<Vec<Value>, Error> {
-        let value = std::thread::scope(|s| -> Result<Value, Error> {
-            let handle = std::thread::Builder::new()
-                .stack_size(1024 * 1024 * 8)
-                .spawn_scoped(s, || {
-                    let mut script = parse_input(input, Rule::SCRIPT)?;
-                    script.get_value(state)
-                })?;
-            handle.join().unwrap()
-        })?;
-
-        let lines = value.as_a::<Array>()?.inner().clone();
-        Ok(lines)
-    }
-
-    /// Parse the given input
-    /// # Arguments
-    /// * `input` - The input to parse
-    ///
-    /// # Returns
-    /// A vector of values, one for each line in the input
-    /// Decorated lines will be a string value
-    pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
-        Self::eval(input, &mut self.0)
-    }
-
-    /// Load an extension from a file and register it
-    /// # Arguments
-    /// * `filename` - The filename of the extension to load
-    ///
-    /// # Returns
-    /// An error if the extension could not be loaded
-    #[cfg(feature = "extensions")]
-    pub fn load_extension(
-        &mut self,
-        filename: &str,
-    ) -> Result<crate::extensions::ExtensionDetails, Error> {
-        crate::extensions::ExtensionController::with(|controller| controller.register(filename))
-    }
-
-    /// Unload an extension, stopping the thread and unregistering all functions
-    /// # Arguments
-    /// * `name` - The filename of the extension to unload
-    #[cfg(feature = "extensions")]
-    pub fn unload_extension(&mut self, filename: &str) {
-        crate::extensions::ExtensionController::with(|controller| controller.unregister(filename));
     }
 }

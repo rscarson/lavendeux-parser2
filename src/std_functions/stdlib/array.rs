@@ -82,7 +82,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             // Update the array if it references a variable
             let value = Value::Array(input.into());
             if let Some(reference) = &token.references {
-                state.set_variable(reference, value)?;
+                state.set_variable(reference, value);
             }
 
             Ok(last)
@@ -111,7 +111,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             // Update the array if it references a variable
             let value = Value::Array(input.into());
             if let Some(reference) = &token.references {
-                state.set_variable(reference, value.clone())?;
+                state.set_variable(reference, value.clone());
             }
 
             Ok(value)
@@ -138,7 +138,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             // Update the array if it references a variable
             let value = Value::Array(input.into());
             if let Some(reference) = &token.references {
-                state.set_variable(reference, value)?;
+                state.set_variable(reference, value);
             }
 
             Ok(first)
@@ -167,7 +167,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             // Update the array if it references a variable
             let value = Value::Array(input.into());
             if let Some(reference) = &token.references {
-                state.set_variable(reference, value.clone())?;
+                state.set_variable(reference, value.clone());
             }
 
             Ok(value)
@@ -193,7 +193,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
             // Update the array if it references a variable
             if let Some(reference) = &token.references {
-                state.set_variable(reference, input)?;
+                state.set_variable(reference, input);
             }
 
             Ok(value)
@@ -221,7 +221,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
             // Update the array if it references a variable
             if let Some(reference) = &token.references {
-                state.set_variable(reference, input.clone())?;
+                state.set_variable(reference, input.clone());
             }
 
             Ok(input)

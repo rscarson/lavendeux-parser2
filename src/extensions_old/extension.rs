@@ -47,8 +47,6 @@ impl From<JsExtension> for Extension {
             decorators: HashMap::new(),
         };
 
-        println!("fn: {:?}", js_extension.clone());
-
         for (name, function) in js_extension.functions {
             match function {
                 JsExtensionFunction::Legacy(_) => {

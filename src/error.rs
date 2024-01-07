@@ -32,6 +32,14 @@ pub enum Error {
     )]
     Internal(String),
 
+    /// Error causing the parser thread to panic
+    #[error("fatal error: {0}")]
+    Fatal(String),
+
+    /// A timeout error caused by a script taking too long to execute
+    #[error("script execution timed out")]
+    Timeout,
+
     ///////////////////////////////////////////////////////////////////////////
     // Value Errors
     // Mostly deals with variables, and value objects

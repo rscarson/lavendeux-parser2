@@ -6,8 +6,8 @@
 use super::*;
 use crate::{Error, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
-use polyvalue::types::{Array, Bool};
-use polyvalue::ValueTrait;
+use polyvalue::types::{Array, Bool, Range};
+use polyvalue::{ValueTrait, ValueType};
 
 // LINE* ~ EOI
 define_node!(
@@ -154,27 +154,50 @@ define_node!(
 
     value = |for_loop: &mut ForLoopExpression, state: &mut State| {
         let iterable = for_loop.iterable.get_value(state)?;
-        let iterable = iterable.as_a::<Array>()?;
 
-        let mut result = vec![];
-        state.scope_into()?;
-        for value in iterable.inner() {
-            if let Some(variable) = &for_loop.variable {
-                state.set_variable(variable, value.clone()).or_else(|e| {
-                    state.scope_out();
-                    Err(e)
-                })?;
-            }
+        match iterable.own_type() {
+            ValueType::Range => {
+                let iterable = iterable.as_a::<Range>()?;
+                let mut result = vec![];
+                state.scope_into()?;
+                for i in iterable.inner().clone() {
+                    let value = Value::from(i);
+                    if let Some(variable) = &for_loop.variable {
+                        state.set_variable(variable, value.clone());
+                    }
 
-            let value = for_loop.body.get_value(state).or_else(|e| {
+                    let value = for_loop.body.get_value(state).or_else(|e| {
+                        state.scope_out();
+                        Err(e)
+                    })?;
+                    result.push(value);
+                }
                 state.scope_out();
-                Err(e)
-            })?;
-            result.push(value);
-        }
-        state.scope_out();
 
-        Ok(Value::Array(result.into()).into())
+                Ok(Value::Array(result.into()).into())
+            },
+
+            _ => {
+                let iterable = iterable.as_a::<Array>()?;
+
+                let mut result = vec![];
+                state.scope_into()?;
+                for value in iterable.inner() {
+                    if let Some(variable) = &for_loop.variable {
+                        state.set_variable(variable, value.clone());
+                    }
+
+                    let value = for_loop.body.get_value(state).or_else(|e| {
+                        state.scope_out();
+                        Err(e)
+                    })?;
+                    result.push(value);
+                }
+                state.scope_out();
+
+                Ok(Value::Array(result.into()).into())
+            }
+        }
     }
 );
 
@@ -297,9 +320,7 @@ mod test {
                 );
 
                 let mut state = State::new();
-                state
-                    .set_variable("a", Value::from(vec![Value::from("0")]))
-                    .ok();
+                state.set_variable("a", Value::from(vec![Value::from("0")]));
 
                 assert_eq!(node.get_value(&mut State::new()).unwrap().to_string(), "0");
 

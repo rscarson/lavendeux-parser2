@@ -149,7 +149,7 @@ impl ExtensionWorker {
         match self.response.recv().unwrap() {
             ExtensionWorkerResponse::CallFunction { result, state } => {
                 for (key, value) in state {
-                    cur_state.set_variable(&key, value).ok();
+                    cur_state.set_variable(&key, value);
                 }
                 result
             }
@@ -176,7 +176,7 @@ impl ExtensionWorker {
                     .iter()
                     .enumerate()
                     .map(|(i, arg)| Argument {
-                        name: format!("arg{}", i + 1),
+                        name: format!("{}", i + 1),
                         optional: false,
                         plural: false,
                         expects: *arg,
@@ -184,8 +184,12 @@ impl ExtensionWorker {
                     .collect(),
                 *function.returns(),
                 |state, args, _token, name| {
+                    // get a vec of the strings 1 to function.arguments().len()
+                    let arg_order = (1..=args.len())
+                        .map(|i| format!("{}", i))
+                        .collect::<Vec<String>>();
                     ExtensionController::with(|controller| {
-                        controller.call_function(name, &flatten_arguments!(args), state)
+                        controller.call_function(name, &flatten_arguments!(args, arg_order), state)
                     })
                 },
                 function.name().to_string(),

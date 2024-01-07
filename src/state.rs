@@ -13,12 +13,15 @@ pub struct State {
     /// while parsing user_functions
     depth: usize,
 
-    /// Registered variables
-    /// The boolean indicates that the value is a constant
-    variables: HashMap<String, (Value, bool)>,
+    /// The time that the current parse started
+    /// This is used to prevent infinite loops
+    /// and implement a timeout
+    parse_starttime: std::time::Instant,
+    timeout: u64,
 
-    /// Scoped variables, for use in functions
-    scoped_variables: Vec<HashMap<String, Value>>,
+    /// Registered variables
+    /// Used as a stack for scoping
+    variables: Vec<HashMap<String, Value>>,
 
     /// Registered user functions
     /// These are functions that are set with
@@ -32,27 +35,59 @@ pub struct State {
 }
 
 impl State {
-    const MAX_DEPTH: usize = 50;
+    const MAX_DEPTH: usize = 999;
 
-    /// Creates a new parser state
-    pub fn new() -> Self {
+    pub fn with_timeout(seconds: u64) -> Self {
         let mut instance = Self {
             depth: 0,
-            variables: HashMap::new(),
-            scoped_variables: vec![],
+            parse_starttime: std::time::Instant::now(),
+            timeout: seconds,
+            variables: vec![HashMap::new()],
             user_functions: HashMap::new(),
             std_functions: HashMap::new(),
         };
 
-        instance.set_constant("pi", Value::from(std::f64::consts::PI));
-        instance.set_constant("e", Value::from(std::f64::consts::E));
-        instance.set_constant("tau", Value::from(std::f64::consts::TAU));
-
         ApiManager::default_apis(&mut instance);
-
         std_functions::register_all(&mut instance.std_functions);
 
+        instance.set_user_function(UserFunction::new(
+            "fun", 
+            vec!["iterations".to_string(), "depth".to_string()], 
+            "depth == 1 ? for i in 0..iterations do i : for d in 1..(depth-1) do fun(iterations, d)".to_string()
+        ).unwrap());
+
         instance
+    }
+
+    /// Creates a new parser state
+    pub fn new() -> Self {
+        Self::with_timeout(0)
+    }
+
+    /// Returns the current depth of the parser
+    pub fn current_depth(&self) -> usize {
+        self.depth
+    }
+
+    /// Sets the timeout of the parser
+    /// Used on parse start
+    pub fn start_timer(&mut self) {
+        self.parse_starttime = std::time::Instant::now();
+    }
+
+    /// Checks the timeout of the parser
+    pub fn check_timer(&self) -> Result<(), Error> {
+        if self.timeout > 0 && self.parse_starttime.elapsed().as_secs() > self.timeout {
+            Err(Error::Timeout)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Sets the depth to 0, and destroys all scopes but the root scope
+    pub fn sanitize_scopes(&mut self) {
+        self.depth = 0;
+        self.variables.truncate(1);
     }
 
     /// Creates a new scope from this state
@@ -64,7 +99,7 @@ impl State {
         }
 
         self.depth += 1;
-        self.scoped_variables.push(HashMap::new());
+        self.variables.push(HashMap::new());
         Ok(())
     }
 
@@ -74,103 +109,49 @@ impl State {
             return;
         }
         self.depth -= 1;
-        self.scoped_variables.pop();
+        self.variables.pop();
     }
 
     /// Assigns a variable in the state, in the root scope
-    pub fn global_assign_variable(&mut self, name: &str, value: Value) -> Result<(), Error> {
-        if self.is_constant(name) {
-            return Err(Error::ConstantValue {
-                name: name.to_string(),
-            });
-        }
-
-        self.variables.insert(name.to_string(), (value, false));
-        Ok(())
+    pub fn global_assign_variable(&mut self, name: &str, value: Value) {
+        self.variables[0].insert(name.to_string(), value);
     }
 
     /// Sets a variable in the state
-    pub fn set_variable(&mut self, name: &str, value: Value) -> Result<(), Error> {
-        if self.is_constant(name) {
-            return Err(Error::ConstantValue {
-                name: name.to_string(),
-            });
-        }
-
-        if self.scoped_variables.is_empty() {
-            self.variables.insert(name.to_string(), (value, false));
-        } else {
-            self.scoped_variables
-                .last_mut()
-                .unwrap()
-                .insert(name.to_string(), value);
-        }
-
-        Ok(())
-    }
-
-    /// Sets a constant in the state
-    pub fn set_constant(&mut self, name: &str, value: Value) {
-        self.variables.insert(name.to_string(), (value, true));
+    pub fn set_variable(&mut self, name: &str, value: Value) {
+        self.variables
+            .last_mut()
+            .unwrap()
+            .insert(name.to_string(), value);
     }
 
     /// Returns the value of a variable
     pub fn get_variable(&self, name: &str) -> Option<Value> {
-        for scope in self.scoped_variables.iter().rev() {
+        for scope in self.variables.iter().rev() {
             if let Some(value) = scope.get(name) {
                 return Some(value.clone());
             }
         }
-
-        self.variables.get(name).map(|(value, _)| value.clone())
+        None
     }
 
-    pub fn delete_variable(&mut self, name: &str) -> Result<Option<Value>, Error> {
-        // remove the value and return it, if it is not flagged as a constant
-        if self.is_constant(name) {
-            return Err(Error::ConstantValue {
-                name: name.to_string(),
-            });
-        }
-
-        for scope in self.scoped_variables.iter_mut().rev() {
+    pub fn delete_variable(&mut self, name: &str) -> Option<Value> {
+        for scope in self.variables.iter_mut().rev() {
             if let Some(value) = scope.remove(name) {
-                return Ok(Some(value));
+                return Some(value);
             }
         }
-
-        if let Some(value) = self.variables.remove(name) {
-            return Ok(Some(value.0));
-        }
-
-        Ok(None)
+        None
     }
 
     /// Returns all variables in the state
     pub fn all_variables(&self) -> HashMap<String, Value> {
-        let mut variables = self
-            .variables
-            .iter()
-            .map(|(name, (value, _))| (name.clone(), value.clone()))
-            .collect::<HashMap<_, _>>();
-
-        for scope in self.scoped_variables.iter().rev() {
-            variables.extend(
-                scope
-                    .iter()
-                    .map(|(name, value)| (name.clone(), value.clone())),
-            );
+        let mut variables = HashMap::new();
+        for scope in self.variables.iter().rev() {
+            variables.extend(scope.iter().map(|(k, v)| (k.clone(), v.clone())));
         }
 
         variables
-    }
-
-    /// Returns true if the given variable is constant
-    pub fn is_constant(&self, name: &str) -> bool {
-        self.variables
-            .get(name)
-            .map(|(_, constant)| *constant)
-            .unwrap_or(false)
     }
 
     /// Sets a user function in the state
@@ -205,6 +186,13 @@ impl State {
         crate::extensions::ExtensionController::with(|controller| {
             controller.get_function(name).clone()
         })
+    }
+
+    /// Registers a function in the state
+    /// This function will overwrite any existing function with the same name
+    pub fn register_function(&mut self, function: Function) {
+        self.std_functions
+            .insert(function.name().to_string(), function);
     }
 
     // We will have a function that searches the whole state for a matching function
@@ -284,9 +272,9 @@ mod test {
     #[test]
     fn test_scoped_delete() {
         let mut state = State::new();
-        state.set_variable("a", Value::from(2.0)).unwrap();
+        state.set_variable("a", Value::from(2.0));
         state.scope_into().ok();
-        state.delete_variable("a").unwrap();
+        state.delete_variable("a");
         state.scope_out();
 
         assert_eq!(state.get_variable("a"), None);

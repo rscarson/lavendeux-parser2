@@ -1,4 +1,5 @@
 mod error;
+mod lavendeux;
 mod pest;
 mod state;
 mod std_functions;
@@ -20,7 +21,7 @@ use syntax_tree::Node;
 use token::ToToken;
 
 pub use error::Error;
-pub use pest::Lavendeux;
+pub use lavendeux::Lavendeux;
 pub use polyvalue::Value;
 pub use state::State;
 pub use token::Token;

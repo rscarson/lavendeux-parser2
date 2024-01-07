@@ -68,7 +68,7 @@ define_node!(
     },
     value = |assignment: &mut VariableAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
-        state.set_variable(&assignment.name, value.clone())?;
+        state.set_variable(&assignment.name, value.clone());
         Ok(value)
     }
 );
@@ -121,7 +121,7 @@ define_node!(
         ptr.set_index(&final_index, value.clone())?;
 
         // Set state and return
-        state.set_variable(&assignment.name, dst)?;
+        state.set_variable(&assignment.name, dst);
         Ok(value)
     }
 );
@@ -165,7 +165,7 @@ define_node!(
         }
 
         for (name, value) in assignment.names.iter().zip(values) {
-            state.set_variable(name, value)?;
+            state.set_variable(name, value);
         }
 
         Ok(value)
@@ -192,12 +192,10 @@ mod test {
                 assert_eq!(tree.value.to_string(), "a");
 
                 let mut state = State::new();
-                state
-                    .set_variable(
-                        "a",
-                        Value::from(vec![Value::from(1), Value::from(2), Value::from(3)]),
-                    )
-                    .unwrap();
+                state.set_variable(
+                    "a",
+                    Value::from(vec![Value::from(1), Value::from(2), Value::from(3)]),
+                );
                 tree.get_value(&mut state).unwrap();
                 assert_eq!(state.get_variable("a").unwrap().to_string(), "1");
                 assert_eq!(state.get_variable("b").unwrap().to_string(), "2");
@@ -275,9 +273,7 @@ mod test {
                 assert_eq!(tree.value.to_string(), "1");
 
                 let mut state = State::new();
-                state
-                    .set_variable("a", Value::from(vec![Value::from(0)]))
-                    .unwrap();
+                state.set_variable("a", Value::from(vec![Value::from(0)]));
                 tree.get_value(&mut state)
                     .expect_err("Should not be able to assign to negative index");
             }
@@ -293,9 +289,7 @@ mod test {
                 assert_eq!(tree.indices[0].to_string(), "2");
 
                 let mut state = State::new();
-                state
-                    .set_variable("a", Value::from(vec![Value::from(0)]))
-                    .unwrap();
+                state.set_variable("a", Value::from(vec![Value::from(0)]));
                 tree.get_value(&mut state)
                     .expect_err("Should not be able to assign to out-of-bounds index");
             }
@@ -312,9 +306,7 @@ mod test {
                 assert_eq!(tree.value.to_string(), "1");
 
                 let mut state = State::new();
-                state
-                    .set_variable("a", Value::from(vec![Value::from(0)]))
-                    .unwrap();
+                state.set_variable("a", Value::from(vec![Value::from(0)]));
                 tree.get_value(&mut state).unwrap();
                 assert_eq!(state.get_variable("a").unwrap().to_string(), "[1]");
             }
@@ -332,9 +324,7 @@ mod test {
                 assert_eq!(tree.value.to_string(), "1");
 
                 let mut state = State::new();
-                state
-                    .set_variable("a", Value::from(vec![Value::from(vec![Value::from(0)])]))
-                    .unwrap();
+                state.set_variable("a", Value::from(vec![Value::from(vec![Value::from(0)])]));
                 tree.get_value(&mut state).unwrap();
                 assert_eq!(state.get_variable("a").unwrap().to_string(), "[[0, 1]]");
             }
@@ -353,12 +343,10 @@ mod test {
                 assert_eq!(tree.value.to_string(), "1");
 
                 let mut state = State::new();
-                state
-                    .set_variable(
-                        "a",
-                        Value::from(vec![Value::from(vec![Value::from(vec![Value::from(0)])])]),
-                    )
-                    .unwrap();
+                state.set_variable(
+                    "a",
+                    Value::from(vec![Value::from(vec![Value::from(vec![Value::from(0)])])]),
+                );
                 tree.get_value(&mut state).unwrap();
                 assert_eq!(state.get_variable("a").unwrap().to_string(), "[[[0, 1]]]");
             }

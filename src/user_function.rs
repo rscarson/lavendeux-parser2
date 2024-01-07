@@ -50,25 +50,22 @@ impl UserFunction {
 
         // Set the arguments
         for (name, value) in self.arguments.iter().zip(arguments) {
-            state.set_variable(name, value).or_else(|e| {
-                state.scope_out();
-                Err(e)
-            })?;
+            state.set_variable(name, value);
         }
 
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
-        self.body().unwrap().get_value(state).or_else(|e| {
-            state.scope_out();
-            Err(e)
-        })
+        let body_result = self.body().unwrap().get_value(state);
+        state.scope_out();
+
+        body_result
     }
 
     /// Converts this function into a standard function
     pub fn to_std_function(&self) -> Function {
         Function::new(
             &self.name,
-            "",
+            &self.arguments().to_vec().join(", "),
             "user-defined",
             self.arguments()
                 .iter()
@@ -77,7 +74,7 @@ impl UserFunction {
             ValueType::Any,
             |state, args, _token, func| {
                 if let Some(function) = state.get_user_function(func) {
-                    function.execute(state, flatten_arguments!(args))
+                    function.execute(state, flatten_arguments!(args, function.arguments))
                 } else {
                     Err(Error::FunctionName { name: func.clone() })
                 }

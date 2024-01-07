@@ -20,7 +20,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let input = get_argument!("name", arguments).to_string();
             let value = get_argument!("value", arguments);
 
-            state.set_variable(&input, value.clone())?;
+            state.set_variable(&input, value.clone());
             Ok(value)
         }
     );
@@ -39,7 +39,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let input = get_argument!("name", arguments).to_string();
             let value = get_argument!("value", arguments);
 
-            state.global_assign_variable(&input, value.clone())?;
+            state.global_assign_variable(&input, value.clone());
             Ok(value)
         }
     );
@@ -101,12 +101,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Any,
         handler = |state: &mut State, arguments, _token, _| {
             let expression = get_argument!("expression", arguments).to_string();
-            let lines = Lavendeux::eval(&expression, state)?;
-            if lines.len() == 1 {
-                Ok(lines[0].clone())
-            } else {
-                Ok(Value::from(lines))
-            }
+            Lavendeux::eval(&expression, state)
         }
     );
 
@@ -120,14 +115,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |state: &mut State, arguments, _token, _| {
             let filename = get_argument!("filename", arguments).to_string();
             match std::fs::read_to_string(filename) {
-                Ok(expression) => {
-                    let lines = Lavendeux::eval(&expression, state)?;
-                    if lines.len() == 1 {
-                        Ok(lines[0].clone())
-                    } else {
-                        Ok(Value::from(lines))
-                    }
-                }
+                Ok(expression) => Lavendeux::eval(&expression, state),
                 Err(e) => Err(Error::Io(e)),
             }
         }

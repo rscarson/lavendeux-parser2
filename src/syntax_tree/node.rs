@@ -20,6 +20,7 @@ macro_rules! define_node {
             }
 
             fn get_value(&mut self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
+                state.check_timer()?;
                 ($get_hnd)(self, state)
             }
 
@@ -62,6 +63,7 @@ macro_rules! define_node {
             }
 
             fn get_value(&mut self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
+                state.check_timer()?;
                 ($get_hnd)(self, state)
             }
 
@@ -139,6 +141,7 @@ lazy_static! {
         //
         // Values
         include_node!(map, ValueLiteral);
+        include_node!(map, ConstantValue);
         include_node!(map, Identifier);
         include_node!(map, ArrayValue);
         include_node!(map, ObjectValue);

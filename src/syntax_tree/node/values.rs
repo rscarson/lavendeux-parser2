@@ -97,6 +97,31 @@ impl ValueLiteral {
 }
 
 define_node!(
+    ConstantValue { value: Value },
+    rules = [const_literal],
+    new = |input: Pair<Rule>| {
+        let token = input.to_token();
+        let text = input.as_str();
+
+        let value = match text {
+            "pi" => Value::from(std::f64::consts::PI),
+            "e" => Value::from(std::f64::consts::E),
+            "tau" => Value::from(std::f64::consts::TAU),
+
+            _ => {
+                return Err(Error::Internal(format!(
+                    "Unexpected const literal {}",
+                    text
+                )));
+            }
+        };
+
+        Ok(Self { value, token }.boxed())
+    },
+    value = |this: &mut ConstantValue, _state: &mut State| { Ok(this.value.clone()) }
+);
+
+define_node!(
     Identifier { name: String },
     rules = [identifier],
     new = |input: Pair<Rule>| {
@@ -219,18 +244,14 @@ define_node!(
             }
 
             (Value::Int(start), Value::Int(end)) => {
-                if start > end || end.inner() - start.inner() > 10000 {
+                if start > end {
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
                         end: end.to_string(),
                     });
                 }
 
-                // as array spanning the range inclusively
-                let array = (*start.inner()..=*end.inner())
-                    .map(|i| Value::from(i))
-                    .collect::<Vec<_>>();
-                Ok(Value::from(array))
+                Ok(Value::from(*start.inner()..=*end.inner()))
             }
 
             _ => Err(Error::InvalidRange {
@@ -306,13 +327,13 @@ define_node!(
             }
 
             let removed = pos.delete_index(&final_idx)?;
-            state.set_variable(&this.src, value)?;
+            state.set_variable(&this.src, value);
             Ok(removed)
         } else {
             if let Some(function) = state.delete_user_function(&this.src) {
                 Ok(function.to_std_function().signature().into())
             } else {
-                state.delete_variable(&this.src)?.ok_or(Error::VariableName {
+                state.delete_variable(&this.src).ok_or(Error::VariableName {
                     name: this.src.clone(),
                 })
             }
@@ -412,7 +433,7 @@ mod test {
             assert_eq!("hello", tree.name);
 
             let state = &mut State::new();
-            state.set_variable("hello", Value::from(1)).ok();
+            state.set_variable("hello", Value::from(1));
             let value = tree.get_value(state).unwrap();
             assert_eq!(1, *value.as_a::<Int>().unwrap().inner());
         });
@@ -525,16 +546,12 @@ mod test {
     #[test]
     fn test_delete() {
         let mut state = State::new();
-        state.set_variable("a", Value::from(1)).ok();
-        state
-            .set_variable("b", Value::from(vec![Value::from(2)]))
-            .ok();
-        state
-            .set_variable(
-                "c",
-                Value::from(vec![Value::from(2), Value::from(vec![Value::from(2)])]),
-            )
-            .ok();
+        state.set_variable("a", Value::from(1));
+        state.set_variable("b", Value::from(vec![Value::from(2)]));
+        state.set_variable(
+            "c",
+            Value::from(vec![Value::from(2), Value::from(vec![Value::from(2)])]),
+        );
 
         assert_tree!(
             "delete a",

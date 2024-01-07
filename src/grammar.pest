@@ -215,6 +215,7 @@ ATOMIC_VALUE = _{
     | hex_literal | bin_literal | oct_literal | int_literal
     | bool_literal | string_literal | regex_literal
     | array_literal | object_literal
+    | const_literal
     | identifier
     | errors
 }
@@ -259,6 +260,8 @@ currency_literal = {
 sci_literal = @{(float_literal | int_literal) ~ ^"e" ~ ("+"|"-")? ~ ('0'..'9')+}
 float_literal = @{int_literal? ~ "." ~ ('0'..'9')+}
 
+const_literal = @{"pi" | "e" | "tau"}
+
 // Integer literals
 int_comma = _{('0'..'9'){1,3} ~ ("," ~ ('0'..'9'){3})+}
 int_literal = @{int_comma | ('0'..'9')+}
@@ -275,6 +278,7 @@ regex_literal = @{
 }
 
 reserved_words = _{
+    "pi" | "e" | "tau" | "true" | "false" |
     "if" | "else" | "for" | "do" | "in" | "as"
     | DELETE_KEYWORD
     | MATCHING_OPERATOR

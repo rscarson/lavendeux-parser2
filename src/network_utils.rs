@@ -235,7 +235,7 @@ impl ApiManager {
         for (k, v) in api_definitions.iter() {
             store.insert(Value::from(k.as_str()), v.to_polyvalue()?)?;
         }
-        state.set_variable(Self::STORE_NAME, store.into()).ok();
+        state.set_variable(Self::STORE_NAME, store.into());
         Ok(())
     }
 

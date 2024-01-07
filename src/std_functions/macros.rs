@@ -21,12 +21,14 @@ macro_rules! get_arguments {
     };
 }
 
+/// Will ignore potential plural arguments, and return a flat vector of arguments
+/// will panic if an argument is not found
 #[macro_export]
 macro_rules! flatten_arguments {
-    ($arguments:expr) => {
-        $arguments
-            .values()
-            .map(|v| v[0].clone())
+    ($arguments:expr, $keys:expr) => {
+        $keys
+            .iter()
+            .map(|k| $arguments.get(k).cloned().unwrap()[0].clone())
             .collect::<Vec<Value>>()
     };
 }

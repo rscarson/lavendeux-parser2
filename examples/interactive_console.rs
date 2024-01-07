@@ -16,7 +16,7 @@ fn next_command() -> String {
 }
 
 fn main() -> Result<(), Error> {
-    let mut lavendeux = Lavendeux::new();
+    let mut lavendeux = Lavendeux::new(Default::default());
 
     // Load extensions
     lavendeux.load_extension("example_extensions/simple_extension.js")?;
