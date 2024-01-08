@@ -106,7 +106,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
     #[cfg(feature = "network-functions")]
     static_function!(
         registry = map,
-        name = "register_api",
+        name = "add_api",
         description = "Registers an API. Accepts a string, or an object with the properties [ url, headers, description, examples, auth_key]",
         category = "network",
         arguments = [
@@ -133,7 +133,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
     #[cfg(feature = "network-functions")]
     static_function!(
         registry = map,
-        name = "delete_api",
+        name = "del_api",
         description = "Unregisters an API",
         category = "network",
         arguments = [required_argument!("name", ValueType::String)],
@@ -151,7 +151,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
     #[cfg(feature = "network-functions")]
     static_function!(
         registry = map,
-        name = "list_apis",
+        name = "list_api",
         description = "Returns a list of registered APIs",
         category = "network",
         arguments = [],
@@ -174,7 +174,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "network",
         arguments = [
             required_argument!("name", ValueType::String),
-            required_argument!("endpoint", ValueType::String)
+            optional_argument!("endpoint", ValueType::String)
         ],
         returns = ValueType::String,
         handler = |state: &mut State, arguments, _token, _| {
@@ -182,14 +182,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<Str>()?
                 .inner()
                 .clone();
-            let endpoint = get_argument!("endpoint", arguments)
-                .as_a::<Str>()?
-                .inner()
-                .clone();
+            let endpoint = get_optional_argument!("endpoint", arguments)
+                .and_then(|v| v.as_a::<Str>().ok())
+                .and_then(|s| Some(s.inner().clone()));
             let api = crate::network_utils::ApiManager::call(
                 state,
                 &name,
-                Some(&endpoint),
+                endpoint.as_deref(),
                 None,
                 Default::default(),
             )?;
@@ -205,7 +204,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "network",
         arguments = [
             required_argument!("name", ValueType::String),
-            required_argument!("endpoint", ValueType::String),
+            optional_argument!("endpoint", ValueType::String),
             optional_argument!("body", ValueType::String)
         ],
         returns = ValueType::String,
@@ -214,10 +213,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<Str>()?
                 .inner()
                 .clone();
-            let endpoint = get_argument!("endpoint", arguments)
-                .as_a::<Str>()?
-                .inner()
-                .clone();
+            let endpoint = get_optional_argument!("endpoint", arguments)
+                .and_then(|v| v.as_a::<Str>().ok())
+                .and_then(|s| Some(s.inner().clone()));
             let body = get_optional_argument!("body", arguments)
                 .unwrap_or(Str::default().into())
                 .as_a::<Str>()?
@@ -226,7 +224,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let api = crate::network_utils::ApiManager::call(
                 state,
                 &name,
-                Some(&endpoint),
+                endpoint.as_deref(),
                 Some(body),
                 Default::default(),
             )?;

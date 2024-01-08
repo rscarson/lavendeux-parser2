@@ -174,7 +174,7 @@ define_node!(
 
 #[cfg(test)]
 mod test {
-    use crate::assert_tree;
+    use crate::{assert_tree, assert_tree_error};
 
     use super::*;
 
@@ -245,19 +245,7 @@ mod test {
             }
         );
 
-        assert_tree!(
-            "pi = 2",
-            VARIABLE_ASSIGNMENT_STATEMENT,
-            VariableAssignment,
-            |tree: &mut VariableAssignment| {
-                assert_eq!(tree.name, "pi");
-                assert_eq!(tree.value.to_string(), "2");
-
-                let mut state = State::new();
-                tree.get_value(&mut state)
-                    .expect_err("Should not be able to assign to pi");
-            }
-        );
+        assert_tree_error!("pi = 2", Pest);
     }
 
     #[test]
@@ -273,9 +261,9 @@ mod test {
                 assert_eq!(tree.value.to_string(), "1");
 
                 let mut state = State::new();
-                state.set_variable("a", Value::from(vec![Value::from(0)]));
-                tree.get_value(&mut state)
-                    .expect_err("Should not be able to assign to negative index");
+                state.set_variable("a", Value::from(vec![Value::from(0), Value::from(1)]));
+                let value = tree.get_value(&mut state).unwrap();
+                assert_eq!(value.to_string(), "1");
             }
         );
 

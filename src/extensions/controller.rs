@@ -1,18 +1,14 @@
 use super::{extension::ExtensionDetails, worker::ExtensionWorker};
 use crate::{state::State, std_functions::Function, Error, Value};
 use std::{
-    cell::{OnceCell, RefCell},
     collections::HashMap,
+    sync::{Mutex, OnceLock},
 };
 
-// Create a thread-local version of the runtime
 // This should allow the following to be enforced:
-// - Runtime is not sent between threads
 // - Runtime is only initialized once
 // - Runtime is never accessed concurrently
-thread_local! {
-    static RUNTIME_CELL: OnceCell<RefCell<ExtensionController>> = OnceCell::new();
-}
+static RUNTIME_CELL: OnceLock<Mutex<ExtensionController>> = OnceLock::new();
 
 pub struct ExtensionController {
     /// Stores the actual extension worker threads
@@ -42,12 +38,10 @@ impl ExtensionController {
     /// Perform an operation on the runtime instance
     /// Will return T if we can get access to the runtime
     /// or panic went wrong
-    pub fn with<T, F: FnMut(&mut ExtensionController) -> T>(mut callback: F) -> T {
-        RUNTIME_CELL.with(|once_lock| {
-            let rt_mut = once_lock.get_or_init(|| RefCell::new(ExtensionController::new()));
-            let mut runtime = rt_mut.borrow_mut();
-            callback(&mut runtime)
-        })
+    pub fn with<T, F: FnOnce(&mut ExtensionController) -> T>(callback: F) -> T {
+        let mutex = RUNTIME_CELL.get_or_init(|| Mutex::new(ExtensionController::new()));
+        let mut guard = mutex.lock().unwrap();
+        callback(&mut *guard)
     }
 
     /// Register an extension

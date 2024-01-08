@@ -93,7 +93,7 @@ define_node!(
         if_true: Node,
         if_false: Node
     },
-    rules = [TERNARY_EXPRESSION],
+    rules = [TERNARY_EXPRESSION, IF_EXPRESSION],
     new = |input: Pair<Rule>| {
         let token = input.to_token();
         let mut children = input.into_inner().rev().peekable();

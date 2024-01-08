@@ -97,6 +97,8 @@ impl ToAstNode for Pair<'_, Rule> {
         while target.clone().into_inner().count() == 1
             && target.as_rule() != Rule::SCRIPT
             && target.as_rule() != Rule::LINE
+            && target.as_rule() != Rule::object_literal
+            && target.as_rule() != Rule::array_literal
         {
             target = target.into_inner().next().unwrap();
         }

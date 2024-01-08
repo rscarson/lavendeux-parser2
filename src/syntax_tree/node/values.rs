@@ -478,7 +478,7 @@ mod test {
             RangeValue,
             |tree: &mut RangeValue| {
                 let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!("[1, 2, 3]", value.to_string());
+                assert_eq!("1..3", value.to_string());
             }
         );
 
@@ -498,7 +498,7 @@ mod test {
             RangeValue,
             |tree: &mut RangeValue| {
                 let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!("[1]", value.to_string());
+                assert_eq!("1..1", value.to_string());
             }
         );
 
@@ -574,7 +574,7 @@ mod test {
             }
         );
         assert_tree!(
-            "delete c[1][1]",
+            "delete c[1][0]",
             DELETE_EXPRESSION,
             DeleteExpression,
             |tree: &mut DeleteExpression| {
