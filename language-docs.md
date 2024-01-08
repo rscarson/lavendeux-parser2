@@ -22,5 +22,56 @@ Attemting to convert a compound value into a non-compound type will only work if
 Compound types include:
 - Array: An ordered set of values
 - Object: A set of values indexed by a non-compound value - it is a syntax error to use a compound type as an object key
+- Range: A special value which cannot be indexed into directly, and will always evaluate as an array in comparisions and operations. All ranges are inclusive
 
 The last value is string, which can be freely created from any other type
+
+### Formats and Examples
+
+Here are the formats supported when using the above types:
+
+**Integers**
+- Base-10, such a `10`, with optional commas for thousands-seperators: `10,000`
+- Other bases, such as binary (`0b101010101`), hex (`0xFFA`), or octal (`0777` or `0o6`)
+
+**Floats**
+- Regular notation, leading number is optional: `5.22` or `.3`
+- Sci notation: `5e+1`, `5E-2`, `6.2e3`
+
+**Decimal**
+- Fixed-point literal: `1D`, `2.3323d`
+- Currency value: `$1.00`, `3￥`
+
+Supported Currency symbols:
+```
+$ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
+₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
+₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
+￡ | ￥ | ￦
+```
+
+**Bool**
+`true` or `false`, case-insensitive
+
+**String**
+Single or double quote enclosed; `'test'` or `"test"`
+With the following supported escape sequences:
+- `\'` Single-quote
+- `\"` Dboule-quote
+- `\n` Newline
+- `\r` Carriage-return
+- `\t` Tab
+- `\\` Literal backslash
+
+**Array**
+Square bracket enclosed, comma separated; `[2, 3]`
+
+**Object**
+Curly-brace enclosed comma seperated pairs of `k:v`
+Where key can be any type except array, object or range
+`{0: 1, true: 'test', 1.2: 'no'}`
+
+**Range**
+Pair of integers or characters split by `..`
+`0..10`; 0 to 10 inclusive
+`'a'..'c'`; The array `['a', 'b', 'c']`

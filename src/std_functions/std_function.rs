@@ -146,7 +146,7 @@ impl Function {
                         values.push(value);
                     } else {
                         return Err(Error::FunctionArgumentType {
-                            arg: 0,
+                            arg: arg_index,
                             expected_type: next_expected.expects,
                             signature: self.signature(),
                         });

@@ -3,6 +3,7 @@ use crate::{
     Error, State,
 };
 use polyvalue::{
+    operations::ArithmeticOperationExt,
     types::{Float, Int},
     Value, ValueTrait, ValueType,
 };
@@ -69,8 +70,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Interprets an integer as a timestamp, and formats it in UTC standard",
         expected_type = ValueType::Numeric,
         handler = &|input: Value| {
-            let input = *input.as_a::<Int>()?.inner();
-            match chrono::NaiveDateTime::from_timestamp_millis(input * 1000) {
+            let input = input.as_a::<Int>()?;
+            let input = Int::arithmetic_op(
+                &input,
+                &Int::new(1000),
+                polyvalue::operations::ArithmeticOperation::Multiply,
+            )?;
+            let input = *input.inner();
+
+            match chrono::NaiveDateTime::from_timestamp_millis(input) {
                 Some(t) => {
                     let datetime: chrono::DateTime<chrono::Utc> =
                         chrono::DateTime::from_naive_utc_and_offset(t, chrono::Utc);

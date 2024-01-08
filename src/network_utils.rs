@@ -1,5 +1,5 @@
 use polyvalue::types::{Object, ObjectInner, Str};
-use polyvalue::{Value, ValueTrait, ValueType};
+use polyvalue::{Value, ValueTrait};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::time::Duration;
@@ -120,9 +120,8 @@ impl TryFrom<Value> for ApiDefinition {
                 })
             }
 
-            _ => Err(Self::Error::ValueType {
-                actual_type: value.own_type(),
-                expected_type: ValueType::Object,
+            _ => Err(crate::Error::ValueFormat {
+                expected_format: "API Definition".to_string(),
             }),
         }
     }
@@ -243,7 +242,7 @@ impl ApiManager {
         Self::retrieve_store(state)?
             .get(name)
             .cloned()
-            .ok_or_else(|| crate::Error::VariableName {
+            .ok_or_else(|| crate::Error::UnknownApi {
                 name: name.to_string(),
             })
     }

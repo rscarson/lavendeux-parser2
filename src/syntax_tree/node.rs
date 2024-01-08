@@ -21,7 +21,15 @@ macro_rules! define_node {
 
             fn get_value(&self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
                 state.check_timer()?;
-                ($get_hnd)(self, state)
+                match ($get_hnd)(self, state) {
+                    Ok(v) => Ok(v),
+                    Err(e) if matches!(e, $crate::Error::Parsing{..}) => Err(e),
+
+                    Err(e) => Err($crate::Error::Parsing {
+                        token: self.token().clone(),
+                        source: Box::new(e),
+                    })
+                }
             }
 
             fn token(&self) -> &crate::Token {

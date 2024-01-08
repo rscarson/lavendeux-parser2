@@ -62,7 +62,7 @@ pub fn recursively_apply_decorator(
                 Ok(Value::from(handler(input)?))
             } else {
                 Err(Error::FunctionArgumentType {
-                    arg: 0,
+                    arg: 1,
                     expected_type: required_type,
                     signature: format!("<{required_type}> @{name}"),
                 })

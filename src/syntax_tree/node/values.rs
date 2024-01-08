@@ -254,10 +254,7 @@ define_node!(
                 Ok(Value::from(*start.inner()..=*end.inner()))
             }
 
-            _ => Err(Error::InvalidRange {
-                start: start.to_string(),
-                end: end.to_string(),
-            }),
+            _ => Err(Error::RangeTypeMismatch),
         }
     }
 );

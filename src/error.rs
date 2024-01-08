@@ -1,5 +1,5 @@
-use crate::Rule;
-use polyvalue::{operations::ArithmeticOperation, ValueType};
+use crate::{Rule, Token};
+use polyvalue::ValueType;
 use thiserror::Error;
 
 /// A stub of rustyscript::Error for use when the extensions feature is disabled
@@ -27,107 +27,28 @@ const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issu
 pub enum Error {
     /// An error caused by a problem with the parser itself
     #[error(
-        "internal parser issue: {0}\nPlease report this problem at {}",
+        "Internal parser issue: {0}\nPlease report this problem at {}",
         BUG_REPORT_URL
     )]
     Internal(String),
 
     /// Error causing the parser thread to panic
-    #[error("fatal error: {0}")]
+    #[error("Fatal error: {0}")]
     Fatal(String),
 
     /// A timeout error caused by a script taking too long to execute
-    #[error("script execution timed out")]
+    #[error("Script execution timed out")]
     Timeout,
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Value Errors
-    // Mostly deals with variables, and value objects
-    ///////////////////////////////////////////////////////////////////////////
-    
-    /// An error caused by an invalid range expression
-    #[error("invalid range expression {start}..{end}")]
-    InvalidRange {
-        /// Start of the range
-        start: String,
-        
-        /// End of the range
-        end: String,
-    },
+    /// An error from this list, but tagged with a token
+    #[error("\n| {token}\n= {source}")]
+    Parsing {
+        /// Token that caused the error
+        token: Token,
 
-    /// An error caused by attempting to overwrite a constant
-    #[error("{src_type} cannot be converted to {dst_type}")]
-    ValueConversion {
-        src_type: ValueType,
-        dst_type: ValueType,
-    },
-
-    /// An error caused by attempting to overwrite a constant
-    #[error("could not overwrite constant value {name}")]
-    ConstantValue {
-        /// Name of the constant
-        name: String
-    },
-
-    /// An error caused by a calculation that resulted in an overflow
-    #[error("arithmetic overflow")]
-    Overflow,
-
-    /// An error caused by a calculation that resulted in an underflow
-    #[error("arithmetic underflow")]
-    Underflow,
-
-    /// An error caused by destructuring an array or object with the wrong number of values
-    #[error("expected {expected_length} values, found {actual_length}")]
-    DestructuringAssignment {
-        expected_length: usize,
-        actual_length: usize,
-    },
-
-    /// An error caused by attempting to parse an value
-    #[error("{input} could not be parsed as {expected_type}")]
-    ValueParsing {
-        /// Value causing the error
-        input: String,
-        
-        /// Type that was requested
-        expected_type: ValueType,
-    },
-
-    /// An error caused by attempting to parse an invalid string into a given format
-    #[error("string could not be parsed as {expected_format}")]
-    StringFormat {
-        /// Expected format of the string
-        expected_format: String,
-    },
-
-    /// An error caused by attempting use an out of range value
-    #[error("value {0} was out of range")]
-    Range(String),
-
-    /// An error caused by attempting to use a value of the wrong type in a calculation
-    #[error("expected {expected_type}, found {actual_type}")]
-    ValueType {
-        /// Value causing the error
-        actual_type: ValueType,
-        
-        /// Type that was requested
-        expected_type: ValueType,
-    },
-
-    /// An error caused by attempting to use an unassigned variable
-    #[error("undefined variable {name}")]
-    VariableName {
-        /// Name of the variable
-        name: String,
-    },
-
-    /// An error caused by attempting to use an operator on
-    /// the wrong type
-    #[error("could not perform arithmetic {operation} on {actual_type}")]
-    UnsupportedOperation {
-        operation: ArithmeticOperation,
-        actual_type: ValueType,
+        /// Error that occurred
+        #[source]
+        source: Box<Error>,
     },
 
     ///////////////////////////////////////////////////////////////////////////
@@ -140,47 +61,77 @@ pub enum Error {
     UnexpectedDecorator,
 
     /// An error caused by using a postfix operator without an operand
-    #[error("expected '*/'")]
+    #[error("Expected '*/'")]
     UnterminatedComment,
 
     /// An error caused by a missing bracket
-    #[error("expected ']'")]
+    #[error("Expected ']'")]
     UnterminatedArray,
 
     /// An error caused by a missing brace
-    #[error("expected '}}'")]
+    #[error("Expected '}}'")]
     UnterminatedObject,
 
     /// An error caused by ending a script on a backslash
-    #[error("missing linebreak after '\\'")]
+    #[error("Missing linebreak after '\\'")]
     UnterminatedLinebreak,
 
     /// An error caused by a missing quote
-    #[error("expected ' or \"")]
+    #[error("Expected ' or \"")]
     UnterminatedLiteral,
 
     /// An error caused by a missing parentheses
-    #[error("expected ')'")]
+    #[error("Expected ')'")]
     UnterminatedParen,
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Value Errors
+    // Mostly deals with variables, and value objects
+    ///////////////////////////////////////////////////////////////////////////
+
+    #[error("Invalid combination of types for range. Use a pair of either integers, or characters")]
+    RangeTypeMismatch,
+
+    #[error("Invalid values for range: {start} > {end}")]
+    InvalidRange {
+        start: String,
+        end: String,
+    },
+
+    #[error("Arithmetic overflow")]
+    Overflow,
+
+    #[error("Expected {expected_length} values, found {actual_length}")]
+    DestructuringAssignment {
+        expected_length: usize,
+        actual_length: usize,
+    },
+
+    #[error("Input could not be parsed as {expected_format}")]
+    ValueFormat {
+        expected_format: String,
+    },
+
+    #[error("{0} was out of range")]
+    Range(String),
+
+    #[error("Undefined variable {name}. You can assign a value with {name} = ...")]
+    VariableName {
+        name: String,
+    },
+
+    #[error("Array empty")]
+    ArrayEmpty,
 
     ///////////////////////////////////////////////////////////////////////////
     // Function Errors
     // Deals with issues during builtin, user, or extension function calls
     ///////////////////////////////////////////////////////////////////////////
 
-    /// An error caused by a recursive function going too deep
-    #[error("user-defined function exceeded maximum recursion depth")]
+    #[error("Recursive function went too deep")]
     StackOverflow,
-
-    /// An error caused by attempting to use a function with ambiguous arguments
-    #[error("function parameters for {signature} are ambiguous")]
-    AmbiguousFunctionDefinition {
-        /// Signature of the function called
-        signature: String,
-    },
-
-    /// An error caused by calling a function with an argument of the wrong type
-    #[error("argument {arg} of {signature}, expected {expected_type}")]
+    
+    #[error("Expected {expected_type} value for argument {arg} of `{signature}`")]
     FunctionArgumentType {
         /// Argument number causing the issue (1-based)
         arg: usize,
@@ -192,16 +143,14 @@ pub enum Error {
         signature: String,
     },
 
-    /// An error caused by calling a function that does not exist
-    #[error("no such function {name}")]
+    #[error("Undefined function {name}. You can define a function with {name}(a, b, c) = ...")]
     FunctionName {
-        /// Name of the function
         name: String,
     },
 
     /// An error caused by calling a function using the wrong number of arguments
     #[error(
-        "{signature} expected {} arguments",
+        "Expected {} arguments for `{signature}`",
         if min == max {format!("{}", min)} else {format!("{}-{}", min, max)}
     )]
     FunctionArguments {
@@ -216,28 +165,8 @@ pub enum Error {
         signature: String,
     },
 
-    /// An error caused by a function argument overflowing a pre-determined limit
-    #[error("argument {arg} of {signature}")]
-    FunctionArgumentOverflow {
-        /// Argument number causing the issue (1-based)
-        arg: usize,
-        
-        /// Signature of the function called
-        signature: String,
-    },
-
-    /// An error caused by calling a decorator with an argument of the wrong type
-    #[error("@{name} expected type {expected_type}")]
-    DecoratorArgumentType {
-        /// Type that was requested
-        expected_type: ValueType,
-
-        /// Name of the decorator
-        name: String,
-    },
-
     /// An error caused by calling a decorator that does not exist
-    #[error("no such decorator {name}")]
+    #[error("No decorator named @{name}")]
     DecoratorName {
         /// Name of the decorator
         name: String,
@@ -246,29 +175,8 @@ pub enum Error {
     /// An error caused by attempting to use an API without registering it
     #[error("API {name} was not found. Add it with api_register(\"{name}\", base_url, [optional api key])")]
     UnknownApi {
-        /// Name of the API
         name: String,
     },
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Array Errors
-    // Deals with issues indexing of arrays and objects
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// An error caused by attempting to use an invalid object or array key
-    #[error("undefined index {key}")]
-    Index {
-        /// Index that caused the error
-        key: String,
-    },
-
-    /// An error caused by attempting to index on an empty array
-    #[error("could not index empty array")]
-    ArrayEmpty,
-
-    /// An error caused by attempting to operate on a pair of arrays of incompatible lengths
-    #[error("array lengths were incompatible")]
-    ArrayLengths,
 
     ///////////////////////////////////////////////////////////////////////////
     // External Errors

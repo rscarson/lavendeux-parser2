@@ -93,7 +93,7 @@ impl State {
         }
 
         self.depth += 1;
-        println!("Depth: {}", self.depth);
+        //println!("Depth: {}", self.depth);
         self.variables.push(HashMap::new());
         Ok(())
     }

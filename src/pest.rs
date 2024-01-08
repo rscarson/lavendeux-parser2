@@ -94,6 +94,7 @@ impl ToAstNode for Pair<'_, Rule> {
         // Bypass single-child nodes
         // They should not be parsed into a node directly
         // Except for the script and line nodes, which are allowed to be single-child
+        // objects and arrays are also allowed to be single-child, as they can have one element
         while target.clone().into_inner().count() == 1
             && target.as_rule() != Rule::SCRIPT
             && target.as_rule() != Rule::LINE

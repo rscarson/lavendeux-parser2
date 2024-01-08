@@ -150,8 +150,9 @@ RANGE_EXPRESSION = {
     CASTING_EXPRESSION ~ (RANGE_OPERATOR ~ CASTING_EXPRESSION)?
 }
 
+TARGET_TYPE = @{identifier}
 CASTING_EXPRESSION = {
-    DELETE_EXPRESSION ~ ("as" ~ identifier)?
+    DELETE_EXPRESSION ~ ("as" ~ TARGET_TYPE)?
 }
 
 DELETE_KEYWORD = {"delete" | "del" | "unset"}

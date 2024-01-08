@@ -203,7 +203,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 }
             }
 
-            Err(Error::StringFormat {
+            Err(Error::ValueFormat {
                 expected_format: "base64".to_string(),
             })
         }

@@ -3,7 +3,7 @@ use crate::{
 };
 use polyvalue::{
     fpdec::Round,
-    types::{Array, CurrencyInner, Float, Int, IntInner},
+    types::{Array, CurrencyInner, Float, Int},
     Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
@@ -104,12 +104,6 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Float,
         handler = |_: &mut State, arguments, _token, _| {
             let precision = *get_argument!("precision", arguments).as_a::<Int>()?.inner();
-            if precision > i8::MAX as IntInner {
-                return Err(Error::FunctionArgumentOverflow {
-                    arg: 2,
-                    signature: "round(n, precision)".to_string(),
-                });
-            }
             match &get_argument!("n", arguments) {
                 Value::Int(n) => Ok(Value::from(n)),
 
