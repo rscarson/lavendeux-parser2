@@ -21,6 +21,7 @@ pub fn collect_help(
 
         let help = help_map.get_mut(&category).unwrap();
         help.push(function_help(function));
+        help.sort();
     }
     help_map
 }
@@ -31,4 +32,19 @@ fn function_help(function: &Function) -> String {
     } else {
         function.signature()
     }
+}
+
+pub fn help_to_string(string_map: HashMap<String, Vec<String>>) -> String {
+    let mut keys = string_map.keys().cloned().collect::<Vec<String>>();
+    keys.sort();
+    keys.iter()
+        .map(|category| {
+            format!(
+                "## {}\n\n{}\n",
+                category,
+                string_map.get(category).unwrap().join("\n")
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
 }

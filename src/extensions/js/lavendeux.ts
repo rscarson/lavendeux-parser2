@@ -14,6 +14,7 @@ interface FunctionDefinition {
 }
 
 interface FunctionMetadata {
+    description?: string;
     arguments?: Type[];
     returns?: Type;
 }
@@ -43,6 +44,7 @@ class Lavendeux {
     addFunction(name: string, callback: Function, metadata: FunctionMetadata = {}) {
         let fn = {
             name: name,
+            description: metadata.description ?? "",
             arguments: metadata.arguments ?? [],
             returns: metadata.returns ?? Type.Any,
             callback: callback,

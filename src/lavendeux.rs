@@ -69,6 +69,20 @@ impl Lavendeux {
         Ok(lines)
     }
 
+    /// Load extension from a loaded module
+    /// # Arguments
+    /// * `module` - The extension source
+    ///
+    /// # Returns
+    /// An error if the extension could not be loaded
+    #[cfg(feature = "extensions")]
+    pub fn load_extension_module(
+        &mut self,
+        module: rustyscript::Module,
+    ) -> Result<crate::extensions::ExtensionDetails, Error> {
+        crate::extensions::ExtensionController::with(|controller| controller.add_extension(module))
+    }
+
     /// Load an extension from a file and register it
     /// # Arguments
     /// * `filename` - The filename of the extension to load

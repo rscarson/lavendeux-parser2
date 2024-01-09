@@ -32,6 +32,6 @@ mod stdlib {
 }
 
 pub use decorator_function::*;
-pub use help::collect_help;
+pub use help::{collect_help, help_to_string};
 pub use std_function::*;
 pub use stdlib::register_all;

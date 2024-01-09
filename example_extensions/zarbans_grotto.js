@@ -3676,7 +3676,14 @@ class ZarbanLavendeuxRunner extends ZarbanRunner {
     lavendeuxExtensionAuthor(author2);
     lavendeuxExtensionVersion(version2);
 
+    lavendeuxFunction('play_zarban', () => ZarbanLavendeuxRunner.callback('start'), {
+      description: "Start a new game of Zarban",
+      arguments: [],
+      returns: lavendeuxType.String
+    });
+
     lavendeuxFunction('zarban', ZarbanLavendeuxRunner.callback, {
+      description: "Advance a game of Zarban",
       arguments: [lavendeuxType.String],
       returns: lavendeuxType.String
     });
@@ -3687,10 +3694,10 @@ class ZarbanLavendeuxRunner extends ZarbanRunner {
    * Callback method for running zarban through lavendeux
    */
   static callback(option) {
+    let state = loadState();
     if (["start", "restart", ""].includes(option.toLowerCase())) {
       delete state.zarban_save;
     }
-    let state = loadState();
     const game = new ZarbanLavendeuxRunner(state.zarban_save);
     const result = game.step(state.zarban_save ? option : false);
     state.zarban_save = game.save();

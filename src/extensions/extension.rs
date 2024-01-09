@@ -8,6 +8,7 @@ use crate::{Error, Token};
 #[derive(Deserialize, Clone)]
 pub struct FunctionDefinition {
     name: String,
+    description: String,
     arguments: Vec<ValueType>,
     returns: ValueType,
 }
@@ -23,6 +24,10 @@ impl FunctionDefinition {
 
     pub fn returns(&self) -> &ValueType {
         &self.returns
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
     }
 
     pub fn signature(&self) -> String {
@@ -158,6 +163,8 @@ impl ExtensionDetails {
 
 #[cfg(test)]
 mod test {
+    use rustyscript::Module;
+
     use super::super::runtime::ExtensionRuntime;
     use super::*;
 
@@ -171,7 +178,8 @@ mod test {
 
     #[test]
     fn test_load_simple() {
-        let mut runtime = ExtensionRuntime::new("example_extensions/simple_extension.js").unwrap();
+        let module = Module::load("example_extensions/simple_extension.js").unwrap();
+        let mut runtime = ExtensionRuntime::new(module).unwrap();
         assert_eq!(runtime.extension_details().name(), "Simple Extension");
         assert_eq!(runtime.extension_details().author(), "@rscarson");
         assert_eq!(runtime.extension_details().version(), "1.0.0");
@@ -202,8 +210,8 @@ mod test {
 
     #[test]
     fn test_load_stateful() {
-        let mut runtime =
-            ExtensionRuntime::new("example_extensions/stateful_functions.js").unwrap();
+        let module = Module::load("example_extensions/stateful_functions.js").unwrap();
+        let mut runtime = ExtensionRuntime::new(module).unwrap();
         assert_eq!(runtime.extension_details().name(), "Stateful Extension");
         assert_eq!(runtime.extension_details().author(), "@rscarson");
         assert_eq!(runtime.extension_details().version(), "1.0.0");

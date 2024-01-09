@@ -1,3 +1,5 @@
+use rustyscript::Module;
+
 use super::{
     controller::ExtensionController, extension::ExtensionDetails, runtime::ExtensionRuntime,
 };
@@ -15,11 +17,11 @@ use std::{
 type VariableState = std::collections::HashMap<String, Value>;
 
 fn runtime_thread(
-    extension_filename: String,
+    extension_module: Module,
     request_rx: Receiver<ExtensionWorkerMessage>,
     response_tx: Sender<ExtensionWorkerResponse>,
 ) {
-    let runtime = ExtensionRuntime::new(&extension_filename);
+    let runtime = ExtensionRuntime::new(extension_module);
     match runtime {
         Ok(mut runtime) => {
             let meta = runtime.extension_details();
@@ -91,13 +93,12 @@ impl ExtensionWorker {
     ///
     /// # Returns
     /// * `Result<ExtensionWorker, Error>` - The worker thread
-    pub fn new(extension_filename: &str) -> Result<Self, Error> {
+    pub fn new(extension_module: Module) -> Result<Self, Error> {
         let (req_tx, req_rx) = channel::<ExtensionWorkerMessage>();
         let (res_tx, res_rx) = channel::<ExtensionWorkerResponse>();
 
-        let filename = extension_filename.to_string();
         let join_handle = thread::spawn(move || {
-            runtime_thread(filename, req_rx, res_tx);
+            runtime_thread(extension_module, req_rx, res_tx);
         });
 
         let response = res_rx.recv().unwrap();
@@ -173,7 +174,7 @@ impl ExtensionWorker {
         if let Some(function) = self.extension().all_functions().get(function) {
             Some(Function::new(
                 &function.name(),
-                "",
+                function.description(),
                 &self.extension().signature(),
                 function
                     .arguments()

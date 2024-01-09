@@ -26,7 +26,7 @@ INLINE_COMMENT = @{"//" ~ (!EOL ~ ANY)* ~ (&EOL | &EOI)}
 BLOCK_COMMENT = @{"/*" ~ (!"*/" ~ ANY)* ~ "*/"}
 COMMENT = _{INLINE_COMMENT | BLOCK_COMMENT}
 
-WHITESPACE = _{" " | "\t" | "\\\n" | COMMENT}
+WHITESPACE = _{" " | "\t" | "\\" ~ EOL | COMMENT}
 EOL = _{NEWLINE | ";"}
 
 // 

@@ -8,6 +8,7 @@ It was created for use in [Lavendeux](https://rscarson.github.io/lavendeux/).
 All expressions in Lavendeux will return a value, in one of the following types, which include a few categories:
 
 The first group of types are classified as numeric; they can all freely be converted between one another
+But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
 - Bool: a single-bit truth value
 - Int: A 64bit integer (1, 2, 3, ...)
 - Float: A 64bit floating-point number (1.0, .2, 3e+7, ...)
@@ -75,3 +76,24 @@ Where key can be any type except array, object or range
 Pair of integers or characters split by `..`
 `0..10`; 0 to 10 inclusive
 `'a'..'c'`; The array `['a', 'b', 'c']`
+
+### Converting between types
+
+You can manually convert between types using `<value> as <type>`, so long as that conversion is allowed:
+- Numeric values can always convert to other numeric values
+- Non-compound non-numeric values cannot convert into numeric values
+- Any type `T` can be converted to an array as `[T]`, or an object as `{0: T}`
+- Conversely, single-element compound values such as `[T]` or `{0: T}` can be freely converted to any type valid for `T`
+- All types can be converted to string or bool
+- Range can become string, bool or array, but no type can become range
+
+Comparisons and expressions will always try and cooerce both values to the same type, using these rules, in this order:
+- If either value is a range, compare the values as arrays
+- If either value is an object, compare the values as objects
+- If either value is an array, compare the values as arrays
+- If either value is an string, compare the values as strings
+- If either value is an currency, compare the values as currencies
+- If either value is a fixed-point, compare the values as fixed-points
+- If either value is an float, compare the values as floats
+- If either value is an int, compare the values as ints
+- If either value is a bool, compare the values as bools

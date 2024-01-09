@@ -8,9 +8,15 @@ fn next_command() -> String {
     let mut input = String::new();
     print!("> ");
     let _ = stdout().flush();
-    stdin()
-        .read_line(&mut input)
-        .expect("error: unable to read user input");
+
+    loop {
+        stdin()
+            .read_line(&mut input)
+            .expect("error: unable to read user input");
+        if !input.trim().ends_with("\\") || input.trim().ends_with("\\\\") {
+            break;
+        }
+    }
 
     return input.trim().to_string();
 }

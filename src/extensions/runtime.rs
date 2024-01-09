@@ -24,7 +24,7 @@ pub struct ExtensionRuntime {
 impl ExtensionRuntime {
     const SCRIPT_TIMEOUT: u64 = 1000;
 
-    pub fn new(filename: &str) -> Result<Self, Error> {
+    pub fn new(module: Module) -> Result<Self, Error> {
         // Start the runtime
         let mut inner = Runtime::new(RuntimeOptions {
             timeout: Duration::from_millis(Self::SCRIPT_TIMEOUT),
@@ -33,7 +33,6 @@ impl ExtensionRuntime {
         })?;
 
         // Load the module
-        let module = Module::load(filename)?;
         let handle = inner.load_module(&module)?;
 
         // Extract extension details

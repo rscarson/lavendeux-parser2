@@ -1,3 +1,5 @@
+use rustyscript::Module;
+
 use super::{extension::ExtensionDetails, worker::ExtensionWorker};
 use crate::{state::State, std_functions::Function, token, Error, Value};
 use std::{
@@ -44,18 +46,25 @@ impl ExtensionController {
         callback(&mut *guard)
     }
 
-    /// Register an extension
-    pub fn register(&mut self, filename: &str) -> Result<ExtensionDetails, Error> {
-        let worker = ExtensionWorker::new(filename)?;
+    pub fn add_extension(&mut self, module: Module) -> Result<ExtensionDetails, Error> {
+        let worker = ExtensionWorker::new(module)?;
 
         // Update the function map
         for name in &worker.extension().function_names() {
-            self.function_map.insert(name.clone(), filename.to_string());
+            self.function_map
+                .insert(name.clone(), module.filename().to_string());
         }
 
         let extension = worker.extension().clone();
-        self.extensions.insert(filename.to_string(), worker);
+        self.extensions
+            .insert(module.filename().to_string(), worker);
         Ok(extension)
+    }
+
+    /// Register an extension
+    pub fn register(&mut self, filename: &str) -> Result<ExtensionDetails, Error> {
+        let module = Module::load(filename)?;
+        self.add_extension(module)
     }
 
     /// Unregister an extension

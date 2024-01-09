@@ -246,21 +246,31 @@ impl State {
                 .map(|(n, f)| (n.clone(), f.to_std_function())),
         );
 
+        let mut help = Vec::new();
+
+        let strings = std_functions::collect_help(map, filter.clone());
+        help.push(std_functions::help_to_string(strings));
+
         #[cfg(feature = "extensions")]
-        map.extend(crate::extensions::ExtensionController::with(|controller| {
-            controller
+        help.push(crate::extensions::ExtensionController::with(|controller| {
+            let ext_fn_map = controller
                 .functions()
                 .iter()
                 .map(|f| (f.name().to_string(), f.clone()))
-                .collect::<Vec<_>>()
+                .collect::<HashMap<String, Function>>();
+            let ext_fn_strings = std_functions::collect_help(ext_fn_map, filter.clone());
+            std_functions::help_to_string(ext_fn_strings)
         }));
 
-        let strings = std_functions::collect_help(map, filter);
-        strings
+        let user_fn_map = self
+            .user_functions
             .iter()
-            .map(|(category, functions)| format!("## {}\n\n{}\n", category, functions.join("\n")))
-            .collect::<Vec<String>>()
-            .join("\n")
+            .map(|(n, f)| (n.clone(), f.to_std_function()))
+            .collect::<HashMap<String, Function>>();
+        let user_fn_strings = std_functions::collect_help(user_fn_map, filter.clone());
+        help.push(std_functions::help_to_string(user_fn_strings));
+
+        help.join("\n")
     }
 }
 
