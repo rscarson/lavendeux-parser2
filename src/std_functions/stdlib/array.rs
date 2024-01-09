@@ -44,9 +44,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Array)],
         returns = ValueType::Any,
-        handler = |_state: &mut State, arguments, _token, _| {
+        handler = |_state: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments).as_a::<Array>()?;
-            let first = input.inner().first().cloned().ok_or(Error::ArrayEmpty)?;
+            let first = input.inner().first().cloned().ok_or(Error::ArrayEmpty {
+                token: token.clone(),
+            })?;
             Ok(first)
         }
     );
@@ -58,9 +60,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Array)],
         returns = ValueType::Any,
-        handler = |_state: &mut State, arguments, _token, _| {
+        handler = |_state: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments).as_a::<Array>()?;
-            let last = input.inner().last().cloned().ok_or(Error::ArrayEmpty)?;
+            let last = input.inner().last().cloned().ok_or(Error::ArrayEmpty {
+                token: token.clone(),
+            })?;
             Ok(last)
         }
     );
@@ -77,7 +81,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<Array>()?
                 .inner()
                 .clone();
-            let last = input.pop().ok_or(Error::ArrayEmpty)?;
+            let last = input.pop().ok_or(Error::ArrayEmpty {
+                token: token.clone(),
+            })?;
 
             // Update the array if it references a variable
             let value = Value::Array(input.into());
@@ -131,7 +137,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .inner()
                 .clone();
             if input.is_empty() {
-                return Err(Error::ArrayEmpty);
+                return Err(Error::ArrayEmpty {
+                    token: token.clone(),
+                });
             }
             let first = input.remove(0);
 

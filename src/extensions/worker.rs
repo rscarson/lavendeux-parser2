@@ -5,7 +5,7 @@ use crate::{
     flatten_arguments,
     state::State,
     std_functions::{Argument, Function},
-    Error, Value,
+    Error, Token, Value,
 };
 use std::{
     sync::mpsc::{channel, Receiver, Sender},
@@ -35,8 +35,9 @@ fn runtime_thread(
                         function,
                         args,
                         mut state,
+                        token,
                     } => {
-                        let result = runtime.call_function(&function, &args, &mut state);
+                        let result = runtime.call_function(&function, &args, &mut state, &token);
                         response_tx
                             .send(ExtensionWorkerResponse::CallFunction { result, state })
                             .unwrap();
@@ -68,6 +69,7 @@ enum ExtensionWorkerMessage {
         function: String,
         args: Vec<Value>,
         state: VariableState,
+        token: Token,
     },
     Shutdown,
 }
@@ -137,12 +139,14 @@ impl ExtensionWorker {
         function: &str,
         args: &[Value],
         cur_state: &mut State,
+        token: &Token,
     ) -> Result<Value, Error> {
         self.request
             .send(ExtensionWorkerMessage::CallFunction {
                 function: function.to_string(),
                 args: args.to_vec(),
                 state: cur_state.all_variables(),
+                token: token.clone(),
             })
             .unwrap();
 
@@ -183,13 +187,18 @@ impl ExtensionWorker {
                     })
                     .collect(),
                 *function.returns(),
-                |state, args, _token, name| {
+                |state, args, token, name| {
                     // get a vec of the strings 1 to function.arguments().len()
                     let arg_order = (1..=args.len())
                         .map(|i| format!("{}", i))
                         .collect::<Vec<String>>();
                     ExtensionController::with(|controller| {
-                        controller.call_function(name, &flatten_arguments!(args, arg_order), state)
+                        controller.call_function(
+                            name,
+                            &flatten_arguments!(args, arg_order),
+                            state,
+                            token,
+                        )
                     })
                 },
                 function.name().to_string(),

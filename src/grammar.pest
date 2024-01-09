@@ -52,7 +52,9 @@ INDEX_ASSIGNMENT_STATEMENT = {
 // Top of expression tree
 //
 
-TOPLEVEL_EXPRESSION = _{ TERNARY_EXPRESSION }
+TOPLEVEL_EXPRESSION = _{ 
+    TERNARY_EXPRESSION
+}
 
 //
 // Flow control expressions
@@ -63,7 +65,7 @@ TERNARY_EXPRESSION = {
 }
 
 IF_EXPRESSION = {
-    ("if" ~ FOR_LOOP_EXPRESSION ~ "do" ~ FOR_LOOP_EXPRESSION ~ "else")* ~ FOR_LOOP_EXPRESSION
+    ("if" ~ FOR_LOOP_EXPRESSION ~ "then" ~ FOR_LOOP_EXPRESSION ~ "else")* ~ FOR_LOOP_EXPRESSION
 }
 
 FOR_LOOP_EXPRESSION = {
@@ -145,6 +147,7 @@ MATCHING_EXPRESSION = {
     RANGE_EXPRESSION ~ (MATCHING_OPERATOR ~ RANGE_EXPRESSION)?
 }
 
+
 RANGE_OPERATOR = {".."}
 RANGE_EXPRESSION = {
     CASTING_EXPRESSION ~ (RANGE_OPERATOR ~ CASTING_EXPRESSION)?
@@ -206,7 +209,8 @@ INDEXING_EXPRESSION = {
 
 TERM = _{
     | "(" ~ TOPLEVEL_EXPRESSION ~ ")"
-    | ATOMIC_VALUE}
+    | ATOMIC_VALUE
+}
 
 ATOMIC_VALUE = _{
     currency_literal | fixed_literal
@@ -276,9 +280,9 @@ regex_literal = @{
     "/" ~ (!"/" ~ ANY | "\\/")* ~ "/" ~ ("i" | "g" | "m" | "s" | "u" | "y")*
 }
 
-reserved_words = _{
+reserved_words = {
     "pi" | "e" | "tau" | "true" | "false" |
-    "if" | "else" | "for" | "do" | "in" | "as"
+    "if" | "then" | "else" | "for" | "do" | "in" | "as"
     | DELETE_KEYWORD
     | MATCHING_OPERATOR
 }
@@ -292,6 +296,8 @@ errors = _{
     ERROR_UNTERMINATED_LITERAL | ERROR_UNTERMINATED_LINEBREAK | ERROR_UNTERMINATED_COMMENT
     | ERROR_UNTERMINATED_ARRAY | ERROR_UNTERMINATED_OBJECT | ERROR_UNTERMINATED_PAREN
     | ERROR_UNEXPECTED_DECORATOR
+    | ERROR_INCOMPLETE_MATCHING_EXPRESSION
+    | ERROR_INCOMPLETE_RANGE_EXPRESSION
 }
 
 ERROR_UNTERMINATED_LITERAL = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))*) | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))*)}
@@ -303,3 +309,6 @@ ERROR_UNTERMINATED_OBJECT = @{"{" ~ ANY*}
 ERROR_UNTERMINATED_PAREN = @{"(" ~ ANY*}
 
 ERROR_UNEXPECTED_DECORATOR = @{"@" ~ identifier ~ WHITESPACE* ~ (!WHITESPACE ~ !EOL ~ ANY)+ | SOI ~ "@" ~ ANY*}
+
+ERROR_INCOMPLETE_MATCHING_EXPRESSION = @{ MATCHING_OPERATOR ~ ANY* }
+ERROR_INCOMPLETE_RANGE_EXPRESSION = @{ ".." ~ ANY* }

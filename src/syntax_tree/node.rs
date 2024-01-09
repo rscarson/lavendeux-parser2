@@ -21,15 +21,7 @@ macro_rules! define_node {
 
             fn get_value(&self, state: &mut crate::State) -> Result<crate::Value, crate::Error> {
                 state.check_timer()?;
-                match ($get_hnd)(self, state) {
-                    Ok(v) => Ok(v),
-                    Err(e) if matches!(e, $crate::Error::Parsing{..}) => Err(e),
-
-                    Err(e) => Err($crate::Error::Parsing {
-                        token: self.token().clone(),
-                        source: Box::new(e),
-                    })
-                }
+                ($get_hnd)(self, state)
             }
 
             fn token(&self) -> &crate::Token {
@@ -174,6 +166,8 @@ lazy_static! {
         include_node!(map, UnterminatedObject);
         include_node!(map, UnterminatedParen);
         include_node!(map, UnexpectedDecorator);
+        include_node!(map, IncompleteRangeExpression);
+        include_node!(map, IncompleteMatchingExpression);
 
         //
         // Core

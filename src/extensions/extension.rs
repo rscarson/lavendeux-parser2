@@ -3,7 +3,7 @@ use rustyscript::{ModuleHandle, Runtime};
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use crate::Error;
+use crate::{Error, Token};
 
 #[derive(Deserialize, Clone)]
 pub struct FunctionDefinition {
@@ -45,12 +45,14 @@ impl FunctionDefinition {
         handle: &ModuleHandle,
         args: &[Value],
         variables: &mut HashMap<String, Value>,
+        token: &Token,
     ) -> Result<Value, Error> {
         if args.len() < self.arguments.len() {
             return Err(Error::FunctionArguments {
                 min: self.arguments.len(),
                 max: self.arguments.len(),
                 signature: self.signature(),
+                token: token.clone(),
             });
         }
 
@@ -61,6 +63,7 @@ impl FunctionDefinition {
                     arg: i + 1,
                     expected_type: *arg,
                     signature: self.signature(),
+                    token: token.clone(),
                 });
             }
         }
@@ -142,12 +145,14 @@ impl ExtensionDetails {
         name: &str,
         args: &[Value],
         variables: &mut HashMap<String, Value>,
+        token: &Token,
     ) -> Result<Value, Error> {
         let function = self.functions.get(name).ok_or(Error::FunctionName {
             name: name.to_string(),
+            token: token.clone(),
         })?;
 
-        function.call(runtime, handle, args, variables)
+        function.call(runtime, handle, args, variables, token)
     }
 }
 
@@ -155,6 +160,14 @@ impl ExtensionDetails {
 mod test {
     use super::super::runtime::ExtensionRuntime;
     use super::*;
+
+    fn fake_token() -> Token {
+        Token {
+            rule: crate::pest::Rule::ATOMIC_VALUE,
+            input: "fake".to_string(),
+            references: None,
+        }
+    }
 
     #[test]
     fn test_load_simple() {
@@ -171,12 +184,18 @@ mod test {
                 "add",
                 &[super::Value::from(1.0), super::Value::from(2.0)],
                 &mut variables,
+                &fake_token(),
             )
             .unwrap();
         assert_eq!(result, Value::from(3));
 
         let result = runtime
-            .call_function("@colour", &[super::Value::from(0xFF)], &mut variables)
+            .call_function(
+                "@colour",
+                &[super::Value::from(0xFF)],
+                &mut variables,
+                &fake_token(),
+            )
             .unwrap();
         assert_eq!(result, Value::from("#ff0000"));
     }
@@ -197,6 +216,7 @@ mod test {
                 "put",
                 &[super::Value::from("foo"), super::Value::from(2.0)],
                 &mut variables,
+                &fake_token(),
             )
             .unwrap();
 
@@ -207,7 +227,12 @@ mod test {
         );
 
         let result = runtime
-            .call_function("get", &[super::Value::from("foo")], &mut variables)
+            .call_function(
+                "get",
+                &[super::Value::from("foo")],
+                &mut variables,
+                &fake_token(),
+            )
             .unwrap();
         assert_eq!(result, Value::from(2.0), "get should return the variable");
     }

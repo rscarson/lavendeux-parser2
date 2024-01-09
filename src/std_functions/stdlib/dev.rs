@@ -162,7 +162,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "dev",
         arguments = [optional_argument!("m", ValueType::Int), optional_argument!("n", ValueType::Int)],
         returns = ValueType::Any,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use rand::Rng;
             let m = get_optional_argument!("m", arguments).and_then(|v| Some(*v.as_a::<Int>().unwrap().inner()));
             let n = get_optional_argument!("n", arguments).and_then(|v| Some(*v.as_a::<Int>().unwrap().inner()));
@@ -171,13 +171,19 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 (None, None) => Ok(Value::from(rand::random::<f64>())),
                 (Some(m), None)|(None, Some(m)) => {
                     if m == 0 {
-                        return Err(Error::Range("0".to_string()));
+                        return Err(Error::Range {
+                            input: "0".to_string(),
+                            token: token.clone(),
+                        });
                     }
                     Ok(Value::from(rand::thread_rng().gen_range(0..(m+1))))
                 },
                 (Some(m), Some(n)) => {
                     if m >= n {
-                        return Err(Error::Range(format!("{}..{}", m, n)));
+                        return Err(Error::Range {
+                            input: format!("{}..{}", m, n),
+                            token: token.clone(),
+                        });
                     }
                     Ok(Value::from(rand::thread_rng().gen_range(m..(n+1))))
                 },

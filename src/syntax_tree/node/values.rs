@@ -134,6 +134,7 @@ define_node!(
     value = |this: &Identifier, state: &mut State| {
         let value = state.get_variable(&this.name).ok_or(Error::VariableName {
             name: this.name.clone(),
+            token: this.token.clone(),
         })?;
         Ok(value)
     }
@@ -223,6 +224,7 @@ define_node!(
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
                         end: end.to_string(),
+                        token: this.token.clone(),
                     });
                 }
 
@@ -233,6 +235,7 @@ define_node!(
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
                         end: end.to_string(),
+                        token: this.token.clone(),
                     });
                 }
 
@@ -248,13 +251,16 @@ define_node!(
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
                         end: end.to_string(),
+                        token: this.token.clone(),
                     });
                 }
 
                 Ok(Value::from(*start.inner()..=*end.inner()))
             }
 
-            _ => Err(Error::RangeTypeMismatch),
+            _ => Err(Error::RangeTypeMismatch {
+                token: this.token.clone(),
+            }),
         }
     }
 );
@@ -316,6 +322,7 @@ define_node!(
         if let Some(final_idx) = indices.pop() {
             let mut value = state.get_variable(&this.src).ok_or(Error::VariableName {
                 name: this.src.clone(),
+                token: this.token.clone(),
             })?;
 
             let mut pos = &mut value;
@@ -332,6 +339,7 @@ define_node!(
             } else {
                 state.delete_variable(&this.src).ok_or(Error::VariableName {
                     name: this.src.clone(),
+                    token: this.token.clone(),
                 })
             }
         }

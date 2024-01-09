@@ -4,6 +4,7 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 use std::{collections::HashMap, fmt::Display};
 
+use crate::Token;
 use crate::{
     flatten_arguments, pest, required_argument, state::State, std_functions::Function, Error, Node,
     Value,
@@ -73,9 +74,14 @@ impl UserFunction {
     }
 
     /// Executes this function
-    pub fn execute(&self, state: &mut State, arguments: Vec<Value>) -> Result<Value, Error> {
+    pub fn execute(
+        &self,
+        state: &mut State,
+        arguments: Vec<Value>,
+        token: &Token,
+    ) -> Result<Value, Error> {
         // Create a new scope
-        state.scope_into()?;
+        state.scope_into(token)?;
 
         // Set the arguments
         for (name, value) in self.arguments.iter().zip(arguments) {
@@ -101,11 +107,14 @@ impl UserFunction {
                 .map(|s| required_argument!(s, ValueType::Any))
                 .collect(),
             ValueType::Any,
-            |state, args, _token, func| {
+            |state, args, token, func| {
                 if let Some(function) = state.get_user_function(func) {
-                    function.execute(state, flatten_arguments!(args, function.arguments))
+                    function.execute(state, flatten_arguments!(args, function.arguments), token)
                 } else {
-                    Err(Error::FunctionName { name: func.clone() })
+                    Err(Error::FunctionName {
+                        name: func.clone(),
+                        token: token.clone(),
+                    })
                 }
             },
             self.name.clone(),

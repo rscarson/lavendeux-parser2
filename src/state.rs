@@ -87,9 +87,11 @@ impl State {
     /// Creates a new scope from this state
     /// A limit is placed on the depth of scopes that can be created
     /// This is to prevent infinite recursion
-    pub fn scope_into(&mut self) -> Result<(), Error> {
+    pub fn scope_into(&mut self, token: &Token) -> Result<(), Error> {
         if self.depth >= Self::MAX_DEPTH {
-            return Err(Error::StackOverflow);
+            return Err(Error::StackOverflow {
+                token: token.clone(),
+            });
         }
 
         self.depth += 1;
@@ -230,6 +232,7 @@ impl State {
 
             Err(Error::DecoratorName {
                 name: name.to_string(),
+                token: token.clone(),
             })
         }
     }
@@ -268,7 +271,13 @@ mod test {
     fn test_scoped_delete() {
         let mut state = State::new();
         state.set_variable("a", Value::from(2.0));
-        state.scope_into().ok();
+        state
+            .scope_into(&Token {
+                rule: crate::pest::Rule::ATOMIC_VALUE,
+                input: "".to_string(),
+                references: None,
+            })
+            .ok();
         state.delete_variable("a");
         state.scope_out();
 

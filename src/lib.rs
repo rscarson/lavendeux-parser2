@@ -20,7 +20,7 @@ use pest::{parse_input, AstNode, Rule, ToAstNode};
 use syntax_tree::Node;
 use token::ToToken;
 
-pub use error::Error;
+pub use error::{Error, ErrorWithToken};
 pub use lavendeux::Lavendeux;
 pub use polyvalue::Value;
 pub use state::State;

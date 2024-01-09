@@ -4,7 +4,7 @@ use crate::{
 };
 use polyvalue::{
     types::{Bool, Float, Int},
-    Value, ValueTrait, ValueType,
+    ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "hex",
         description = "Base 16 number formatting, such as 0xFF",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Int>()?.inner();
             Ok(format!("{:#0x}", input))
         }
@@ -30,7 +30,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "oct",
         description = "Base 8 number formatting, such as 0o77",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Int>()?.inner();
             Ok(format!("{:#0o}", input))
         }
@@ -41,7 +41,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "bin",
         description = "Base 2 number formatting, such as 0b101",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Int>()?.inner();
             Ok(format!("{:#0b}", input))
         }
@@ -52,7 +52,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "sci",
         description = "Scientific notation formatting, such as 1.2e3",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Int>()?.inner();
             Ok(format!("{:e}", input))
         }
@@ -63,7 +63,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "float",
         description = "Formats a number as a floating point number",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = input.as_a::<Float>()?;
             Ok(input.to_string())
         }
@@ -74,7 +74,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "int",
         description = "Format a number as an integer",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = input.as_a::<Int>()?;
             Ok(input.to_string())
         }
@@ -85,7 +85,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "bool",
         description = "Format a value as a boolean",
         expected_type = ValueType::Any,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = input.as_a::<Bool>()?;
             Ok(input.to_string())
         }

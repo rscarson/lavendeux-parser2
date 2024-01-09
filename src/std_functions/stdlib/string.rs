@@ -191,7 +191,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use base64::{engine::general_purpose, Engine as _};
             let input = get_argument!("input", arguments)
                 .as_a::<Str>()?
@@ -205,6 +205,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
             Err(Error::ValueFormat {
                 expected_format: "base64".to_string(),
+                token: token.clone(),
             })
         }
     );

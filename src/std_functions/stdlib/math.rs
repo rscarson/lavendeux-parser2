@@ -16,12 +16,18 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("input", ValueType::Compound)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
                 .as_a::<Array>()?
                 .inner()
                 .clone();
-            let min = input.iter().min().ok_or(Error::ArrayEmpty)?.clone();
+            let min = input
+                .iter()
+                .min()
+                .ok_or(Error::ArrayEmpty {
+                    token: token.clone(),
+                })?
+                .clone();
             Ok(min)
         }
     );
@@ -33,12 +39,18 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("input", ValueType::Compound)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
                 .as_a::<Array>()?
                 .inner()
                 .clone();
-            let max = input.iter().max().ok_or(Error::ArrayEmpty)?.clone();
+            let max = input
+                .iter()
+                .max()
+                .ok_or(Error::ArrayEmpty {
+                    token: token.clone(),
+                })?
+                .clone();
             Ok(max)
         }
     );

@@ -159,7 +159,7 @@ define_node!(
             ValueType::Range => {
                 let iterable = iterable.as_a::<Range>()?;
                 let mut result = vec![];
-                state.scope_into()?;
+                state.scope_into(for_loop.token())?;
                 for i in iterable.inner().clone() {
                     let value = Value::from(i);
                     if let Some(variable) = &for_loop.variable {
@@ -181,7 +181,7 @@ define_node!(
                 let iterable = iterable.as_a::<Array>()?;
 
                 let mut result = vec![];
-                state.scope_into()?;
+                state.scope_into(for_loop.token())?;
                 for value in iterable.inner() {
                     if let Some(variable) = &for_loop.variable {
                         state.set_variable(variable, value.clone());

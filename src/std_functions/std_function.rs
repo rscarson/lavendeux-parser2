@@ -128,6 +128,7 @@ impl Function {
     pub fn map_arguments(
         &self,
         arguments: Vec<Value>,
+        token: &Token,
     ) -> Result<HashMap<String, Vec<Value>>, Error> {
         let mut validated: HashMap<String, Vec<Value>> = HashMap::new();
 
@@ -149,6 +150,7 @@ impl Function {
                             arg: arg_index,
                             expected_type: next_expected.expects,
                             signature: self.signature(),
+                            token: token.clone(),
                         });
                     }
                 }
@@ -167,6 +169,7 @@ impl Function {
                         arg: arg_index,
                         expected_type: next_expected.expects,
                         signature: self.signature(),
+                        token: token.clone(),
                     });
                 }
             } else if next_expected.optional {
@@ -177,6 +180,7 @@ impl Function {
                     min: s.start,
                     max: s.end,
                     signature: self.signature(),
+                    token: token.clone(),
                 });
             }
         }
@@ -191,7 +195,7 @@ impl Function {
         arguments: Vec<Value>,
         token: &Token,
     ) -> Result<Value, Error> {
-        let arguments = self.map_arguments(arguments)?;
+        let arguments = self.map_arguments(arguments, token)?;
         (self.handler)(state, arguments, token, &self.data)
     }
 

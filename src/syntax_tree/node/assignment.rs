@@ -111,7 +111,10 @@ define_node!(
         let final_index = indices.pop().unwrap();
 
         // Move through the indices to get the final pointer
-        let mut dst = state.get_variable(&assignment.name).ok_or(Error::VariableName { name: assignment.name.clone() })?;
+        let mut dst = state.get_variable(&assignment.name).ok_or(Error::VariableName {
+            name: assignment.name.clone(),
+            token: assignment.token().clone(),
+        })?;
         let mut ptr = &mut dst;
         for index in &indices {
             ptr = ptr.get_index_mut(index)?;
@@ -161,6 +164,7 @@ define_node!(
             return Err(Error::DestructuringAssignment {
                 expected_length: assignment.names.len(),
                 actual_length: values.len(),
+                token: assignment.token().clone(),
             });
         }
 

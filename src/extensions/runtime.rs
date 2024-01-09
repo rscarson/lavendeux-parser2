@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use polyvalue::Value;
 use rustyscript::{deno_core::extension, Module, ModuleHandle, Runtime, RuntimeOptions};
 
-use crate::Error;
+use crate::{Error, Token};
 
 use super::extension::ExtensionDetails;
 
@@ -51,9 +51,16 @@ impl ExtensionRuntime {
         name: &str,
         args: &[Value],
         variables: &mut HashMap<String, Value>,
+        token: &Token,
     ) -> Result<Value, Error> {
-        self.extension
-            .call_function(&mut self.runtime, &self.handle, name, args, variables)
+        self.extension.call_function(
+            &mut self.runtime,
+            &self.handle,
+            name,
+            args,
+            variables,
+            token,
+        )
     }
 
     pub fn extension_details(&self) -> &ExtensionDetails {

@@ -65,67 +65,7 @@ pub struct ApiDefinition {
     pub examples: String,
     pub auth_key: Option<String>,
 }
-impl TryFrom<Value> for ApiDefinition {
-    type Error = crate::Error;
-    fn try_from(value: Value) -> Result<Self, Self::Error> {
-        match value {
-            Value::String(url) => Ok(ApiDefinition {
-                base_url: url.to_string(),
-                additional_headers: HashMap::new(),
-                description: "".to_string(),
-                examples: "".to_string(),
-                auth_key: None,
-            }),
 
-            Value::Object(mut obj) => {
-                let base_url = obj
-                    .remove(&Value::from("url"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()?
-                    .to_string();
-                let description = obj
-                    .remove(&Value::from("description"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()?
-                    .to_string();
-                let examples = obj
-                    .remove(&Value::from("examples"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()?
-                    .to_string();
-                let auth_key = obj
-                    .remove(&Value::from("auth_key"))
-                    .and_then(|v| Some(v.as_a::<Str>().unwrap().to_string()));
-
-                let additional_headers = obj
-                    .remove(&Value::from("headers"))
-                    .unwrap_or(Value::from(ObjectInner::new()))
-                    .as_a::<Object>()?
-                    .inner()
-                    .iter()
-                    .map(|(k, v)| {
-                        (
-                            k.as_a::<Str>().unwrap().to_string(),
-                            v.as_a::<Str>().unwrap().to_string(),
-                        )
-                    })
-                    .collect::<HashMap<String, String>>();
-
-                Ok(ApiDefinition {
-                    base_url,
-                    additional_headers,
-                    description,
-                    examples,
-                    auth_key,
-                })
-            }
-
-            _ => Err(crate::Error::ValueFormat {
-                expected_format: "API Definition".to_string(),
-            }),
-        }
-    }
-}
 impl ApiDefinition {
     pub fn base_url(&self) -> &str {
         &self.base_url
@@ -164,6 +104,67 @@ impl ApiDefinition {
         }
 
         Ok(value.into())
+    }
+
+    pub fn from_value(value: Value) -> Option<Self> {
+        match value {
+            Value::String(url) => Some(ApiDefinition {
+                base_url: url.to_string(),
+                additional_headers: HashMap::new(),
+                description: "".to_string(),
+                examples: "".to_string(),
+                auth_key: None,
+            }),
+
+            Value::Object(mut obj) => {
+                let base_url = obj
+                    .remove(&Value::from("url"))
+                    .unwrap_or(Value::from(""))
+                    .as_a::<Str>()
+                    .ok()?
+                    .to_string();
+                let description = obj
+                    .remove(&Value::from("description"))
+                    .unwrap_or(Value::from(""))
+                    .as_a::<Str>()
+                    .ok()?
+                    .to_string();
+                let examples = obj
+                    .remove(&Value::from("examples"))
+                    .unwrap_or(Value::from(""))
+                    .as_a::<Str>()
+                    .ok()?
+                    .to_string();
+                let auth_key = obj
+                    .remove(&Value::from("auth_key"))
+                    .and_then(|v| Some(v.as_a::<Str>().unwrap().to_string()));
+
+                let additional_headers = obj
+                    .remove(&Value::from("headers"))
+                    .unwrap_or(Value::from(ObjectInner::new()))
+                    .as_a::<Object>()
+                    .ok()?
+                    .inner()
+                    .iter()
+                    .map(|(k, v)| {
+                        (
+                            k.as_a::<Str>().unwrap().to_string(),
+                            v.as_a::<Str>().unwrap().to_string(),
+                        )
+                    })
+                    .collect::<HashMap<String, String>>();
+
+                Some(ApiDefinition {
+                    base_url,
+                    additional_headers,
+                    description,
+                    examples,
+                    auth_key,
+                })
+            }
+
+            _ => None,
+        }
     }
 
     pub fn call(
@@ -206,24 +207,25 @@ macro_rules! define_api {
 pub struct ApiManager();
 impl ApiManager {
     const STORE_NAME: &'static str = "__api_definitions";
-    pub fn retrieve_store(
-        state: &crate::State,
-    ) -> Result<HashMap<String, ApiDefinition>, crate::Error> {
+    pub fn retrieve_store(state: &crate::State) -> HashMap<String, ApiDefinition> {
         let store = state
             .get_variable(Self::STORE_NAME)
             .unwrap_or(Object::default().into())
-            .as_a::<Object>()?
+            .as_a::<Object>()
+            .unwrap()
             .inner()
             .clone();
         store
             .iter()
             .map(|(k, v)| {
-                Ok((
-                    k.as_a::<Str>()?.to_string(),
-                    ApiDefinition::try_from(v.clone())?,
-                ))
+                (
+                    k.as_a::<Str>().unwrap().to_string(),
+                    ApiDefinition::from_value(v.clone()),
+                )
             })
-            .collect::<Result<HashMap<String, ApiDefinition>, crate::Error>>()
+            .filter(|(_, v)| v.is_some())
+            .map(|(k, v)| (k, v.unwrap()))
+            .collect::<HashMap<String, ApiDefinition>>()
     }
 
     pub fn store(
@@ -238,13 +240,8 @@ impl ApiManager {
         Ok(())
     }
 
-    pub fn get(state: &crate::State, name: &str) -> Result<ApiDefinition, crate::Error> {
-        Self::retrieve_store(state)?
-            .get(name)
-            .cloned()
-            .ok_or_else(|| crate::Error::UnknownApi {
-                name: name.to_string(),
-            })
+    pub fn get(state: &crate::State, name: &str) -> Option<ApiDefinition> {
+        Self::retrieve_store(state).get(name).cloned()
     }
 
     pub fn set(
@@ -252,43 +249,29 @@ impl ApiManager {
         name: &str,
         api_definition: ApiDefinition,
     ) -> Result<(), crate::Error> {
-        let mut store = Self::retrieve_store(state)?;
+        let mut store = Self::retrieve_store(state);
         store.insert(name.to_string(), api_definition);
         Self::store(state, store)
     }
 
     pub fn delete(state: &mut crate::State, name: &str) -> Result<(), crate::Error> {
-        let mut store = Self::retrieve_store(state)?;
+        let mut store = Self::retrieve_store(state);
         store.remove(name);
         Self::store(state, store)
     }
 
     pub fn list(state: &crate::State) -> Result<Vec<String>, crate::Error> {
-        Ok(Self::retrieve_store(state)?
+        Ok(Self::retrieve_store(state)
             .keys()
             .map(|k| k.to_string())
             .collect::<Vec<String>>())
     }
 
-    pub fn call(
-        state: &crate::State,
-        name: &str,
-        endpoint: Option<&str>,
-        body: Option<String>,
-        headers: HashMap<String, String>,
-    ) -> Result<Value, crate::Error> {
-        let api_definition = Self::get(state, name)?;
-        Ok(api_definition.call(endpoint, body, headers)?)
-    }
-
-    pub fn add_key_for(
-        state: &mut crate::State,
-        name: &str,
-        key: &str,
-    ) -> Result<(), crate::Error> {
-        let mut api_definition = Self::get(state, name)?;
-        api_definition.auth_key = Some(key.to_string());
-        Self::set(state, name, api_definition)
+    pub fn add_key_for(state: &mut crate::State, name: &str, key: &str) {
+        if let Some(mut api_definition) = Self::get(state, name) {
+            api_definition.auth_key = Some(key.to_string());
+            Self::set(state, name, api_definition).ok();
+        }
     }
 
     pub fn default_apis(state: &mut crate::State) {

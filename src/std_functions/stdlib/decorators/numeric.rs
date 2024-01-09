@@ -5,7 +5,7 @@ use crate::{
 use polyvalue::{
     operations::ArithmeticOperationExt,
     types::{Float, Int},
-    Value, ValueTrait, ValueType,
+    ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -15,10 +15,12 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "roman",
         description = "Interprets an integer as a roman numeral",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, token| {
             let mut input = *input.as_a::<Int>()?.inner();
             if input > 3999 {
-                return Err(Error::Overflow);
+                return Err(Error::Overflow {
+                    token: token.clone(),
+                });
             }
 
             let roman_numerals = vec![
@@ -52,7 +54,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "ordinal",
         description = "Interprets an integer as an ordinal number",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Int>()?.inner();
             let ordinal = match input % 10 {
                 1 => format!("{}st", input),
@@ -69,7 +71,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "utc",
         description = "Interprets an integer as a timestamp, and formats it in UTC standard",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, token| {
             let input = input.as_a::<Int>()?;
             let input = Int::arithmetic_op(
                 &input,
@@ -84,7 +86,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                         chrono::DateTime::from_naive_utc_and_offset(t, chrono::Utc);
                     Ok(datetime.format("%Y-%m-%d %H:%M:%S").to_string())
                 }
-                None => Err(Error::Range(input.to_string())),
+                None => Err(Error::Range {
+                    input: input.to_string(),
+                    token: token.clone(),
+                }),
             }
         }
     );
@@ -94,7 +99,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "percent",
         description = "Interprets a number as a percentage",
         expected_type = ValueType::Numeric,
-        handler = &|input: Value| {
+        handler = &|input, _token| {
             let input = *input.as_a::<Float>()?.inner();
             Ok(format!("{}%", input * 100.0))
         }

@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Error, Token};
 use polyvalue::{
     types::{Array, Object},
     Value, ValueTrait, ValueType,
@@ -21,10 +21,11 @@ macro_rules! static_decorator {
             category = "decorators",
             arguments = [required_argument!("input", ValueType::Any)],
             returns = ValueType::String,
-            handler = |_state: &mut State, arguments, _token, _| {
+            handler = |_state: &mut State, arguments, token, _| {
                 let input = get_argument!("input", arguments);
                 $crate::std_functions::decorator_function::recursively_apply_decorator(
                     input,
+                    token,
                     $expected_type,
                     $name,
                     $handler,
@@ -36,15 +37,17 @@ macro_rules! static_decorator {
 
 pub fn recursively_apply_decorator(
     input: Value,
+    token: &Token,
     required_type: ValueType,
     name: &str,
-    handler: &dyn Fn(Value) -> Result<String, Error>,
+    handler: &dyn Fn(Value, &Token) -> Result<String, Error>,
 ) -> Result<Value, Error> {
     match input.own_type() {
         ValueType::Array => {
             let mut input = input.as_a::<Array>()?;
             for e in input.inner_mut() {
-                *e = recursively_apply_decorator(e.clone(), required_type, name, handler)?.into();
+                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
+                    .into();
             }
             Ok(Value::from(input.to_string()))
         }
@@ -52,19 +55,21 @@ pub fn recursively_apply_decorator(
         ValueType::Object => {
             let mut input = input.as_a::<Object>()?;
             for e in input.inner_mut().values_mut() {
-                *e = recursively_apply_decorator(e.clone(), required_type, name, handler)?.into();
+                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
+                    .into();
             }
             Ok(Value::from(input.to_string()))
         }
 
         _ => {
             if input.is_a(required_type) {
-                Ok(Value::from(handler(input)?))
+                Ok(Value::from(handler(input, token)?))
             } else {
                 Err(Error::FunctionArgumentType {
                     arg: 1,
                     expected_type: required_type,
                     signature: format!("<{required_type}> @{name}"),
+                    token: token.clone(),
                 })
             }
         }

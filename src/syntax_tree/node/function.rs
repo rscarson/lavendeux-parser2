@@ -62,8 +62,9 @@ define_node!(
             return Ok(Value::from(state.help(filter)));
         }
 
-        let function = state.get_function(&call.name).ok_or(Error::FunctionName { name:
-            call.name.clone()
+        let function = state.get_function(&call.name).ok_or(Error::FunctionName {
+            name: call.name.clone(),
+            token: call.token().clone()
         })?;
 
         // Collect arguments

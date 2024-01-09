@@ -114,7 +114,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("endpoint", ValueType::Any)
         ],
         returns = ValueType::String,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let name = get_argument!("name", arguments)
                 .as_a::<Str>()?
                 .inner()
@@ -124,7 +124,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             crate::network_utils::ApiManager::set(
                 state,
                 &name,
-                crate::network_utils::ApiDefinition::try_from(endpoint)?,
+                crate::network_utils::ApiDefinition::from_value(endpoint).ok_or(Error::ValueFormat {
+                    expected_format: format!("<url: string> | {{<url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}}"),
+                    token: token.clone()
+                })?,
             )?;
             Ok(Value::from(name))
         }
@@ -177,7 +180,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             optional_argument!("endpoint", ValueType::String)
         ],
         returns = ValueType::String,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let name = get_argument!("name", arguments)
                 .as_a::<Str>()?
                 .inner()
@@ -185,14 +188,17 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let endpoint = get_optional_argument!("endpoint", arguments)
                 .and_then(|v| v.as_a::<Str>().ok())
                 .and_then(|s| Some(s.inner().clone()));
-            let api = crate::network_utils::ApiManager::call(
-                state,
-                &name,
-                endpoint.as_deref(),
-                None,
-                Default::default(),
-            )?;
-            Ok(api)
+
+            let api = crate::network_utils::ApiManager::get(state, &name)
+                .ok_or(Error::ValueFormat {
+                expected_format: format!(
+                    "requested API is not defined. You can set it with add_api('{name}', 'endpoint')"
+                ),
+                token: token.clone(),
+            })?;
+
+            let result = api.call(endpoint.as_deref(), None, Default::default())?;
+            Ok(result)
         }
     );
 
@@ -208,7 +214,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             optional_argument!("body", ValueType::String)
         ],
         returns = ValueType::String,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let name = get_argument!("name", arguments)
                 .as_a::<Str>()?
                 .inner()
@@ -221,14 +227,16 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<Str>()?
                 .inner()
                 .clone();
-            let api = crate::network_utils::ApiManager::call(
-                state,
-                &name,
-                endpoint.as_deref(),
-                Some(body),
-                Default::default(),
-            )?;
-            Ok(api)
+            let api = crate::network_utils::ApiManager::get(state, &name)
+                .ok_or(Error::ValueFormat {
+                expected_format: format!(
+                    "requested API is not defined. You can set it with add_api('{name}', 'endpoint')"
+                ),
+                token: token.clone(),
+            })?;
+
+            let result = api.call(endpoint.as_deref(), Some(body), Default::default())?;
+            Ok(result)
         }
     );
 
@@ -253,7 +261,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<Str>()?
                 .inner()
                 .clone();
-            crate::network_utils::ApiManager::add_key_for(state, &name, &key)?;
+            crate::network_utils::ApiManager::add_key_for(state, &name, &key);
             Ok(Value::from(name))
         }
     );
@@ -266,12 +274,23 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "network",
         arguments = [required_argument!("query", ValueType::String)],
         returns = ValueType::String,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let query = get_argument!("query", arguments)
                 .as_a::<Str>()?
                 .inner()
                 .clone();
-            let api = crate::network_utils::ApiManager::get(state, "chatgpt")?;
+            let api = crate::network_utils::ApiManager::get(state, "chatgpt").ok_or(
+                Error::ValueFormat {
+                    expected_format: format!("API chatgpt is not defined. You can set it with add_api('chatgpt', 'endpoint')"),
+                    token: token.clone(),
+                }
+            )?;
+            if api.auth_key.is_none() {
+                return Err(Error::ValueFormat {
+                    expected_format: format!("API key for chatgpt is not set. You can set one with api_key('chatgpt', '<key>')"),
+                    token: token.clone(),
+                });
+            }
 
             use serde::{Deserialize, Serialize};
             #[derive(Serialize, Deserialize)]

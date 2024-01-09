@@ -1,5 +1,5 @@
 use super::{extension::ExtensionDetails, worker::ExtensionWorker};
-use crate::{state::State, std_functions::Function, Error, Value};
+use crate::{state::State, std_functions::Function, token, Error, Value};
 use std::{
     collections::HashMap,
     sync::{Mutex, OnceLock},
@@ -74,11 +74,12 @@ impl ExtensionController {
         name: &str,
         args: &[Value],
         state: &mut State,
+        token: &token::Token,
     ) -> Result<Value, Error> {
         self.extensions
             .get(self.function_map.get(name).unwrap())
             .unwrap()
-            .call_function(name, args, state)
+            .call_function(name, args, state, token)
     }
 
     /// Return the function with the given name

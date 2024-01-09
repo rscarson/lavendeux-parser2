@@ -19,6 +19,22 @@ pub mod rustyscript {
     impl std::error::Error for Error {}
 }
 
+/// A wrapper for an error that also contains the token that caused it
+#[derive(Debug)]
+pub struct ErrorWithToken {
+    /// Token that caused the error
+    pub token: Token,
+
+    /// Error that occurred
+    pub source: Error,
+}
+impl std::error::Error for ErrorWithToken {}
+impl std::fmt::Display for ErrorWithToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\n| {}\n= {}", self.token, self.source)
+    }
+}
+
 const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issues/new?assignees=&labels=&template=bug_report.md&title=";
 
 /// Represents the errors that can occur during parsing
@@ -40,98 +56,126 @@ pub enum Error {
     #[error("Script execution timed out")]
     Timeout,
 
-    /// An error from this list, but tagged with a token
-    #[error("\n| {token}\n= {source}")]
-    Parsing {
-        /// Token that caused the error
-        token: Token,
-
-        /// Error that occurred
-        #[source]
-        source: Box<Error>,
-    },
-
     ///////////////////////////////////////////////////////////////////////////
     // Syntax Errors
     // Deals with issues during Pest tree parsing
     ///////////////////////////////////////////////////////////////////////////
 
     /// An error caused by using a decorator in the wrong place
-    #[error("@decorators must be at the end of a statement")]
-    UnexpectedDecorator,
+    #[error("\n| {token}\n= @decorators must be at the end of a statement")]
+    UnexpectedDecorator {
+        token: Token,
+    },
 
     /// An error caused by using a postfix operator without an operand
-    #[error("Expected '*/'")]
-    UnterminatedComment,
+    #[error("\n| {token}\n= Expected '*/'")]
+    UnterminatedComment{
+        token: Token,
+    },
 
     /// An error caused by a missing bracket
-    #[error("Expected ']'")]
-    UnterminatedArray,
+    #[error("\n| {token}\n= Expected ']'")]
+    UnterminatedArray{
+        token: Token,
+    },
 
     /// An error caused by a missing brace
-    #[error("Expected '}}'")]
-    UnterminatedObject,
+    #[error("\n| {token}\n= Expected '}}'")]
+    UnterminatedObject{
+        token: Token,
+    },
 
     /// An error caused by ending a script on a backslash
-    #[error("Missing linebreak after '\\'")]
-    UnterminatedLinebreak,
+    #[error("\n| {token}\n= Missing linebreak after '\\'")]
+    UnterminatedLinebreak{
+        token: Token,
+    },
 
     /// An error caused by a missing quote
-    #[error("Expected ' or \"")]
-    UnterminatedLiteral,
+    #[error("\n| {token}\n= Expected ' or \"")]
+    UnterminatedLiteral{
+        token: Token,
+    },
 
     /// An error caused by a missing parentheses
-    #[error("Expected ')'")]
-    UnterminatedParen,
+    #[error("\n| {token}\n= Expected ')'")]
+    UnterminatedParen{
+        token: Token,
+    },
+
+    #[error("\n| {token}\n= Expected a pattern to match against (an array, value, or regex literal)")]
+    IncompleteMatchingExpression{
+        token: Token,
+    },
+
+    #[error("\n| {token}\n= Expected 2 bounds for range expression, for example: 1..2 or 'a'..'z'")]
+    IncompleteRangeExpression{
+        token: Token,
+    },
 
     ///////////////////////////////////////////////////////////////////////////
     // Value Errors
     // Mostly deals with variables, and value objects
     ///////////////////////////////////////////////////////////////////////////
 
-    #[error("Invalid combination of types for range. Use a pair of either integers, or characters")]
-    RangeTypeMismatch,
+    #[error("\n| {token}\n= Invalid combination of types for range. Use a pair of either integers, or characters")]
+    RangeTypeMismatch {
+        token: Token,
+    },
 
-    #[error("Invalid values for range: {start} > {end}")]
+    #[error("\n| {token}\n= Invalid values for range: {start} > {end}")]
     InvalidRange {
         start: String,
         end: String,
+        token: Token,
     },
 
-    #[error("Arithmetic overflow")]
-    Overflow,
+    #[error("\n| {token}\n= Arithmetic overflow")]
+    Overflow {
+        token: Token,
+    },
 
-    #[error("Expected {expected_length} values, found {actual_length}")]
+    #[error("\n| {token}\n= Expected {expected_length} values, found {actual_length}")]
     DestructuringAssignment {
         expected_length: usize,
         actual_length: usize,
+        token: Token,
     },
 
-    #[error("Input could not be parsed as {expected_format}")]
+    #[error("\n| {token}\n= Input could not be parsed as {expected_format}")]
     ValueFormat {
         expected_format: String,
+        token: Token,
     },
 
-    #[error("{0} was out of range")]
-    Range(String),
+    #[error("\n| {token}\n= {input} was out of range")]
+    Range {
+        input: String,
+        token: Token,
+    },
 
-    #[error("Undefined variable {name}. You can assign a value with {name} = ...")]
+    #[error("\n| {token}\n= Undefined variable {name}. You can assign a value with {name} = ...")]
     VariableName {
         name: String,
+        token: Token,
     },
 
-    #[error("Array empty")]
-    ArrayEmpty,
+    #[error("\n| {token}\n= Array empty")]
+    ArrayEmpty {
+        token: Token,
+    },
 
     ///////////////////////////////////////////////////////////////////////////
     // Function Errors
     // Deals with issues during builtin, user, or extension function calls
     ///////////////////////////////////////////////////////////////////////////
 
-    #[error("Recursive function went too deep")]
-    StackOverflow,
+    #[error("\n| {token}\n= Recursive function went too deep")]
+    StackOverflow {
+        token: Token,
+    },
     
-    #[error("Expected {expected_type} value for argument {arg} of `{signature}`")]
+    #[error("\n| {token}\n= Expected {expected_type} value for argument {arg} of `{signature}`")]
     FunctionArgumentType {
         /// Argument number causing the issue (1-based)
         arg: usize,
@@ -141,11 +185,14 @@ pub enum Error {
         
         /// Signature of the function called
         signature: String,
+
+        token: Token,
     },
 
-    #[error("Undefined function {name}. You can define a function with {name}(a, b, c) = ...")]
+    #[error("\n| {token}\n= Undefined function {name}. You can define a function with {name}(a, b, c) = ...")]
     FunctionName {
         name: String,
+        token: Token,
     },
 
     /// An error caused by calling a function using the wrong number of arguments
@@ -163,19 +210,22 @@ pub enum Error {
         
         /// Signature of the function called
         signature: String,
+        
+        token: Token,
     },
 
     /// An error caused by calling a decorator that does not exist
-    #[error("No decorator named @{name}")]
+    #[error("\n| {token}\n= No decorator named @{name}")]
     DecoratorName {
-        /// Name of the decorator
         name: String,
+        token: Token,
     },
     
     /// An error caused by attempting to use an API without registering it
-    #[error("API {name} was not found. Add it with api_register(\"{name}\", base_url, [optional api key])")]
+    #[error("\n| {token}\n= API {name} was not found. Add it with api_register(\"{name}\", base_url, [optional api key])")]
     UnknownApi {
         name: String,
+        token: Token,
     },
 
     ///////////////////////////////////////////////////////////////////////////
