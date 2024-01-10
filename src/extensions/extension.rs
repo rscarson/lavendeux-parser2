@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use crate::{Error, Token};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FunctionDefinition {
     name: String,
     description: String,
@@ -110,7 +110,7 @@ impl FunctionDefinition {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ExtensionDetails {
     name: String,
     author: String,
