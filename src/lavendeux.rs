@@ -21,6 +21,7 @@ impl Default for ParserOptions {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Lavendeux {
     state: State,
     options: ParserOptions,
