@@ -1,11 +1,11 @@
 use polyvalue::{Value, ValueType};
 use rustyscript::{ModuleHandle, Runtime};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{Error, Token};
 
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FunctionDefinition {
     name: String,
     description: String,
@@ -110,7 +110,7 @@ impl FunctionDefinition {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ExtensionDetails {
     name: String,
     author: String,
