@@ -47,17 +47,16 @@ impl ExtensionController {
     }
 
     pub fn add_extension(&mut self, module: Module) -> Result<ExtensionDetails, Error> {
+        let filename = module.filename().to_string();
         let worker = ExtensionWorker::new(module)?;
 
         // Update the function map
         for name in &worker.extension().function_names() {
-            self.function_map
-                .insert(name.clone(), module.filename().to_string());
+            self.function_map.insert(name.clone(), filename.clone());
         }
 
         let extension = worker.extension().clone();
-        self.extensions
-            .insert(module.filename().to_string(), worker);
+        self.extensions.insert(filename, worker);
         Ok(extension)
     }
 
