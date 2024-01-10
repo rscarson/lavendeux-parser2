@@ -105,4 +105,10 @@ impl Lavendeux {
     pub fn unload_extension(&mut self, filename: &str) {
         crate::extensions::ExtensionController::with(|controller| controller.unregister(filename));
     }
+
+    /// Unload all extensions, stopping all threads and unregistering all functions
+    #[cfg(feature = "extensions")]
+    pub fn unload_all_extensions(&mut self) {
+        crate::extensions::ExtensionController::with(|controller| controller.unregister_all());
+    }
 }

@@ -77,6 +77,14 @@ impl ExtensionController {
         }
     }
 
+    /// Unregister all extensions
+    pub fn unregister_all(&mut self) {
+        let keys = self.extensions.keys().cloned().collect::<Vec<String>>();
+        for filename in keys {
+            self.unregister(&filename);
+        }
+    }
+
     pub fn call_function(
         &self,
         name: &str,
