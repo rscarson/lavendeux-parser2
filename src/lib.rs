@@ -21,7 +21,7 @@ use syntax_tree::Node;
 use token::ToToken;
 
 pub use error::{Error, ErrorWithToken};
-pub use lavendeux::Lavendeux;
+pub use lavendeux::{Lavendeux, ParserOptions};
 pub use polyvalue::Value;
 pub use state::State;
 pub use token::Token;
