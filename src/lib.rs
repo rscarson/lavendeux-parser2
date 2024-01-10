@@ -10,8 +10,8 @@ mod user_function;
 #[cfg(feature = "network-functions")]
 mod network_utils;
 
-//#[cfg(feature = "extensions")]
-//mod extensions;
+#[cfg(feature = "extensions")]
+pub use rustyscript;
 
 #[cfg(feature = "extensions")]
 mod extensions;
