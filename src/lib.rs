@@ -20,6 +20,9 @@ use pest::{parse_input, AstNode, Rule, ToAstNode};
 use syntax_tree::Node;
 use token::ToToken;
 
+#[cfg(feature = "extensions")]
+pub use extensions::ExtensionDetails;
+
 pub use error::{Error, ErrorWithToken};
 pub use lavendeux::{Lavendeux, ParserOptions};
 pub use polyvalue::Value;
