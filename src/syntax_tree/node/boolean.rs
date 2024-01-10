@@ -5,7 +5,8 @@
 use super::*;
 use crate::{Rule, State, ToToken, Value};
 use pest::iterators::Pair;
-use polyvalue::operations::*;
+use polyvalue::types::Bool;
+use polyvalue::{operations::*, ValueTrait};
 
 define_node!(
     BooleanExpression {
@@ -57,8 +58,17 @@ define_node!(
 
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
-            let right = operands.next().unwrap().get_value(state)?;
-            left = Value::boolean_op(&left, &right, *op)?;
+            let ss_eval_op = *left.as_a::<Bool>()?.inner();
+            if *op == BooleanOperation::And && !ss_eval_op {
+                // Short circuit
+                left = Value::from(false);
+            } else if *op == BooleanOperation::Or && ss_eval_op {
+                // Short circuit
+                left = Value::from(true);
+            } else {
+                let right = operands.next().unwrap().get_value(state)?;
+                left = Value::boolean_op(&left, &right, *op)?;
+            }
         }
 
         Ok(left)

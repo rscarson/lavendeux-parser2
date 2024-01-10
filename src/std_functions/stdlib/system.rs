@@ -138,5 +138,18 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             )?
             .into())
         }
-    )
+    );
+
+    static_function!(
+        registry = map,
+        name = "typeof",
+        description = "Returns the type of its input",
+        category = "system",
+        arguments = [required_argument!("input", ValueType::Any)],
+        returns = ValueType::String,
+        handler = |_state: &mut State, arguments, _token, _| {
+            let input = get_argument!("input", arguments);
+            Ok(Value::from(input.own_type().to_string()))
+        }
+    );
 }
