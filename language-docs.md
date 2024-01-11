@@ -172,18 +172,23 @@ The resulting type of an expression will be determined using the system describe
 Lavendish also supports implicit muliplication; so the expressions `2 * x` and `2x` are equivalent to each other.
 
 You can also use addition for string, array, or object concatenation:
-`"hello" + " " + "world"`
-`[1,2] + [3]`
+```lavendeux
+"hello" + " " + "world"
+[1,2] + [3]
+```
 
 Subtraction for search and deletion:
-`"hello world" - "world"`
-`[0, 1, 2] - [1,2]`
-`{'a': 1, 'b': 1, 'c': 2} - 1`
+```lavendeux
+"hello world" - "world"
+[0, 1, 2] - [1,2]
+{'a': 1, 'b': 1, 'c': 2} - 1
+```
 
 Negation for string, or array inversion:
-`-"hi" == "ih"`
-`-[1,2] == [2,1]`
-
+```lavendeux
+-"hi" == "ih"
+-[1,2] == [2,1]
+```
 
 ### 2.2 Bitwise operations
 
@@ -197,6 +202,16 @@ Available operators:
 - `>>` right-shift
 - `<<` left-shift
 
+Here is an example that uses these concepts for bit-level flags:
+```lavendeux    
+FLAG_FEATURE1 = 0b10000000
+FLAG_FEATURE2 = 0b01000000
+FLAG_FEATURE3 = 0b00100000
+bits = FLAG_FEATURE1 | FLAG_FEATURE2
+```
+
+`bits` will now contain the value 192 (0xC0)
+
 ### 2.3 Boolean operations
 
 All boolean operations are performed on, and result in booleans. All other types will be downgraded to boolean (by casting)
@@ -206,6 +221,23 @@ Available operators:
 - `||` OR
 - `==, !=, >= >, <=, <` Comparison
 
+Examples - all of these evaluate to true
+```lavendeux
+[] == false
+[0] as bool == true
+65 > 6.5
+```
+
+Short-circuit evaluation is used by these operators, to prevent side-effects:
+```lavendeux
+x = 3
+true || assign('x', 5)
+x == 3
+
+false && assign('x', 5)
+x == 3
+```
+
 ### 2.4 Indexing
 
 You can index into array, objects, or strings:
@@ -213,7 +245,10 @@ You can index into array, objects, or strings:
 arr = [1, 2, 3]
 obj = {'a': 1, 'b': 2, 'c': 3}
 str = "hello world"
+```
 
+You can also set indices, or get ranges or arrays of indices
+```lavendeux
 arr[1] = 4; // Setting an index
 obj['a'..'b'] // Grabbing a set of indices
 str[ arr ] // Does not need to be a range!
@@ -226,6 +261,7 @@ del arr[0] // The delete keyword also works on indices for array and object
 Matching expressions of the form `value <match operator> pattern` can also be used to search for a subvalue inside of an array, object or string.
 
 **contains**
+-----
 True if the pattern can be found anywhere in the value
 ```lavendeux
 'test' contains /st/
@@ -234,6 +270,7 @@ True if the pattern can be found anywhere in the value
 ```
 
 **starts_with**
+-----
 True if the pattern can be found at the beginning of the value
 ```lavendeux
 'test' starts_with 't'
@@ -241,6 +278,7 @@ True if the pattern can be found at the beginning of the value
 ```
 
 **ends_with**
+-----
 True if the pattern can be found at the beginning of the value
 ```lavendeux
 'test' ends_with 't'
@@ -248,6 +286,7 @@ True if the pattern can be found at the beginning of the value
 ```
 
 **matches**
+-----
 True if the pattern matches the whole value
 ```lavendeux
 'test' matches /T../i
@@ -268,9 +307,16 @@ In addition to the normal `variable = value` syntax, you can store variables in 
 
 Variables can also be removed using the keyword `del` or `unset`
 
+Examples:
+```lavendeux
+array_value = [1, 2, 3]
+array_value[3] = 4
+(a, b, c, d) = array_value
+```
+
 ### 3.2 Decorators
 
-Decorators will format a line's output as a string. They are provided by the standard library, or by extensions.
+Decorators are placed at the end of a line, and will format that line's output as a string. They are provided by the standard library, or by extensions.
 Here are some examples:
 
 ```lavendeux
@@ -287,9 +333,9 @@ Functions in lavendeux come in 3 flavours: stdlib, extension, and user-defined
 They can be called with `function_name(arg1, arg2)`  
 A few examples:
 ```
-atob('test')
-time()
-choose(1..10000)
+atob('test')        // Encode a string as base64 
+time()              // Get the current unix timestamp
+choose(1..10000)    // Select an item as random from the input
 ```
 
 User-defined functions can be created with `name(a, b, c) = a + b + c`
@@ -312,7 +358,14 @@ A full list of available stdlib functions can be found in `section 5.2`
 
 ### 3.4 Loops and Conditionals
 
-Conditionals are available as ternary expressions: `condition ? if_true : if_false`. Short-circuit evaluation is used in evaluation of these expressions.
+Conditionals are available as ternary expressions: `condition ? if_true : if_false`. Short-circuit evaluation is used in evaluation of these expressions:
+```lavendeux
+a = [1, 2, 3]
+is_empty(a) ? [1] : a
+
+is_empty(a) ? (del a) : a
+len(a) == 3
+```
 
 Loops are available as mapping expressions over compound values, for example:
 ```lavendeux
