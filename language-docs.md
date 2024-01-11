@@ -142,8 +142,8 @@ Pair of integers or characters split by `..`
 ### 1.3 Converting between types
 
 You can manually convert between types using `<value> as <type>`, so long as that conversion is allowed:
-- Numeric values can always convert to other numeric values
-- Non-compound non-numeric values cannot convert into numeric values
+- Numeric values can always convert to other numeric values [`1 as float`, `true as fixed` or `$1.00 as int` are all valid]
+- Non-compound non-numeric values cannot convert into numeric values [`'test' as int` would be an error]
 - Any type `T` can be converted to an array as `[T]`, or an object as `{0: T}`
 - Conversely, single-element compound values such as `[T]` or `{0: T}` can be freely converted to any type valid for `T`
 - All types can be converted to string or bool
