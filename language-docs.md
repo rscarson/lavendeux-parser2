@@ -3,7 +3,7 @@
 This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
 It was created for use in [Lavendeux](https://rscarson.github.io/lavendeux/).
 
-Inputs are a series of statements separated by a newline, or a `;`.
+Inputs are a series of expressions separated by a newline, or a `;`.
 Lines can optionally end with an @decorator to format the output as a string (see `section 3.2`)
 
 Comments are either `//`, which turns the rest of the line into a comment
@@ -11,48 +11,92 @@ Or a block comment bounded by /* and */
 
 ## Chapter 1 - Values
 
-All expressions in Lavendeux will return a value, in one of the following types, which include a few categories:
+### 1.1 Data Types
 
-The first group of types are classified as numeric; they can all freely be converted between one another,
-but expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
-- Bool: a single-bit truth value
-- Int: A 64bit integer (1, 2, 3, ...)
-- Float: A 64bit floating-point number (1.0, .2, 3e+7, ...)
-- Fixed: A fixed-point decimal value (1.22D, 4D, ...)
-- Currency: A fixed-point decimal value with a currency symbol ($1, $2.00, 3￥, ...)
+All expressions in Lavendeux will return a value of a specific type. These types can be broadly categorized as `numeric`, `compound`, or `string`.
 
-Bool is an outlier here, since any type can be cast to bool - truth is determined by equivalence to 0, or by emptiness, depending on the type.
+#### Numeric Types
 
-The second group are compound types.
+The first group of types are classified as numeric; they can all freely be cast to each other.  
+If a type is downcast to a smaller numeric type, it will be truncated to fit (1.6 becomes 1 for example)
+
+But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
+- Bool: a single-bit truth value [`true`, `false`]
+- Int: A 64bit integer [`1`, `2,000`, `-78`]
+- Float: A 64bit floating-point number [`1.0`, `.2`, `3e+7`]
+- Fixed: A fixed-point decimal value [`1.22D`, `4D`]
+- Currency: A fixed-point decimal value with a currency symbol [`$1`, `$2.00`, `3￥`]
+
+**Bool is an outlier here, since any type can be cast to bool**: Truth is determined by equivalence to 0, or by emptiness, depending on the type.
+
+Examples:
+```lavendeux
+    $1,000 + ¥1,000.00 == 2,000     // Currencies
+    5.6e+7 - .6E7 + .2e-3           // Sci notation
+    1 + 1.2 + .3 == 2.5             // Floats and integers
+    5 > 3 == true                   // Boolean
+    'foo' + 'bar'                   // String
+    [1, 2, 'test']                  // Arrays
+    {'key': 1, 2: 'value'}          // Objects
+```
+
+#### Compound Types
+
+The second group are compound types, which encapsulate a set of values
 
 Compound types include:
 - Array: An ordered set of values
-- Object: A set of values indexed by a non-compound value - it is a syntax error to use a compound type as an object key
+- Object: A set of values indexed by a non-compound value - **it is an error to use a compound type as an object key**
 - Range: A special value which cannot be indexed into directly, and will always evaluate as an array in comparisions and operations. All ranges are inclusive;
 
 Attempting to convert non-compound types into one of these will result in a single-value array or object.
-For example, `1 as array` would result in `[1]`, and `1 as object` would be the equivalent to `[1] as object`, which is `{0: 1}` - non-compound types are first cast to array before being transformed into objects.
 
-Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1
+For example, `1 as array` would result in `[1]`,  
+and `1 as object` would be the equivalent to `[1] as object`, which is `{0: 1}`  
+**Note**: Non-compound types are first cast to array before being transformed into objects.
+
+Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1, and will simply extract that value:
+```lavendeux
+1 as array == [1]
+[1] as int == 1
+
+1 as object == {0: 1}
+{0: 1} as int == 1
+```
+
+#### String Values
 
 The last value is string, which any value can be cast to in order to get a string representation.
 
 You can use the `is` keyword to check the type of a value:
 `1 is int`, for example, or `'test' is string`
 
-### 1.1 Formats and Examples
+Examples:
+```lavendeux
+2,000 as string == '2000'
+$1.00 as string == '$1.00'
+2.0 as string == '2.0'
+[1, 2, 3] as string == '[1, 2, 3]'
+{'test': 2} as string == '{test: 2}'
+(0..10) as string == '0..10'
+```
 
-Here are the formats supported when using the above types:
+### 1.2 Formats and Examples
+
+Here are the input formats supported when using the above types:
 
 **Integers**
+-------
 - Base-10, such a `10`, with optional commas for thousands-seperators: `10,000`  
 - Other bases, such as binary (`0b101010101`), hex (`0xFFA`), or octal (`0777` or `0o6`)  
 
 **Floats**
+-------
 - Regular notation, leading number is optional: `5.22` or `.3`  
 - Sci notation: `5e+1`, `5E-2`, `6.2e3`  
 
 **Decimal**
+-------
 - Fixed-point literal: `1D`, `2.3323d`  
 - Currency value: `$1.00`, `3￥`  
 
@@ -65,9 +109,11 @@ $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | 
 ```
 
 **Bool**
+-----
 `true` or `false`, case-insensitive
 
 **String**
+-----
 Single or double quote enclosed; `'test'` or `"test"`  
 With the following supported escape sequences:
 - `\'` Single-quote
@@ -78,19 +124,22 @@ With the following supported escape sequences:
 - `\\` Literal backslash
 
 **Array**
+-----
 Square bracket enclosed, comma separated; `[2, 3]`
 
 **Object**
+-----
 Curly-brace enclosed comma separated pairs of `k:v`  
 Where key can be any type except array, object or range  
 `{0: 1, true: 'test', 1.2: 'no'}`  
 
 **Range**
+-----
 Pair of integers or characters split by `..`  
 `0..10`; 0 to 10 inclusive  
 `'a'..'c'`; The array `['a', 'b', 'c']`  
 
-### 1.2 Converting between types
+### 1.3 Converting between types
 
 You can manually convert between types using `<value> as <type>`, so long as that conversion is allowed:
 - Numeric values can always convert to other numeric values
