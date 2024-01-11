@@ -3,7 +3,7 @@
 This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
 It was created for use in [Lavendeux](https://rscarson.github.io/lavendeux/).
 
-Inputs are a series of statements seperated by a newline, or a ';'.
+Inputs are a series of statements separated by a newline, or a `;`.
 Lines can optionally end with an @decorator to format the output as a string (see `section 3.2`)
 
 Comments are either `//`, which turns the rest of the line into a comment
@@ -13,25 +13,29 @@ Or a block comment bounded by /* and */
 
 All expressions in Lavendeux will return a value, in one of the following types, which include a few categories:
 
-The first group of types are classified as numeric; they can all freely be converted between one another
-But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
+The first group of types are classified as numeric; they can all freely be converted between one another,
+but expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
 - Bool: a single-bit truth value
 - Int: A 64bit integer (1, 2, 3, ...)
 - Float: A 64bit floating-point number (1.0, .2, 3e+7, ...)
 - Fixed: A fixed-point decimal value (1.22D, 4D, ...)
 - Currency: A fixed-point decimal value with a currency symbol ($1, $2.00, 3￥, ...)
 
-The 2nd group are compound types; attempting to convert non-compound types into one of these will result in a single-value array or object.
-For example, `1 as array` would result in `[1]`, and `1 as object` would be the equivalent to `[1] as object`, which is `{0: 1}`.
+Bool is an outlier here, since any type can be cast to bool - truth is determined by equivalence to 0, or by emptiness, depending on the type.
 
-Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1
+The second group are compound types.
 
 Compound types include:
 - Array: An ordered set of values
 - Object: A set of values indexed by a non-compound value - it is a syntax error to use a compound type as an object key
-- Range: A special value which cannot be indexed into directly, and will always evaluate as an array in comparisions and operations. All ranges are inclusive
+- Range: A special value which cannot be indexed into directly, and will always evaluate as an array in comparisions and operations. All ranges are inclusive;
 
-The last value is string, which can be freely created from any other type
+Attempting to convert non-compound types into one of these will result in a single-value array or object.
+For example, `1 as array` would result in `[1]`, and `1 as object` would be the equivalent to `[1] as object`, which is `{0: 1}` - non-compound types are first cast to array before being transformed into objects.
+
+Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1
+
+The last value is string, which any value can be cast to in order to get a string representation.
 
 You can use the `is` keyword to check the type of a value:
 `1 is int`, for example, or `'test' is string`
@@ -41,16 +45,16 @@ You can use the `is` keyword to check the type of a value:
 Here are the formats supported when using the above types:
 
 **Integers**
-- Base-10, such a `10`, with optional commas for thousands-seperators: `10,000`
-- Other bases, such as binary (`0b101010101`), hex (`0xFFA`), or octal (`0777` or `0o6`)
+- Base-10, such a `10`, with optional commas for thousands-seperators: `10,000`  
+- Other bases, such as binary (`0b101010101`), hex (`0xFFA`), or octal (`0777` or `0o6`)  
 
 **Floats**
-- Regular notation, leading number is optional: `5.22` or `.3`
-- Sci notation: `5e+1`, `5E-2`, `6.2e3`
+- Regular notation, leading number is optional: `5.22` or `.3`  
+- Sci notation: `5e+1`, `5E-2`, `6.2e3`  
 
 **Decimal**
-- Fixed-point literal: `1D`, `2.3323d`
-- Currency value: `$1.00`, `3￥`
+- Fixed-point literal: `1D`, `2.3323d`  
+- Currency value: `$1.00`, `3￥`  
 
 Supported Currency symbols:
 ```
@@ -64,10 +68,10 @@ $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | 
 `true` or `false`, case-insensitive
 
 **String**
-Single or double quote enclosed; `'test'` or `"test"`
+Single or double quote enclosed; `'test'` or `"test"`  
 With the following supported escape sequences:
 - `\'` Single-quote
-- `\"` Dboule-quote
+- `\"` Double-quote
 - `\n` Newline
 - `\r` Carriage-return
 - `\t` Tab
@@ -77,14 +81,14 @@ With the following supported escape sequences:
 Square bracket enclosed, comma separated; `[2, 3]`
 
 **Object**
-Curly-brace enclosed comma seperated pairs of `k:v`
-Where key can be any type except array, object or range
-`{0: 1, true: 'test', 1.2: 'no'}`
+Curly-brace enclosed comma separated pairs of `k:v`  
+Where key can be any type except array, object or range  
+`{0: 1, true: 'test', 1.2: 'no'}`  
 
 **Range**
-Pair of integers or characters split by `..`
-`0..10`; 0 to 10 inclusive
-`'a'..'c'`; The array `['a', 'b', 'c']`
+Pair of integers or characters split by `..`  
+`0..10`; 0 to 10 inclusive  
+`'a'..'c'`; The array `['a', 'b', 'c']`  
 
 ### 1.2 Converting between types
 
@@ -134,7 +138,8 @@ Negation for string, or array inversion:
 
 ### 2.2 Bitwise operations
 
-All bitwise operations are performed on, and result in integers. Booleans will be upgraded to int, and all other types will be downgraded to int
+All bitwise operations are performed on, and result in integers. If an operand cannot be cast to integer it will result in an error.
+Booleans will be upgraded to int, and all other types will be truncated to int
 Available operators:
 - `~` bitwise not
 - `^` bitwise xor
@@ -145,7 +150,7 @@ Available operators:
 
 ### 2.3 Boolean operations
 
-All boolean operations are performed on, and result in booleans. All other types will be downgraded to boolean
+All boolean operations are performed on, and result in booleans. All other types will be downgraded to boolean (by casting)
 Available operators:
 - `!` NOT
 - `&&` AND
@@ -220,17 +225,17 @@ Decorators will format a line's output as a string. They are provided by the sta
 Here are some examples:
 
 ```lavendeux
-2 @usd
-56 @ordinal
-0.432 @percent
-12 @roman
-time() @utc
+2 @usd          // $2.00
+56 @ordinal     // 56th
+0.432 @percent  // 43.2%
+12 @roman       // XII
+time() @utc     // 2024-01-11 14:07:08 
 ```
 
 ### 3.3 Functions
 
-Functions in lavendeux come in 3 flavours; stdlib, extension, and user-defined
-They can be called with `function_name(arg1, arg2)`
+Functions in lavendeux come in 3 flavours: stdlib, extension, and user-defined  
+They can be called with `function_name(arg1, arg2)`  
 A few examples:
 ```
 atob('test')
@@ -263,9 +268,15 @@ Conditionals are available as ternary expressions: `condition ? if_true : if_fal
 Loops are available as mapping expressions over compound values, for example:
 ```lavendeux
 for c in "hello world" do c + c
+// = [hh, ee, ll, ll, oo,   , ww, oo, rr, ll, dd]
+
+// You do not need to capture the count variable
+for 0..10 do 5
+// = [5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
 
 a = [1, 2, 3]
 for a do '!'
+// [!, !, !]
 ```
 
 ## Chapter 4 - Extensions
@@ -307,29 +318,29 @@ lavendeuxDecorator(
 
 ### 5.1 Operator Reference
 
-`+`     Numeric addition, string/array/object concatenation
-`-`     Numeric subtraction, string/array/object search and remove
-`*`     Numeric multiplication
-`/`     Numeric division
-`%`     Numeric modulo
-`**`    Numeric exponentiation
+`+`     Numeric addition, string/array/object concatenation  
+`-`     Numeric subtraction, string/array/object search and remove  
+`*`     Numeric multiplication  
+`/`     Numeric division    
+`%`     Numeric modulo  
+`**`    Numeric exponentiation  
 
-`&`     Bitwise AND
-`|`     Bitwise OR
-`^`     Bitwise XOR
-`<<`    Bitwise left shift
-`>>`    Bitwise right shift
-`~`     Bitwise NOT
-
-`&&`    Boolean AND (short-circuiting)
-`||`    Boolean OR (short-circuiting)
-`!`     Boolean NOT
-`<`     Less than
-`<=`    Less than or equal to
-`>`     Greater than
-`>=`    Greater than or equal to
-`==`    Equal to
-`!=`    Not equal to
+`&`     Bitwise AND  
+`|`     Bitwise OR  
+`^`     Bitwise XOR  
+`<<`    Bitwise left shift  
+`>>`    Bitwise right shift  
+`~`     Bitwise NOT  
+  
+`&&`    Boolean AND (short-circuiting)  
+`||`    Boolean OR (short-circuiting)  
+`!`     Boolean NOT  
+`<`     Less than  
+`<=`    Less than or equal to  
+`>`     Greater than  
+`>=`    Greater than or equal to  
+`==`    Equal to  
+`!=`    Not equal to  
 
 ### 5.2 stdlib Reference
 
@@ -337,121 +348,121 @@ Below is a full list of the functions and decorators built into the standard lib
 
 #### arrays
 
-chunks(array, int) -> array : Splits the given array into chunks of the given size
-deque(array) -> any : Removes and returns the first element of the given array
-enque(array, any) -> array : Adds the given element to the beginning of the given array, then returns the array
-first(array) -> any : Returns the first element of the given array
-insert(compound, int, any) -> any : Inserts the given element at the given index in the given array or object
-is_empty(any) -> bool : Returns true if the given array or object is empty
-keys(object) -> array : Returns the keys of the given object
-last(array) -> any : Returns the last element of the given array
-len(any) -> int : Returns the length of the given array or object
-merge(compound, compound) -> compound : Merges the given arrays or objects
-pop(array) -> any : Removes and returns the last element of the given array
-push(array, any) -> array : Adds the given element to the end of the given array, then returns the array
-remove(compound, int) -> any : Removes the element at the given index from the given array or object and returns it
-split(array, int) -> array : Splits the given array at the given index
-values(object) -> array : Returns the values of the given object
-
-#### decorators
-
-@aud(any) -> string : Interprets a number as a AUD amount
-@bin(any) -> string : Base 2 number formatting, such as 0b101
-@bool(any) -> string : Format a value as a boolean
-@cad(any) -> string : Interprets a number as a CAD amount
-@cny(any) -> string : Interprets a number as a CNY amount
-@eur(any) -> string : Interprets a number as a Euro amount
-@float(any) -> string : Formats a number as a floating point number
-@gbp(any) -> string : Interprets a number as a GBP amount
-@hex(any) -> string : Base 16 number formatting, such as 0xFF
-@inr(any) -> string : Interprets a number as a INR amount
-@int(any) -> string : Format a number as an integer
-@jpy(any) -> string : Interprets a number as a JPY amount
-@oct(any) -> string : Base 8 number formatting, such as 0o77
-@ordinal(any) -> string : Interprets an integer as an ordinal number
-@percent(any) -> string : Interprets a number as a percentage
-@roman(any) -> string : Interprets an integer as a roman numeral
-@rub(any) -> string : Interprets a number as a RUB amount
-@sci(any) -> string : Scientific notation formatting, such as 1.2e3
-@usd(any) -> string : Interprets a number as a USD amount
-@utc(any) -> string : Interprets an integer as a timestamp, and formats it in UTC standard
-
-#### dev
-
-choose(array) -> any : Returns a random element from a given array
-md5(string) -> string : Returns the md5 hash of a given string
-rand(int, int) -> any : With no arguments, return a float from 0 to 1. Otherwise return an integer from 0 to m, or m to n
-sha256(string) -> string : Returns the sha256 hash of a given string
-sha512(string) -> string : Returns the sha512 hash of a given string
-tail(string, int) -> float : Returns the last [lines] lines from a given file
-time() -> float : Returns a unix timestamp for the current system time
-
-#### math
-
-abs(numeric) -> float : Returns the absolute value of a number
-ceil(numeric) -> float : Rounds a number up to the nearest integer
-floor(numeric) -> float : Rounds a number down to the nearest integer
-ln(numeric) -> float : Returns the natural logarithm of a number
-log(numeric, numeric) -> float : Returns the logarithm of a number with a given base
-log10(numeric) -> float : Returns the base 10 logarithm of a number
-max(compound) -> float : Returns the largest value in a set
-min(compound) -> float : Returns the smallest value in a set
-root(numeric, numeric) -> float : Returns the nth root of a number
-round(numeric, int) -> float : Rounds a number to a given precision
-sqrt(numeric) -> float : Returns the square root of a number
-
-#### network
-
-add_api(string, any) -> string : Registers an API. Accepts a string, or an object with the properties [ url, headers, description, examples, auth_key]
-api_key(string, string) -> string : Adds an API key for an API
-chatgpt(string) -> string : Calls the ChatGPT API
-del_api(string) -> string : Unregisters an API
-get(string, object) -> string : Performs an HTTP GET request
-get_api(string, string) -> string : Calls an API endpoint using GET
-list_api() -> object : Returns a list of registered APIs
-post(string, string, object) -> string : Performs an HTTP POST request
-post_api(string, string, string) -> string : Calls an API endpoint using POST
-resolve(string) -> string : Resolves a hostname to an IP address
-
-#### string
-
-atob(string) -> string : Returns a base64-encoded string
-btoa(string) -> string : Returns a base64-decoded string
-lowercase(string) -> string : Returns a lowercase version of a string
-prettyjson(any) -> string : Returns a pretty-printed JSON string
-replace(string, string, string) -> string : Replaces all instances of a substring with another substring
-trim(string) -> string : Removes whitespace from the beginning and end of a string
-trim_end(string) -> string : Removes whitespace from the end of a string
-trim_start(string) -> string : Removes whitespace from the beginning of a string
-uppercase(string) -> string : Returns an uppercase version of a string
-urldecode(string) -> string : Returns a URL-decoded string
-urlencode(string) -> string : Returns a URL-encoded string
-
-#### system
-
-add_extension(string) -> string : Adds a JavaScript extension to the interpreter
-assign(string, any) -> any : Assigns a variable in the current scope
-assign_global(string, any) -> any : Assigns a variable in the top-level scope
-eval(string) -> any : Evaluates a string as a Lavendeux expression and returns the result
-eval_file(string) -> any : Evaluates a file as a Lavendeux expression and returns the result
-js(string) -> any : Executes a JavaScript expression and returns the result
-remove_extension(string) -> string : Removes a JavaScript extension from the interpreter
-state() -> object : Returns the currently defined variables
-typeof(any) -> string : Returns the type of its input
-
-#### trig
-
-acos(numeric) -> float : Calculate the acos of n
-acosh(numeric) -> float : Calculate the acosh of n
-asin(numeric) -> float : Calculate the asin of n
-asinh(numeric) -> float : Calculate the asinh of n
-atan(numeric) -> float : Calculate the atan of n
-atanh(numeric) -> float : Calculate the atanh of n
-cos(numeric) -> float : Calculate the cos of n
-cosh(numeric) -> float : Calculate the cosh of n
-sin(numeric) -> float : Calculate the sin of n
-sinh(numeric) -> float : Calculate the sinh of n
-tan(numeric) -> float : Calculate the tan of n
-tanh(numeric) -> float : Calculate the tanh of n
-to_degrees(numeric) -> float : Converts radians to degrees
-to_radians(numeric) -> float : Converts degrees to radians
+chunks(array, int) -> array : Splits the given array into chunks of the given size  
+deque(array) -> any : Removes and returns the first element of the given array  
+enque(array, any) -> array : Adds the given element to the beginning of the given array, then returns the array  
+first(array) -> any : Returns the first element of the given array  
+insert(compound, int, any) -> any : Inserts the given element at the given index in the given array or object  
+is_empty(any) -> bool : Returns true if the given array or object is empty  
+keys(object) -> array : Returns the keys of the given object  
+last(array) -> any : Returns the last element of the given array  
+len(any) -> int : Returns the length of the given array or object  
+merge(compound, compound) -> compound : Merges the given arrays or objects  
+pop(array) -> any : Removes and returns the last element of the given array  
+push(array, any) -> array : Adds the given element to the end of the given array, then returns the array  
+remove(compound, int) -> any : Removes the element at the given index from the given array or object and returns it  
+split(array, int) -> array : Splits the given array at the given index  
+values(object) -> array : Returns the values of the given object  
+  
+#### decorators  
+  
+@aud(any) -> string : Interprets a number as a AUD amount  
+@bin(any) -> string : Base 2 number formatting, such as 0b101  
+@bool(any) -> string : Format a value as a boolean  
+@cad(any) -> string : Interprets a number as a CAD amount  
+@cny(any) -> string : Interprets a number as a CNY amount  
+@eur(any) -> string : Interprets a number as a Euro amount  
+@float(any) -> string : Formats a number as a floating point number  
+@gbp(any) -> string : Interprets a number as a GBP amount  
+@hex(any) -> string : Base 16 number formatting, such as 0xFF  
+@inr(any) -> string : Interprets a number as a INR amount  
+@int(any) -> string : Format a number as an integer  
+@jpy(any) -> string : Interprets a number as a JPY amount  
+@oct(any) -> string : Base 8 number formatting, such as 0o77  
+@ordinal(any) -> string : Interprets an integer as an ordinal number  
+@percent(any) -> string : Interprets a number as a percentage  
+@roman(any) -> string : Interprets an integer as a roman numeral  
+@rub(any) -> string : Interprets a number as a RUB amount  
+@sci(any) -> string : Scientific notation formatting, such as 1.2e3  
+@usd(any) -> string : Interprets a number as a USD amount  
+@utc(any) -> string : Interprets an integer as a timestamp, and formats it in UTC standard  
+  
+#### dev  
+  
+choose(array) -> any : Returns a random element from a given array  
+md5(string) -> string : Returns the md5 hash of a given string  
+rand(int, int) -> any : With no arguments, return a float from 0 to 1. Otherwise return an integer from 0 to m, or m to n  
+sha256(string) -> string : Returns the sha256 hash of a given string  
+sha512(string) -> string : Returns the sha512 hash of a given string  
+tail(string, int) -> float : Returns the last [lines] lines from a given file  
+time() -> float : Returns a unix timestamp for the current system time  
+  
+#### math  
+  
+abs(numeric) -> float : Returns the absolute value of a number  
+ceil(numeric) -> float : Rounds a number up to the nearest integer  
+floor(numeric) -> float : Rounds a number down to the nearest integer  
+ln(numeric) -> float : Returns the natural logarithm of a number  
+log(numeric, numeric) -> float : Returns the logarithm of a number with a given base  
+log10(numeric) -> float : Returns the base 10 logarithm of a number  
+max(compound) -> float : Returns the largest value in a set  
+min(compound) -> float : Returns the smallest value in a set  
+root(numeric, numeric) -> float : Returns the nth root of a number  
+round(numeric, int) -> float : Rounds a number to a given precision  
+sqrt(numeric) -> float : Returns the square root of a number  
+  
+#### network  
+  
+add_api(string, any) -> string : Registers an API. Accepts a string, or an object with the properties [ url, headers, description, examples, auth_key]  
+api_key(string, string) -> string : Adds an API key for an API  
+chatgpt(string) -> string : Calls the ChatGPT API  
+del_api(string) -> string : Unregisters an API  
+get(string, object) -> string : Performs an HTTP GET request  
+get_api(string, string) -> string : Calls an API endpoint using GET  
+list_api() -> object : Returns a list of registered APIs  
+post(string, string, object) -> string : Performs an HTTP POST request  
+post_api(string, string, string) -> string : Calls an API endpoint using POST  
+resolve(string) -> string : Resolves a hostname to an IP address  
+  
+#### string  
+  
+atob(string) -> string : Returns a base64-encoded string  
+btoa(string) -> string : Returns a base64-decoded string  
+lowercase(string) -> string : Returns a lowercase version of a string  
+prettyjson(any) -> string : Returns a pretty-printed JSON string  
+replace(string, string, string) -> string : Replaces all instances of a substring with another substring  
+trim(string) -> string : Removes whitespace from the beginning and end of a string  
+trim_end(string) -> string : Removes whitespace from the end of a string  
+trim_start(string) -> string : Removes whitespace from the beginning of a string  
+uppercase(string) -> string : Returns an uppercase version of a string  
+urldecode(string) -> string : Returns a URL-decoded string  
+urlencode(string) -> string : Returns a URL-encoded string  
+  
+#### system  
+  
+add_extension(string) -> string : Adds a JavaScript extension to the interpreter  
+assign(string, any) -> any : Assigns a variable in the current scope  
+assign_global(string, any) -> any : Assigns a variable in the top-level scope  
+eval(string) -> any : Evaluates a string as a Lavendeux expression and returns the result  
+eval_file(string) -> any : Evaluates a file as a Lavendeux expression and returns the result  
+js(string) -> any : Executes a JavaScript expression and returns the result  
+remove_extension(string) -> string : Removes a JavaScript extension from the interpreter  
+state() -> object : Returns the currently defined variables  
+typeof(any) -> string : Returns the type of its input  
+  
+#### trig  
+  
+acos(numeric) -> float : Calculate the acos of n  
+acosh(numeric) -> float : Calculate the acosh of n  
+asin(numeric) -> float : Calculate the asin of n  
+asinh(numeric) -> float : Calculate the asinh of n  
+atan(numeric) -> float : Calculate the atan of n  
+atanh(numeric) -> float : Calculate the atanh of n  
+cos(numeric) -> float : Calculate the cos of n  
+cosh(numeric) -> float : Calculate the cosh of n  
+sin(numeric) -> float : Calculate the sin of n  
+sinh(numeric) -> float : Calculate the sinh of n  
+tan(numeric) -> float : Calculate the tan of n  
+tanh(numeric) -> float : Calculate the tanh of n  
+to_degrees(numeric) -> float : Converts radians to degrees  
+to_radians(numeric) -> float : Converts degrees to radians  
