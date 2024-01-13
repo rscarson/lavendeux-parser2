@@ -222,7 +222,7 @@ mod test {
         runtime
             .call_function(
                 "put",
-                &[super::Value::from("foo"), super::Value::from(2.0)],
+                &[super::Value::from("foo"), super::Value::from(2.1)],
                 &mut variables,
                 &fake_token(),
             )
@@ -230,7 +230,7 @@ mod test {
 
         assert_eq!(
             variables.get("foo"),
-            Some(&Value::from(2.0)),
+            Some(&Value::from(2.1)),
             "put should set a variable",
         );
 
@@ -242,6 +242,6 @@ mod test {
                 &fake_token(),
             )
             .unwrap();
-        assert_eq!(result, Value::from(2.0), "get should return the variable");
+        assert_eq!(result, Value::from(2.1), "get should return the variable");
     }
 }

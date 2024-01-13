@@ -3671,24 +3671,20 @@ class ZarbanLavendeuxRunner extends ZarbanRunner {
   static registerExtension(name2, author2, version2) {
     if (!lavendeux)
       return;
-
     lavendeuxExtensionName(name2);
     lavendeuxExtensionAuthor(author2);
     lavendeuxExtensionVersion(version2);
-
-    lavendeuxFunction('play_zarban', () => ZarbanLavendeuxRunner.callback('start'), {
+    lavendeuxFunction("play_zarban", () => ZarbanLavendeuxRunner.callback("start"), {
       description: "Start a new game of Zarban",
       arguments: [],
       returns: lavendeuxType.String
     });
-
-    lavendeuxFunction('zarban', ZarbanLavendeuxRunner.callback, {
+    lavendeuxFunction("zarban", ZarbanLavendeuxRunner.callback, {
       description: "Advance a game of Zarban",
       arguments: [lavendeuxType.String],
       returns: lavendeuxType.String
     });
-
-    lavendeuxDecorator('zarban', ZarbanLavendeuxRunner.callback, lavendeuxType.String);
+    lavendeuxDecorator("zarban", ZarbanLavendeuxRunner.callback, lavendeuxType.String);
   }
   /**
    * Callback method for running zarban through lavendeux
