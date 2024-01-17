@@ -31,7 +31,7 @@ lazy_static = "1.4.0"
 thiserror = "1.0.50"
 
 # Main value for the parse tree
-polyvalue = {git = "https://github.com/rscarson/polyvalue.git"}
+polyvalue = "0.2.0"
 
 #
 # dependencies for functions and decorators
