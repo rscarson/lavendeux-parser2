@@ -169,8 +169,6 @@ Operations in lavendish can be broadly split into a few categories
 All the normal arithmetic operations (+, -, *, /, and %), as well as exponentiation (**) are supported by all the numeric types.
 The resulting type of an expression will be determined using the system described in `section 1.2`
 
-Lavendish also supports implicit muliplication; so the expressions `2 * x` and `2x` are equivalent to each other.
-
 You can also use addition for string, array, or object concatenation:
 ```lavendeux
 "hello" + " " + "world"
@@ -181,7 +179,6 @@ Subtraction for search and deletion:
 ```lavendeux
 "hello world" - "world"
 [0, 1, 2] - [1,2]
-{'a': 1, 'b': 1, 'c': 2} - 1
 ```
 
 Negation for string, or array inversion:
@@ -201,6 +198,8 @@ Available operators:
 - `&` bitwise and
 - `>>` right-shift
 - `<<` left-shift
+
+Note: Negative shifts will shift in the opposite direction, and will wrap to 64bits using `rhs % 64`
 
 Here is an example that uses these concepts for bit-level flags:
 ```lavendeux    

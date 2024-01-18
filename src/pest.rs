@@ -48,6 +48,13 @@ macro_rules! assert_tree {
     };
 }
 
+#[macro_export]
+macro_rules! node_is_type {
+    ($node:expr, $type:path) => {
+        $node.as_any().downcast_ref::<$type>().is_some()
+    };
+}
+
 /// A macro to assert that the given input parses into an error
 /// # Arguments
 /// * `input` - The input to parse
@@ -56,7 +63,9 @@ macro_rules! assert_tree {
 macro_rules! assert_tree_error {
     ($input:literal, $err:ident) => {
         if let Err(err) = $crate::parse_input($input, Rule::SCRIPT) {
-            assert!(matches!(err, Error::$err { .. }));
+            if !matches!(err, Error::$err { .. }) {
+                panic!("Expected error {:?} but got {:?}", stringify!($err), err);
+            }
         } else {
             panic!("Expected error");
         }

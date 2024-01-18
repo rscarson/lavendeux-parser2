@@ -204,9 +204,19 @@ define_node!(
         let token = input.to_token();
         let mut children = input.into_inner();
 
-        let start = children.next().unwrap().to_ast_node()?;
+        let start = children
+            .next()
+            .ok_or(Error::IncompleteRangeExpression {
+                token: token.clone(),
+            })?
+            .to_ast_node()?;
+
         children.next().unwrap(); // Skip the ..
-        let end = children.next().unwrap().to_ast_node()?;
+        
+        let end = children.next()
+        .ok_or(Error::IncompleteRangeExpression {
+            token: token.clone(),
+        })?.to_ast_node()?;
 
         Ok(Self { start, end, token }.boxed())
     },

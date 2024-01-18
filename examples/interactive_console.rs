@@ -1,4 +1,4 @@
-use lavendeux_parser2::{Error, Lavendeux};
+use lavendeux_parser::{Error, Lavendeux};
 use std::collections::VecDeque;
 use std::env;
 use std::io::{stdin, stdout, Write};

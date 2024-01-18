@@ -162,12 +162,9 @@ lazy_static! {
         include_node!(map, UnterminatedLinebreak);
         include_node!(map, UnterminatedLiteral);
         include_node!(map, UnterminatedComment);
-        include_node!(map, UnterminatedArray);
-        include_node!(map, UnterminatedObject);
-        include_node!(map, UnterminatedParen);
         include_node!(map, UnexpectedDecorator);
         include_node!(map, IncompleteRangeExpression);
-        include_node!(map, IncompleteMatchingExpression);
+        include_node!(map, IncompleteObject);
 
         //
         // Core

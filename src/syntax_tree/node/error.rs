@@ -28,15 +28,9 @@ macro_rules! error_node {
 error_node!(UnterminatedLinebreak, ERROR_UNTERMINATED_LINEBREAK);
 error_node!(UnterminatedLiteral, ERROR_UNTERMINATED_LITERAL);
 error_node!(UnterminatedComment, ERROR_UNTERMINATED_COMMENT);
-error_node!(UnterminatedArray, ERROR_UNTERMINATED_ARRAY);
-error_node!(UnterminatedObject, ERROR_UNTERMINATED_OBJECT);
-error_node!(UnterminatedParen, ERROR_UNTERMINATED_PAREN);
 error_node!(UnexpectedDecorator, ERROR_UNEXPECTED_DECORATOR);
-error_node!(IncompleteRangeExpression, ERROR_INCOMPLETE_RANGE_EXPRESSION);
-error_node!(
-    IncompleteMatchingExpression,
-    ERROR_INCOMPLETE_MATCHING_EXPRESSION
-);
+error_node!(IncompleteRangeExpression, RANGE_OPERATOR);
+error_node!(IncompleteObject, ERROR_INCOMPLETE_OBJECT);
 
 #[cfg(test)]
 mod test {
@@ -48,11 +42,10 @@ mod test {
         assert_tree_error!("1 +\\", UnterminatedLinebreak);
         assert_tree_error!("1 + \"", UnterminatedLiteral);
         assert_tree_error!("1 + /*", UnterminatedComment);
-        assert_tree_error!("1 + [", UnterminatedArray);
-        assert_tree_error!("1 + {", UnterminatedObject);
-        assert_tree_error!("1 + (", UnterminatedParen);
         assert_tree_error!("@1 + 1", UnexpectedDecorator);
-        assert_tree_error!("1 + 1..", IncompleteRangeExpression);
+        assert_tree_error!("..", IncompleteRangeExpression);
+        assert_tree_error!("..1", IncompleteRangeExpression);
         assert_tree_error!("1 + 1 matches", IncompleteMatchingExpression);
+        assert_tree_error!("{0}", IncompleteObject);
     }
 }

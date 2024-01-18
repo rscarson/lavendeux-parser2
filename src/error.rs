@@ -113,10 +113,20 @@ pub enum Error {
         token: Token,
     },
 
+    #[error("\n| {token}\n= Expected a key-value pair, for example: {{0: 'test'}}")]
+    IncompleteObject {
+        token: Token,
+    },
+
     ///////////////////////////////////////////////////////////////////////////
     // Value Errors
     // Mostly deals with variables, and value objects
     ///////////////////////////////////////////////////////////////////////////
+    
+    #[error("\n| {token}\n= Implicit multiplication is not allowed between {left} and {right}")]
+    IllegalImplicitMultiplication {
+        left: String, right: String, token: Token
+    },
 
     #[error("\n| {token}\n= Invalid combination of types for range. Use a pair of either integers, or characters")]
     RangeTypeMismatch {

@@ -133,3 +133,99 @@ impl Display for UserFunction {
         )
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_precompilation() {
+        let src = "fn test(a, b) = a + b";
+        cached_fn_compile(src).unwrap();
+        cached_fn_compile(src).unwrap();
+
+        USER_FUNCTION_CACHE.with(|once_lock| {
+            let rt_mut = once_lock.get_or_init(|| RefCell::new(HashMap::new()));
+            let cache = rt_mut.borrow_mut();
+
+            assert_eq!(1, cache.len());
+        });
+    }
+
+    #[test]
+    fn test_compilation() {
+        let fn1 = UserFunction::new(
+            "test",
+            vec!["a".to_string(), "b".to_string()],
+            "a + b".to_string(),
+        )
+        .unwrap();
+        assert_eq!(fn1.name(), "test");
+        assert_eq!(fn1.arguments(), &["a".to_string(), "b".to_string()]);
+        assert_eq!(fn1.src(), "a + b");
+        let res = fn1.execute(
+            &mut State::new(),
+            vec![Value::from(1.0), Value::from(2.0)],
+            fn1.body().token(),
+        );
+        assert_eq!(res.unwrap(), Value::from(3.0));
+
+        // no args now
+        let fn2 = UserFunction::new("test2", vec![], "1 + 2".to_string()).unwrap();
+        assert_eq!(fn2.name(), "test2");
+        assert_eq!(fn2.arguments().len(), 0);
+        assert_eq!(fn2.src(), "1 + 2");
+        let res = fn2.execute(&mut State::new(), vec![], fn2.body().token());
+        assert_eq!(res.unwrap(), Value::from(3));
+
+        // 1 arg
+        let fn3 = UserFunction::new("test3", vec!["a".to_string()], "a + 2".to_string()).unwrap();
+        assert_eq!(fn3.name(), "test3");
+        assert_eq!(fn3.arguments(), &["a".to_string()]);
+        assert_eq!(fn3.src(), "a + 2");
+        let res = fn3.execute(
+            &mut State::new(),
+            vec![Value::from(1.0)],
+            fn3.body().token(),
+        );
+        assert_eq!(res.unwrap(), Value::from(3.0));
+    }
+
+    #[test]
+    fn test_display() {
+        let fn1 = UserFunction::new(
+            "test",
+            vec!["a".to_string(), "b".to_string()],
+            "a + b".to_string(),
+        )
+        .unwrap();
+        assert_eq!(format!("{}", fn1), "test(a, b) = a + b");
+
+        let fn2 = UserFunction::new("test2", vec![], "1 + 2".to_string()).unwrap();
+        assert_eq!(format!("{}", fn2), "test2() = 1 + 2");
+
+        let fn3 = UserFunction::new("test3", vec!["a".to_string()], "a + 2".to_string()).unwrap();
+        assert_eq!(format!("{}", fn3), "test3(a) = a + 2");
+    }
+
+    #[test]
+    fn test_to_std() {
+        let fn1 = UserFunction::new(
+            "test",
+            vec!["a".to_string(), "b".to_string()],
+            "a + b".to_string(),
+        )
+        .unwrap();
+        let std_fn = fn1.to_std_function();
+        assert_eq!(std_fn.name(), "test");
+        assert_eq!(std_fn.arguments().len(), 2);
+        let mut state = &mut State::new();
+        state.set_user_function(fn1.clone());
+        let res = std_fn.execute(
+            &mut state,
+            vec![Value::from(1.0), Value::from(2.0)],
+            fn1.body().token(),
+        );
+        assert_eq!(res.unwrap(), Value::from(3.0));
+    }
+}

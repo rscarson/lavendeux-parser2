@@ -222,13 +222,13 @@ mod test {
         );
 
         assert_tree!(
-            "test(a) = 2a",
+            "test(a) = 2*a",
             FUNCTION_ASSIGNMENT_STATEMENT,
             FunctionAssignment,
             |tree: &mut FunctionAssignment| {
                 assert_eq!(tree.name, "test");
                 assert_eq!(tree.arguments[0], "a");
-                assert_eq!(tree.expression, "2a");
+                assert_eq!(tree.expression, "2*a");
             }
         );
     }

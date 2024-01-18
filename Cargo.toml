@@ -1,5 +1,5 @@
 [package]
-name = "lavendeux_parser2"
+name = "lavendeux-parser"
 version = "0.1.0"
 edition = "2021"
 
@@ -31,7 +31,8 @@ lazy_static = "1.4.0"
 thiserror = "1.0.50"
 
 # Main value for the parse tree
-polyvalue = "0.2.0"
+#polyvalue = "0.2.2"
+polyvalue = {git = "https://github.com/rscarson/polyvalue.git"}
 
 #
 # dependencies for functions and decorators

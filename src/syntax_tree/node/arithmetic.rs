@@ -15,48 +15,39 @@ define_node!(
     rules = [
         ARITHMETIC_AS_EXPRESSION,
         ARITHMETIC_MD_EXPRESSION,
-        ARITHMETIC_IMPLICIT_MUL_EXPRESSION,
         ARITHMETIC_EXPONENTIATION_EXPRESSION
     ],
     new = |input: Pair<Rule>| {
-        let rule = input.as_rule();
         let token = input.to_token();
         let mut children = input.into_inner().rev().peekable();
 
         let mut expr = Self {
             operand_stack: Vec::new(),
             operator_stack: Vec::new(),
-            token,
+            token: token.clone(),
         };
 
         // We will build up a stack of operands and operators
         expr.operand_stack.push(children.next().unwrap().to_ast_node()?);
         while children.peek().is_some() {
-            let operation = if rule == Rule::ARITHMETIC_IMPLICIT_MUL_EXPRESSION {
-                // Implicit multiplication is just multiplication
-                // Do not consume a child for the operation
-                ArithmeticOperation::Multiply
-            } else {
-                let operation = children.next().unwrap().as_str();
-                match operation {
-                    "+" => ArithmeticOperation::Add,
-                    "-" => ArithmeticOperation::Subtract,
-                    "*" => ArithmeticOperation::Multiply,
-                    "/" => ArithmeticOperation::Divide,
-                    "%" => ArithmeticOperation::Modulo,
-                    "**" => ArithmeticOperation::Exponentiate,
-                    _ => {
-                        return Err(Error::Internal(format!(
-                            "Invalid arithmetic operation {:?}",
-                            operation
-                        )))
-                    }
+            let operation = children.next().unwrap().as_str();
+            let operation = match operation {
+                "+" => ArithmeticOperation::Add,
+                "-" => ArithmeticOperation::Subtract,
+                "*" => ArithmeticOperation::Multiply,
+                "/" => ArithmeticOperation::Divide,
+                "%" => ArithmeticOperation::Modulo,
+                "**" => ArithmeticOperation::Exponentiate,
+                _ => {
+                    return Err(Error::Internal(format!(
+                        "Invalid arithmetic operation {:?}",
+                        operation
+                    )))
                 }
             };
+
             expr.operator_stack.push(operation);
-
             let operand = children.next().unwrap().to_ast_node()?;
-
             expr.operand_stack.push(operand);
         }
 
@@ -118,18 +109,6 @@ mod test {
             TOPLEVEL_EXPRESSION,
             ArithmeticExpression,
             |_: &mut ArithmeticExpression| {}
-        );
-
-        // Test implicit multiplication
-        assert_tree!(
-            "2 2",
-            TOPLEVEL_EXPRESSION,
-            ArithmeticExpression,
-            |tree: &mut ArithmeticExpression| {
-                assert_eq!(tree.operand_stack.len(), 2);
-                assert_eq!(tree.operator_stack.len(), 1);
-                assert_eq!(tree.operator_stack[0], ArithmeticOperation::Multiply);
-            }
         );
 
         // Test precedence

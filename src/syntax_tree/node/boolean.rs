@@ -129,7 +129,9 @@ define_node!(
                 )))
             }
         };
-        let pattern = children.next().unwrap();
+        let pattern = children.next().ok_or(Error::IncompleteMatchingExpression {
+            token: token.clone(),
+        })?;
 
         // is is a special case because it is the only operation that can accept an identifier
         // as a pattern - the type name can be a string, but does not need to be

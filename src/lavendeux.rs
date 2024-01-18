@@ -42,9 +42,54 @@ impl Lavendeux {
         self.state.register_function(function);
     }
 
+    /// Designed to catch unmatched brackets that can slow down parsing
+    pub fn preprocess_input(input: &str) -> Result<(), Error> {
+        let (mut p, mut b, mut c) = (0, 0, 0);
+        for char in input.chars() {
+            match char {
+                '(' => p += 1,
+                ')' => p -= 1,
+                '[' => b += 1,
+                ']' => b -= 1,
+                '{' => c += 1,
+                '}' => c -= 1,
+                _ => (),
+            }
+        }
+
+        if p > 0 {
+            Err(Error::UnterminatedParen {
+                token: crate::Token {
+                    rule: Rule::SCRIPT,
+                    input: input.to_string(),
+                    references: None,
+                },
+            })
+        } else if b > 0 {
+            Err(Error::UnterminatedArray {
+                token: crate::Token {
+                    rule: Rule::SCRIPT,
+                    input: input.to_string(),
+                    references: None,
+                },
+            })
+        } else if c > 0 {
+            Err(Error::UnterminatedObject {
+                token: crate::Token {
+                    rule: Rule::SCRIPT,
+                    input: input.to_string(),
+                    references: None,
+                },
+            })
+        } else {
+            Ok(())
+        }
+    }
+
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
     pub fn eval(input: &str, state: &mut State) -> Result<Value, Error> {
+        Self::preprocess_input(input)?;
         let script = parse_input(input, Rule::SCRIPT)?;
         script.get_value(state)
     }
@@ -110,5 +155,38 @@ impl Lavendeux {
     #[cfg(feature = "extensions")]
     pub fn unload_all_extensions(&mut self) {
         crate::extensions::ExtensionController::with(|controller| controller.unregister_all());
+    }
+}
+
+// Tests mostly related to the fuzzer
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_slow_brackets() {
+        let mut parser = Lavendeux::new(Default::default());
+        parser
+            .parse("X[[[]3[4[bri[z[eeg(e4?estarts_witheHoAs(tX[[[]3[4[bri[z[eee(e4?estarts_<a")
+            .unwrap_err();
+        parser
+            .parse("X[[[]3[4[bri[z[eee(e4?estarts_witheHAso(tX[[[]3[4[bri[z[eee(e4?estarts_<a")
+            .unwrap_err();
+        parser
+            .parse("eeeeeeeA(e5[[4^A(e5[[4^A^eA(e5[[4^A(e5[[4^A^A^")
+            .unwrap_err();
+        parser
+            .parse("eeeeeeA(peeeeeA(eeeeA(peeeeeA(eeA(pA(peeA(pA(pi^A")
+            .unwrap_err();
+    }
+
+    #[test]
+    fn test_large_fixed_convert() {
+        let mut parser = Lavendeux::new(Default::default());
+        parser.parse(
+            "1$16666666666666666666666666666666666666666666666666666666666666666666666666662.11",
+        ).unwrap_err();
+        parser.parse("e₿8**82asin").unwrap_err();
+        parser.parse("e85**88d**e8**8").unwrap_err();
     }
 }
