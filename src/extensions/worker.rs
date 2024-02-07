@@ -4,6 +4,7 @@ use super::{
     controller::ExtensionController, extension::ExtensionDetails, runtime::ExtensionRuntime,
 };
 use crate::{
+    error::ExternalError,
     flatten_arguments,
     state::State,
     std_functions::{Argument, Function},
@@ -82,7 +83,7 @@ enum ExtensionWorkerResponse {
         state: VariableState,
     },
     Start(ExtensionDetails),
-    Error(Error),
+    Error(ExternalError),
 }
 
 impl ExtensionWorker {
@@ -93,7 +94,7 @@ impl ExtensionWorker {
     ///
     /// # Returns
     /// * `Result<ExtensionWorker, Error>` - The worker thread
-    pub fn new(extension_module: Module) -> Result<Self, Error> {
+    pub fn new(extension_module: Module) -> Result<Self, ExternalError> {
         let (req_tx, req_rx) = channel::<ExtensionWorkerMessage>();
         let (res_tx, res_rx) = channel::<ExtensionWorkerResponse>();
 
@@ -106,9 +107,8 @@ impl ExtensionWorker {
             ExtensionWorkerResponse::Start(extension) => extension,
             ExtensionWorkerResponse::Error(err) => return Err(err),
             _ => {
-                return Err(Error::Internal(format!(
-                    "JSRuntime worker responded incorrectly"
-                )))
+                let e = Error::Internal(format!("JSRuntime worker responded incorrectly"));
+                return Err(Box::new(e).into());
             }
         };
 
@@ -158,7 +158,7 @@ impl ExtensionWorker {
                 }
                 result
             }
-            ExtensionWorkerResponse::Error(err) => Err(err),
+            ExtensionWorkerResponse::Error(err) => Err(err.to_error(token)),
             _ => Err(Error::Internal(format!(
                 "JSRuntime worker responded incorrectly"
             ))),

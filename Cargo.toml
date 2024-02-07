@@ -48,3 +48,6 @@ urlencoding = { version = "2.1.2", optional = true }
 md-5 = { version = "0.10.5", optional = true }
 sha2 = { version = "0.10.6", optional = true }
 rand = { version = "0.8.5", optional = true }
+
+[dev-dependencies]
+mockito = "1.2.0"

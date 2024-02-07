@@ -60,6 +60,7 @@ impl Lavendeux {
         if p > 0 {
             Err(Error::UnterminatedParen {
                 token: crate::Token {
+                    line: 0,
                     rule: Rule::SCRIPT,
                     input: input.to_string(),
                     references: None,
@@ -68,6 +69,7 @@ impl Lavendeux {
         } else if b > 0 {
             Err(Error::UnterminatedArray {
                 token: crate::Token {
+                    line: 0,
                     rule: Rule::SCRIPT,
                     input: input.to_string(),
                     references: None,
@@ -76,6 +78,7 @@ impl Lavendeux {
         } else if c > 0 {
             Err(Error::UnterminatedObject {
                 token: crate::Token {
+                    line: 0,
                     rule: Rule::SCRIPT,
                     input: input.to_string(),
                     references: None,
@@ -104,14 +107,17 @@ impl Lavendeux {
                 .spawn_scoped(s, || {
                     self.state.start_timer();
                     Self::eval(input, &mut self.state)
-                })?;
+                })
+                .or(Err(Error::Fatal(
+                    "Failed to spawn parser thread".to_string(),
+                )))?;
             match handle.join() {
                 Ok(value) => value,
                 Err(e) => Err(Error::Fatal(e.downcast_ref::<&str>().unwrap().to_string())),
             }
         })?;
 
-        let lines = value.as_a::<Array>()?.inner().clone();
+        let lines = value.as_a::<Array>().unwrap().inner().clone();
         Ok(lines)
     }
 
@@ -123,10 +129,11 @@ impl Lavendeux {
     /// An error if the extension could not be loaded
     #[cfg(feature = "extensions")]
     pub fn load_extension_module(
-        &mut self,
         module: rustyscript::Module,
     ) -> Result<crate::extensions::ExtensionDetails, Error> {
-        crate::extensions::ExtensionController::with(|controller| controller.add_extension(module))
+        Ok(crate::extensions::ExtensionController::with(
+            |controller| controller.add_extension(module),
+        )?)
     }
 
     /// Load an extension from a file and register it
@@ -136,24 +143,23 @@ impl Lavendeux {
     /// # Returns
     /// An error if the extension could not be loaded
     #[cfg(feature = "extensions")]
-    pub fn load_extension(
-        &mut self,
-        filename: &str,
-    ) -> Result<crate::extensions::ExtensionDetails, Error> {
-        crate::extensions::ExtensionController::with(|controller| controller.register(filename))
+    pub fn load_extension(filename: &str) -> Result<crate::extensions::ExtensionDetails, Error> {
+        Ok(crate::extensions::ExtensionController::with(
+            |controller| controller.register(filename),
+        )?)
     }
 
     /// Unload an extension, stopping the thread and unregistering all functions
     /// # Arguments
     /// * `name` - The filename of the extension to unload
     #[cfg(feature = "extensions")]
-    pub fn unload_extension(&mut self, filename: &str) {
+    pub fn unload_extension(filename: &str) {
         crate::extensions::ExtensionController::with(|controller| controller.unregister(filename));
     }
 
     /// Unload all extensions, stopping all threads and unregistering all functions
     #[cfg(feature = "extensions")]
-    pub fn unload_all_extensions(&mut self) {
+    pub fn unload_all_extensions() {
         crate::extensions::ExtensionController::with(|controller| controller.unregister_all());
     }
 }

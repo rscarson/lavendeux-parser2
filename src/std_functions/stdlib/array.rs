@@ -1,9 +1,10 @@
 use crate::{
-    get_argument, required_argument, static_function, std_functions::Function, Error, State,
+    error::WrapError, get_argument, required_argument, static_function, std_functions::Function,
+    Error, State,
 };
 use polyvalue::{
-    operations::IndexingOperationExt,
-    types::{Array, Int, Object},
+    operations::IndexingMutationExt,
+    types::{Array, Object, I64},
     Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
@@ -16,10 +17,12 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Any)],
         returns = ValueType::Int,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
-            let len = Int::from(input.inner().len());
-            Ok(Value::Int(len))
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let len = I64::from(input.inner().len() as i64);
+            Ok(Value::i64(len))
         }
     );
 
@@ -30,8 +33,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Any)],
         returns = ValueType::Bool,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
             let is_empty = input.inner().is_empty();
             Ok(Value::from(is_empty))
         }
@@ -45,7 +50,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         arguments = [required_argument!("input", ValueType::Array)],
         returns = ValueType::Any,
         handler = |_state: &mut State, arguments, token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
             let first = input.inner().first().cloned().ok_or(Error::ArrayEmpty {
                 token: token.clone(),
             })?;
@@ -61,7 +68,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         arguments = [required_argument!("input", ValueType::Array)],
         returns = ValueType::Any,
         handler = |_state: &mut State, arguments, token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
             let last = input.inner().last().cloned().ok_or(Error::ArrayEmpty {
                 token: token.clone(),
             })?;
@@ -78,7 +87,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Any,
         handler = |state: &mut State, arguments, token, _| {
             let mut input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let last = input.pop().ok_or(Error::ArrayEmpty {
@@ -108,7 +118,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Array,
         handler = |state: &mut State, arguments, token, _| {
             let mut input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let element = get_argument!("element", arguments);
@@ -133,7 +144,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Any,
         handler = |state: &mut State, arguments, token, _| {
             let mut input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             if input.is_empty() {
@@ -166,7 +178,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Array,
         handler = |state: &mut State, arguments, token, _| {
             let mut input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let element = get_argument!("element", arguments);
@@ -197,7 +210,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let mut input = get_argument!("input", arguments);
             let index = get_argument!("index", arguments);
 
-            let value = input.delete_index(&index)?;
+            let value = input.delete_index(&index).to_error(token)?;
 
             // Update the array if it references a variable
             if let Some(reference) = &token.references {
@@ -225,7 +238,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let index = get_argument!("index", arguments);
             let element = get_argument!("element", arguments);
 
-            input.set_index(&index, element)?;
+            input.set_index(&index, element).to_error(token)?;
 
             // Update the array if it references a variable
             if let Some(reference) = &token.references {
@@ -247,11 +260,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("input2", ValueType::Compound)
         ],
         returns = ValueType::Compound,
-        handler = |_state: &mut State, arguments, _token, _| {
+        handler = |_state: &mut State, arguments, token, _| {
             let input1 = get_argument!("input1", arguments);
             let input2 = get_argument!("input2", arguments);
 
-            match input1.resolve(&input2)? {
+            match input1.resolve(&input2).to_error(token)? {
                 (Value::Array(a), Value::Array(b)) => {
                     let mut merged = a.inner().clone();
                     merged.extend(b.inner().clone());
@@ -280,9 +293,14 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("index", ValueType::Int)
         ],
         returns = ValueType::Array,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
-            let index = *get_argument!("index", arguments).as_a::<Int>()?.inner();
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let index = *get_argument!("index", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
 
             let mut split = input.inner().clone();
             let index = index as usize;
@@ -306,9 +324,14 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("size", ValueType::Int)
         ],
         returns = ValueType::Array,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Array>()?;
-            let size = *get_argument!("size", arguments).as_a::<Int>()?.inner();
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let size = *get_argument!("size", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
 
             let size = size as usize;
             let chunks = input.inner().chunks(size).map(|c| Value::from(c.to_vec()));
@@ -324,8 +347,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Object)],
         returns = ValueType::Array,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Object>()?;
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Object>()
+                .to_error(token)?;
             let keys = input.keys().iter().cloned().cloned().collect::<Vec<_>>();
             Ok(Value::from(keys))
         }
@@ -339,10 +364,46 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "arrays",
         arguments = [required_argument!("input", ValueType::Object)],
         returns = ValueType::Array,
-        handler = |_state: &mut State, arguments, _token, _| {
-            let input = get_argument!("input", arguments).as_a::<Object>()?;
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Object>()
+                .to_error(token)?;
             let values = input.values().iter().cloned().cloned().collect::<Vec<_>>();
             Ok(Value::from(values))
+        }
+    );
+
+    // all - return true if all elements in the array are true
+    static_function!(
+        registry = map,
+        name = "all",
+        description = "Returns true if all elements in the given array are true",
+        category = "arrays",
+        arguments = [required_argument!("input", ValueType::Array)],
+        returns = ValueType::Bool,
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let all = input.inner().iter().all(|v| v.is_truthy());
+            Ok(Value::from(all))
+        }
+    );
+
+    // any - return true if any elements in the array are true
+    static_function!(
+        registry = map,
+        name = "any",
+        description = "Returns true if any elements in the given array are true",
+        category = "arrays",
+        arguments = [required_argument!("input", ValueType::Array)],
+        returns = ValueType::Bool,
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let any = input.inner().iter().any(|v| v.is_truthy());
+            Ok(Value::from(any))
         }
     );
 }

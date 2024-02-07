@@ -21,7 +21,7 @@ struct LavendeuxParser;
 #[macro_export]
 macro_rules! assert_tree {
     ($input:literal, $rule:ident, $expected:ty, $hnd:expr) => {
-        match $crate::parse_input($input, Rule::$rule) {
+        match $crate::pest::parse_input($input, Rule::$rule) {
             Ok(mut tree) => {
                 $crate::assert_tree!(&mut tree, $expected, $hnd);
             }
@@ -62,7 +62,7 @@ macro_rules! node_is_type {
 #[macro_export]
 macro_rules! assert_tree_error {
     ($input:literal, $err:ident) => {
-        if let Err(err) = $crate::parse_input($input, Rule::SCRIPT) {
+        if let Err(err) = $crate::pest::parse_input($input, Rule::SCRIPT) {
             if !matches!(err, Error::$err { .. }) {
                 panic!("Expected error {:?} but got {:?}", stringify!($err), err);
             }
@@ -81,6 +81,7 @@ pub trait AstNode: std::fmt::Display + std::fmt::Debug {
         Self: Sized;
     fn get_value(&self, state: &mut State) -> Result<Value, Error>;
     fn token(&self) -> &Token;
+    fn token_offsetline(&mut self, offset: usize);
     fn boxed(self) -> Node
     where
         Self: Sized + 'static;
@@ -109,6 +110,8 @@ impl ToAstNode for Pair<'_, Rule> {
             && target.as_rule() != Rule::LINE
             && target.as_rule() != Rule::object_literal
             && target.as_rule() != Rule::array_literal
+            && target.as_rule() != Rule::SKIP_KEYWORD
+            && target.as_rule() != Rule::BREAK_KEYWORD
         {
             target = target.into_inner().next().unwrap();
         }
@@ -124,12 +127,24 @@ impl ToAstNode for Pair<'_, Rule> {
 
 /// Main function to parse the input into a syntax tree
 pub fn parse_input(input: &str, rule: Rule) -> Result<Node, Error> {
-    let mut pairs = LavendeuxParser::parse(rule, input)?.flatten();
-    if let Some(pair) = pairs.next() {
-        pair.to_ast_node()
-    } else {
-        Err(Error::Internal(format!(
-            "Grammar issue; empty input should be valid",
-        )))
+    match LavendeuxParser::parse(rule, input) {
+        Ok(pairs) => {
+            if let Some(pair) = pairs.flatten().next() {
+                pair.to_ast_node()
+            } else {
+                Err(Error::Internal(format!(
+                    "Grammar issue; empty input should be valid",
+                )))
+            }
+        }
+        Err(err) => {
+            let token = Token {
+                line: 0,
+                rule: rule,
+                input: input.to_string(),
+                references: None,
+            };
+            Err(crate::error::ExternalError::from(err).to_error(&token))
+        }
     }
 }

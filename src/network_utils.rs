@@ -2,6 +2,7 @@ use polyvalue::types::{Object, ObjectInner, Str};
 use polyvalue::{Value, ValueTrait};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
+use std::str::FromStr;
 use std::time::Duration;
 
 /// Resolve a hostname to an IP address
@@ -18,6 +19,21 @@ pub fn resolve(hostname: &str) -> Result<Value, std::io::Error> {
         }
         Err(e) => Err(e),
     }
+}
+
+fn decode_response(response: &str, headers: &HashMap<String, String>) -> Value {
+    let json_decode = headers.get("Content-Type").cloned().unwrap_or_default()
+        == "application/json"
+        || headers.get("content-type").cloned().unwrap_or_default() == "application/json";
+    if json_decode {
+        if let Ok(v) = serde_json::Value::from_str(response) {
+            if let Ok(v) = Value::try_from(v) {
+                return v;
+            }
+        }
+    }
+
+    Value::from(response)
 }
 
 /// Fetch from a given URL
@@ -47,7 +63,10 @@ pub fn request(
 
             match request.send() {
                 Ok(res) => match res.text() {
-                    Ok(s) => Ok(Value::from(s)),
+                    Ok(s) => {
+                        let value = decode_response(&s, &headers);
+                        Ok(value)
+                    }
                     Err(e) => Err(e),
                 },
                 Err(e) => Err(e),
@@ -83,7 +102,7 @@ impl ApiDefinition {
         &self.auth_key
     }
 
-    pub fn to_polyvalue(&self) -> Result<Value, crate::Error> {
+    pub fn to_polyvalue(&self) -> Result<Value, crate::error::ExternalError> {
         let mut value = Object::try_from(vec![
             (Value::from("url"), Value::from(self.base_url())),
             (
@@ -231,7 +250,7 @@ impl ApiManager {
     pub fn store(
         state: &mut crate::State,
         api_definitions: HashMap<String, ApiDefinition>,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), crate::error::ExternalError> {
         let mut store = Object::default();
         for (k, v) in api_definitions.iter() {
             store.insert(Value::from(k.as_str()), v.to_polyvalue()?)?;
@@ -248,13 +267,13 @@ impl ApiManager {
         state: &mut crate::State,
         name: &str,
         api_definition: ApiDefinition,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<(), crate::error::ExternalError> {
         let mut store = Self::retrieve_store(state);
         store.insert(name.to_string(), api_definition);
         Self::store(state, store)
     }
 
-    pub fn delete(state: &mut crate::State, name: &str) -> Result<(), crate::Error> {
+    pub fn delete(state: &mut crate::State, name: &str) -> Result<(), crate::error::ExternalError> {
         let mut store = Self::retrieve_store(state);
         store.remove(name);
         Self::store(state, store)
@@ -321,5 +340,73 @@ impl ApiManager {
             description = "Chat with GPT-3.5",
             examples = "chatgpt('hello world')"
         );
+    }
+}
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_api_definition() {
+        let api = ApiDefinition {
+            base_url: "https://example.com".to_string(),
+            additional_headers: HashMap::from([("key".to_string(), "value".to_string())]),
+            description: "A test API".to_string(),
+            examples: "https://example.com".to_string(),
+            auth_key: Some("test_key".to_string()),
+        };
+
+        let value = api.to_polyvalue().unwrap();
+        let api2 = ApiDefinition::from_value(value).unwrap();
+
+        assert_eq!(api.base_url, api2.base_url);
+        assert_eq!(api.additional_headers, api2.additional_headers);
+        assert_eq!(api.description, api2.description);
+        assert_eq!(api.examples, api2.examples);
+        assert_eq!(api.auth_key, api2.auth_key);
+
+        let value = Value::from("https://example.com");
+        let api2 = ApiDefinition::from_value(value).unwrap();
+        assert_eq!(api2.base_url, "https://example.com");
+
+        // mock server with mockito
+        let mut server = mockito::Server::new();
+        let mock = server
+            .mock("GET", "/")
+            .with_status(200)
+            .with_header("content-type", "text/plain")
+            .with_body("hello world")
+            .create();
+
+        let url = format!("http://{}", server.host_with_port());
+        let result = ApiDefinition::from_value(url.into())
+            .unwrap()
+            .call(None, None, Default::default())
+            .unwrap();
+        assert_eq!(result.to_string(), "hello world");
+
+        mock.assert();
+
+        let mock = server
+            .mock("GET", "/json")
+            .with_status(200)
+            .with_header("content-type", "text/plain")
+            .with_body("{\"hello\": \"world\"}")
+            .create();
+
+        // create headers hashmap with content-type json
+        let mut headers = HashMap::new();
+        headers.insert("content-type".to_string(), "application/json".to_string());
+
+        let url = format!("http://{}", server.host_with_port());
+        let result = ApiDefinition::from_value(url.into())
+            .unwrap()
+            .call(Some("/json"), None, headers)
+            .unwrap()
+            .as_a::<polyvalue::types::Object>()
+            .unwrap();
+        assert_eq!(result.get(&"hello".into()).unwrap().to_string(), "world");
+
+        mock.assert();
     }
 }

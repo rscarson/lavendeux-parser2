@@ -3,7 +3,7 @@
 //! Nodes for unary operations
 //!
 use super::*;
-use crate::{Rule, State, ToToken, Value};
+use crate::{error::WrapError, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
 use polyvalue::types::Bool;
 use polyvalue::{operations::*, ValueTrait};
@@ -58,7 +58,7 @@ define_node!(
 
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
-            let ss_eval_op = *left.as_a::<Bool>()?.inner();
+            let ss_eval_op = *left.as_a::<Bool>().to_error(&this.token)?.inner();
             if *op == BooleanOperation::And && !ss_eval_op {
                 // Short circuit
                 left = Value::from(false);
@@ -67,7 +67,7 @@ define_node!(
                 left = Value::from(true);
             } else {
                 let right = operands.next().unwrap().get_value(state)?;
-                left = Value::boolean_op(&left, &right, *op)?;
+                left = Value::boolean_op(&left, &right, *op).to_error(&this.token)?;
             }
         }
 
@@ -98,7 +98,8 @@ define_node!(
     },
     value = |this: &BooleanNotExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
-        let value = Value::boolean_op(&value, &value.clone(), BooleanOperation::Not)?;
+        let value = Value::boolean_op(&value, &value.clone(), BooleanOperation::Not)
+            .to_error(&this.token)?;
         Ok(value)
     }
 );
@@ -132,15 +133,7 @@ define_node!(
         let pattern = children.next().ok_or(Error::IncompleteMatchingExpression {
             token: token.clone(),
         })?;
-
-        // is is a special case because it is the only operation that can accept an identifier
-        // as a pattern - the type name can be a string, but does not need to be
-        let pattern = if operation == MatchingOperation::Is {
-            let s = pattern.as_str().to_string();
-            ValueLiteral::new(Value::from(s), pattern.to_token()).boxed()
-        } else {
-            pattern.to_ast_node()?
-        };
+        let pattern = pattern.to_ast_node()?;
 
         Ok(Self {
             value,
@@ -152,8 +145,18 @@ define_node!(
     },
     value = |this: &MatchingExpression, state: &mut State| {
         let value = this.value.get_value(state)?;
-        let pattern = this.pattern.get_value(state)?;
-        Ok(Value::matching_op(&value, &pattern, this.operation)?)
+
+        // is is a special case because it is the only operation that can accept an identifier
+        // as a pattern - the type name can be a string, but does not need to be
+        let pattern = match this.pattern.get_value(state) {
+            Ok(pattern) => pattern,
+            Err(Error::VariableName { name, .. }) if this.operation == MatchingOperation::Is => {
+                Value::from(name)
+            }
+            Err(e) => return Err(e),
+        };
+
+        Ok(Value::matching_op(&value, &pattern, this.operation).to_error(&this.token)?)
     }
 );
 

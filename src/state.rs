@@ -12,6 +12,7 @@ pub struct State {
     /// This is used to prevent infinite recursion
     /// while parsing user_functions
     depth: usize,
+    locked: usize,
 
     /// The time that the current parse started
     /// This is used to prevent infinite loops
@@ -37,11 +38,12 @@ pub struct State {
 impl State {
     const MAX_DEPTH: usize = 999;
 
-    pub fn with_timeout(seconds: u64) -> Self {
+    pub fn with_timeout(ms: u64) -> Self {
         let mut instance = Self {
             depth: 0,
+            locked: 0,
             parse_starttime: std::time::Instant::now(),
-            timeout: seconds,
+            timeout: ms,
             variables: vec![HashMap::new()],
             user_functions: HashMap::new(),
             std_functions: HashMap::new(),
@@ -71,7 +73,7 @@ impl State {
 
     /// Checks the timeout of the parser
     pub fn check_timer(&self) -> Result<(), Error> {
-        if self.timeout > 0 && self.parse_starttime.elapsed().as_secs() > self.timeout {
+        if self.timeout > 0 && self.parse_starttime.elapsed().as_millis() > self.timeout as u128 {
             Err(Error::Timeout)
         } else {
             Ok(())
@@ -81,6 +83,7 @@ impl State {
     /// Sets the depth to 0, and destroys all scopes but the root scope
     pub fn sanitize_scopes(&mut self) {
         self.depth = 0;
+        self.locked = 0;
         self.variables.truncate(1);
     }
 
@@ -95,9 +98,13 @@ impl State {
         }
 
         self.depth += 1;
-        //println!("Depth: {}", self.depth);
         self.variables.push(HashMap::new());
         Ok(())
+    }
+
+    /// Locks the current scope, preventing access to variables in higher scopes
+    pub fn lock_scope(&mut self) {
+        self.locked = self.depth;
     }
 
     /// Removes the current scope from this state
@@ -107,6 +114,30 @@ impl State {
         }
         self.depth -= 1;
         self.variables.pop();
+
+        if self.depth < self.locked {
+            self.locked = 0;
+        }
+    }
+
+    fn get_valid_scopes(
+        &self,
+    ) -> std::iter::Take<std::iter::Rev<std::slice::Iter<'_, HashMap<String, polyvalue::Value>>>>
+    {
+        self.variables
+            .iter()
+            .rev()
+            .take(self.depth - self.locked + 1)
+    }
+
+    fn get_valid_scopes_mut(
+        &mut self,
+    ) -> std::iter::Take<std::iter::Rev<std::slice::IterMut<'_, HashMap<String, polyvalue::Value>>>>
+    {
+        self.variables
+            .iter_mut()
+            .rev()
+            .take(self.depth - self.locked + 1)
     }
 
     /// Assigns a variable in the state, in the root scope
@@ -116,6 +147,19 @@ impl State {
 
     /// Sets a variable in the state
     pub fn set_variable(&mut self, name: &str, value: Value) {
+        for scope in self.get_valid_scopes_mut() {
+            if scope.contains_key(name) {
+                scope.insert(name.to_string(), value);
+                return;
+            }
+        }
+
+        // If the variable is not found, assign it in the root scope
+        self.set_variable_in_scope(name, value)
+    }
+
+    /// Sets a variable in the current scope
+    pub fn set_variable_in_scope(&mut self, name: &str, value: Value) {
         self.variables
             .last_mut()
             .unwrap()
@@ -124,7 +168,7 @@ impl State {
 
     /// Returns the value of a variable
     pub fn get_variable(&self, name: &str) -> Option<Value> {
-        for scope in self.variables.iter().rev() {
+        for scope in self.get_valid_scopes() {
             if let Some(value) = scope.get(name) {
                 return Some(value.clone());
             }
@@ -133,7 +177,7 @@ impl State {
     }
 
     pub fn delete_variable(&mut self, name: &str) -> Option<Value> {
-        for scope in self.variables.iter_mut().rev() {
+        for scope in self.get_valid_scopes_mut() {
             if let Some(value) = scope.remove(name) {
                 return Some(value);
             }
@@ -144,7 +188,7 @@ impl State {
     /// Returns all variables in the state
     pub fn all_variables(&self) -> HashMap<String, Value> {
         let mut variables = HashMap::new();
-        for scope in self.variables.iter().rev() {
+        for scope in self.get_valid_scopes() {
             variables.extend(scope.iter().map(|(k, v)| (k.clone(), v.clone())));
         }
 
@@ -239,15 +283,9 @@ impl State {
 
     /// Returns a string containing the help for all functions
     pub fn help(&self, filter: Option<String>) -> String {
-        let mut map = self.std_functions.clone();
-        map.extend(
-            self.user_functions
-                .iter()
-                .map(|(n, f)| (n.clone(), f.to_std_function())),
-        );
-
         let mut help = Vec::new();
 
+        let map = self.std_functions.clone();
         let strings = std_functions::collect_help(map, filter.clone());
         help.push(std_functions::help_to_string(strings));
 
@@ -265,6 +303,7 @@ impl State {
         let user_fn_map = self
             .user_functions
             .iter()
+            .filter(|(n, _)| !n.starts_with("_"))
             .map(|(n, f)| (n.clone(), f.to_std_function()))
             .collect::<HashMap<String, Function>>();
         let user_fn_strings = std_functions::collect_help(user_fn_map, filter.clone());
@@ -278,19 +317,82 @@ impl State {
 mod test {
     use super::*;
     #[test]
-    fn test_scoped_delete() {
+    fn test_scope() {
         let mut state = State::new();
         state.set_variable("a", Value::from(2.0));
-        state
-            .scope_into(&Token {
-                rule: crate::pest::Rule::ATOMIC_VALUE,
-                input: "".to_string(),
-                references: None,
-            })
-            .ok();
-        state.delete_variable("a");
+        state.scope_into(&Token::dummy()).ok();
+        assert_eq!(state.delete_variable("a"), Some(Value::from(2.0)));
+        assert_eq!(state.delete_variable("a"), None);
+
+        state.global_assign_variable("b", Value::from(2.0));
+
+        assert_eq!(state.current_depth(), 1);
         state.scope_out();
+        assert_eq!(state.current_depth(), 0);
+
+        state.scope_out();
+        assert_eq!(state.current_depth(), 0);
 
         assert_eq!(state.get_variable("a"), None);
+        assert_eq!(state.get_variable("b"), Some(Value::from(2.0)));
+
+        state.depth = State::MAX_DEPTH;
+        assert!(matches!(
+            state.scope_into(&Token::dummy()),
+            Err(Error::StackOverflow { .. })
+        ));
+    }
+
+    #[test]
+    fn test_timer() {
+        let mut state = State::with_timeout(200);
+        state.start_timer();
+        std::thread::sleep(std::time::Duration::from_millis(250));
+        assert!(matches!(state.check_timer().unwrap_err(), Error::Timeout));
+    }
+
+    #[test]
+    fn test_all_variables() {
+        let mut state = State::new();
+        state.set_variable("a", Value::from(2.0));
+        state.scope_into(&Token::dummy()).ok();
+        state.set_variable("b", Value::from(3.0));
+
+        let variables = state.all_variables();
+        assert!(variables.contains_key("a"));
+        assert!(variables.contains_key("b"));
+    }
+
+    #[test]
+    fn test_user_functions() {
+        let mut state = State::new();
+        let function = UserFunction::new("test", vec![], vec!["2.0".to_string()]).unwrap();
+        state.set_user_function(function);
+        assert_eq!(state.get_user_function("test").unwrap().name(), "test");
+        assert_eq!(state.get_function("test").unwrap().name(), "test");
+    }
+
+    #[test]
+    fn test_help() {
+        let mut state = State::new();
+        let function = UserFunction::new("testasdfasdf", vec![], vec!["2.0".to_string()]).unwrap();
+        state.set_user_function(function);
+        assert!(state.help(None).contains("testasdfasdf"));
+        assert!(state.help(None).contains("Bitwise"));
+        assert!(!state
+            .help(Some("bitwise".to_string()))
+            .contains("testasdfasdf"));
+    }
+
+    #[cfg(feature = "extensions")]
+    #[test]
+    fn test_extensions() {
+        use crate::Lavendeux;
+
+        let state = State::new();
+        Lavendeux::load_extension("example_extensions/simple_extension.js").unwrap();
+
+        assert!(state.get_ext_function("add").is_some());
+        assert!(state.get_function("add").is_some());
     }
 }

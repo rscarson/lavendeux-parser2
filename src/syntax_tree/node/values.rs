@@ -4,13 +4,11 @@
 //! These nodes are how the user will interact with the syntax tree.
 //!
 use super::*;
-use crate::{Error, Rule, State, ToToken, Token, Value};
+use crate::error::WrapError;
+use crate::{Error, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
-use polyvalue::operations::IndexingOperationExt;
-use polyvalue::{
-    types::{Bool, Currency, Fixed, Float, Int, ObjectInner, Str},
-    ValueTrait, ValueType,
-};
+use polyvalue::operations::IndexingMutationExt;
+use polyvalue::{types::*, ValueTrait, ValueType};
 use std::str::FromStr;
 
 fn parse_string(input: &str) -> String {
@@ -35,6 +33,8 @@ fn parse_string(input: &str) -> String {
             s.replace("\\'", "\'")
                 .replace("\\\"", "\"")
                 .replace("\\n", "\n")
+                .replace("\\\n", "\n")
+                .replace("\\\r", "\r")
                 .replace("\\r", "\r")
                 .replace("\\t", "\t")
         })
@@ -49,35 +49,76 @@ define_node!(
         fixed_literal,
         sci_literal,
         float_literal,
-        hex_literal,
-        bin_literal,
-        oct_literal,
-        int_literal,
         bool_literal,
         regex_literal,
+        sized_literal,
         string_literal
     ],
     new = |input: Pair<Rule>| {
         let token = input.to_token();
         let value = match input.as_rule() {
-            Rule::int_literal => Int::from_str(input.as_str())?.into(),
-            Rule::float_literal | Rule::sci_literal => Float::from_str(input.as_str())?.into(),
+            Rule::int_literal => I64::from_str(input.as_str()).to_error(&token)?.into(),
+            Rule::float_literal | Rule::sci_literal => {
+                Float::from_str(input.as_str()).to_error(&token)?.into()
+            }
 
             Rule::hex_literal | Rule::bin_literal | Rule::oct_literal => {
-                Int::from_str_radix(input.as_str())?.into()
+                I64::from_str_radix(input.as_str()).to_error(&token)?.into()
             }
 
             Rule::string_literal => parse_string(input.as_str()).into(),
-            Rule::bool_literal => Bool::from_str(input.as_str())?.into(),
+            Rule::bool_literal => Bool::from_str(input.as_str()).to_error(&token)?.into(),
 
             Rule::regex_literal => Str::new(input.as_str().to_string()).into(),
+
+            Rule::sized_literal => {
+                let input = input.as_str();
+
+                if let Some(integer) = input.strip_suffix("u8") {
+                    polyvalue::types::U8::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("u16") {
+                    polyvalue::types::U16::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("u32") {
+                    polyvalue::types::U32::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("u64") {
+                    polyvalue::types::U64::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("i8") {
+                    polyvalue::types::I8::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("i16") {
+                    polyvalue::types::I16::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("i32") {
+                    polyvalue::types::I32::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else if let Some(integer) = input.strip_suffix("i64") {
+                    polyvalue::types::I64::from_str(integer)
+                        .to_error(&token)?
+                        .into()
+                } else {
+                    polyvalue::types::I64::from_str(input)
+                        .to_error(&token)?
+                        .into()
+                }
+            }
 
             Rule::fixed_literal => {
                 // remove the D suffix first
                 let input = &input.as_str()[..input.as_str().len() - 1];
-                Fixed::from_str(input)?.into()
+                Fixed::from_str(input).to_error(&token)?.into()
             }
-            Rule::currency_literal => Currency::from_str(input.as_str())?.into(),
+            Rule::currency_literal => Currency::from_str(input.as_str()).to_error(&token)?.into(),
 
             _ => Err(Error::Internal(format!(
                 "Unexpected rule {:?} in ValueLiteral",
@@ -89,12 +130,6 @@ define_node!(
     },
     value = |this: &ValueLiteral, _state: &mut State| { Ok(this.value.clone()) }
 );
-
-impl ValueLiteral {
-    pub fn new(value: Value, token: Token) -> Self {
-        Self { value, token }
-    }
-}
 
 define_node!(
     ConstantValue { value: Value },
@@ -187,7 +222,7 @@ define_node!(
         for (key, value) in &this.pairs {
             let key = key.get_value(state)?;
             let value = value.get_value(state)?;
-            object.insert(key, value)?;
+            object.insert(key, value).to_error(&this.token)?;
         }
 
         Ok(Value::Object(object.into()))
@@ -212,11 +247,13 @@ define_node!(
             .to_ast_node()?;
 
         children.next().unwrap(); // Skip the ..
-        
-        let end = children.next()
-        .ok_or(Error::IncompleteRangeExpression {
-            token: token.clone(),
-        })?.to_ast_node()?;
+
+        let end = children
+            .next()
+            .ok_or(Error::IncompleteRangeExpression {
+                token: token.clone(),
+            })?
+            .to_ast_node()?;
 
         Ok(Self { start, end, token }.boxed())
     },
@@ -256,7 +293,7 @@ define_node!(
                 Ok(Value::from(array))
             }
 
-            (Value::Int(start), Value::Int(end)) => {
+            (Value::I64(start), Value::I64(end)) => {
                 if start > end {
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
@@ -287,7 +324,7 @@ define_node!(
 
         let value = children.next().unwrap().to_ast_node()?;
         let target_type = children.next().unwrap().as_str();
-        let target_type: ValueType = target_type.try_into()?;
+        let target_type = ValueType::try_from(target_type).to_error(&token)?;
 
         Ok(Self {
             value,
@@ -298,7 +335,7 @@ define_node!(
     },
     value = |this: &CastingExpression, state: &mut State| {
         let value = this.value.get_value(state)?;
-        Ok(value.as_type(this.target_type)?)
+        Ok(value.as_type(this.target_type).to_error(&this.token)?)
     }
 );
 
@@ -337,10 +374,10 @@ define_node!(
 
             let mut pos = &mut value;
             for index in &mut indices {
-                pos = pos.get_index_mut(index)?;
+                pos = pos.get_index_mut(index).to_error(&this.token)?;
             }
 
-            let removed = pos.delete_index(&final_idx)?;
+            let removed = pos.delete_index(&final_idx).to_error(&this.token)?;
             state.set_variable(&this.src, value);
             Ok(removed)
         } else {
@@ -359,7 +396,7 @@ define_node!(
 #[cfg(test)]
 mod test {
     use polyvalue::{
-        types::{Int, Object},
+        types::{Object, I64},
         ValueTrait,
     };
 
@@ -397,34 +434,34 @@ mod test {
 
     #[test]
     fn test_hex_literal() {
-        assert_value!("0x1", hex_literal, "1");
-        assert_value!("0x1a", hex_literal, "26");
-        assert_value!("0x1A", hex_literal, "26");
-        assert_value!("0x1Aa", hex_literal, "426");
-        assert_value!("0xA0", hex_literal, "160");
+        assert_value!("0x1", sized_literal, "1");
+        assert_value!("0x1a", sized_literal, "26");
+        assert_value!("0x1A", sized_literal, "26");
+        assert_value!("0x1Aa", sized_literal, "426");
+        assert_value!("0xA0", sized_literal, "160");
     }
 
     #[test]
     fn test_bin_literal() {
-        assert_value!("0b1", bin_literal, "1");
-        assert_value!("0b10", bin_literal, "2");
-        assert_value!("0b101", bin_literal, "5");
+        assert_value!("0b1", sized_literal, "1");
+        assert_value!("0b10", sized_literal, "2");
+        assert_value!("0b101", sized_literal, "5");
     }
 
     #[test]
     fn test_oct_literal() {
-        assert_value!("0o1", oct_literal, "1");
-        assert_value!("0o10", oct_literal, "8");
-        assert_value!("0o101", oct_literal, "65");
-        assert_value!("0101", oct_literal, "65");
+        assert_value!("0o1", sized_literal, "1");
+        assert_value!("0o10", sized_literal, "8");
+        assert_value!("0o101", sized_literal, "65");
+        assert_value!("0101", sized_literal, "65");
     }
 
     #[test]
-    fn test_int_literal() {
-        assert_value!("1", int_literal, "1");
-        assert_value!("10", int_literal, "10");
-        assert_value!("100", int_literal, "100");
-        assert_value!("100,000", int_literal, "100000");
+    fn test_sized_literal() {
+        assert_value!("1", sized_literal, "1");
+        assert_value!("10", sized_literal, "10");
+        assert_value!("100", sized_literal, "100");
+        assert_value!("100_000", sized_literal, "100000");
     }
 
     #[test]
@@ -450,7 +487,7 @@ mod test {
             let state = &mut State::new();
             state.set_variable("hello", Value::from(1));
             let value = tree.get_value(state).unwrap();
-            assert_eq!(1, *value.as_a::<Int>().unwrap().inner());
+            assert_eq!(1, *value.as_a::<I64>().unwrap().inner());
         });
     }
 
@@ -480,7 +517,7 @@ mod test {
                 let obj = value.as_a::<Object>().unwrap();
                 assert!(obj.inner().contains_key(&Value::from("a")));
                 assert!(obj.inner().contains_key(&Value::from("b")));
-                assert!(obj.inner().contains_key(&Value::from(3)));
+                assert!(obj.inner().contains_key(&Value::from(3i64)));
             }
         );
     }

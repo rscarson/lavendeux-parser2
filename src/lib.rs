@@ -16,14 +16,14 @@ pub use rustyscript;
 #[cfg(feature = "extensions")]
 mod extensions;
 
-use pest::{parse_input, AstNode, Rule, ToAstNode};
+use pest::{AstNode, Rule, ToAstNode};
 use syntax_tree::Node;
 use token::ToToken;
 
 #[cfg(feature = "extensions")]
 pub use extensions::ExtensionDetails;
 
-pub use error::{Error, ErrorWithToken};
+pub use error::Error;
 pub use lavendeux::{Lavendeux, ParserOptions};
 pub use polyvalue::Value;
 pub use state::State;

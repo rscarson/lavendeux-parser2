@@ -1,9 +1,10 @@
 use crate::{
-    get_argument, required_argument, static_function, std_functions::Function, Error, State,
+    error::WrapError, get_argument, required_argument, static_function, std_functions::Function,
+    Error, State,
 };
 use polyvalue::{
     fpdec::Round,
-    types::{Array, CurrencyInner, Float, Int},
+    types::{Array, CurrencyInner, Float, I64},
     Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
@@ -18,7 +19,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Float,
         handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let min = input
@@ -41,7 +43,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Float,
         handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let max = input
@@ -62,8 +65,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.ceil()))
         }
     );
@@ -75,8 +81,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.floor()))
         }
     );
@@ -91,8 +100,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |_: &mut State, arguments, _token, _| {
             match &get_argument!("n", arguments) {
                 Value::Float(n) => Ok(Value::from(n.inner().abs())),
-                Value::Int(n) => Ok(Value::from(n.inner().abs())),
-                Value::Fixed(n) => Ok(Value::from(n.inner().abs())),
+                Value::I64(n) => Ok(Value::from(n.inner().abs())),
+                Value::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
                 Value::Currency(n) => {
                     let symbol = n.symbol().clone();
                     let precision = n.precision();
@@ -114,11 +123,17 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("precision", ValueType::Int)
         ],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let precision = *get_argument!("precision", arguments).as_a::<Int>()?.inner();
-            match &get_argument!("n", arguments) {
-                Value::Int(n) => Ok(Value::from(n)),
+        handler = |_: &mut State, arguments, token, _| {
+            let n = get_argument!("n", arguments);
+            if n.is_a(ValueType::Int) {
+                return Ok(n);
+            }
 
+            let precision = *get_argument!("precision", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
+            match &get_argument!("n", arguments) {
                 // Round floats to n decimal places
                 Value::Float(n) => {
                     let n = n.inner();
@@ -128,15 +143,51 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                     Ok(Value::from(n))
                 }
 
-                Value::Fixed(n) => Ok(Value::from(n.inner().round(precision as i8))),
+                Value::Fixed(n) => Ok(Value::from(n.inner().clone().round(precision as i8))),
                 Value::Currency(n) => {
                     let symbol = n.symbol().clone();
                     let precision = n.precision();
-                    let value = n.inner().value().inner().round(precision as i8);
+                    let value = n.inner().value().inner().clone().round(precision as i8);
                     Ok(CurrencyInner::new(symbol, precision, value.into()).into())
                 }
                 _ => Err(Error::Internal("Invalid argument type".to_string())),
             }
+        }
+    );
+
+    // LOG2
+    static_function!(
+        registry = map,
+        name = "log2",
+        description = "Returns the base 2 logarithm of a number",
+        category = "math",
+        arguments = [required_argument!("n", ValueType::Numeric)],
+        returns = ValueType::Float,
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
+            Ok(Value::from(n.log2()))
+        }
+    );
+
+    // iLOG2
+    static_function!(
+        registry = map,
+        name = "ilog2",
+        description = "Returns the base 2 logarithm of an integer",
+        category = "math",
+        arguments = [required_argument!("n", ValueType::Int)],
+        returns = ValueType::Float,
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
+            Ok(Value::from(
+                n.ilog2() as <polyvalue::types::I64 as ValueTrait>::Inner
+            ))
         }
     );
 
@@ -148,8 +199,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.log10()))
         }
     );
@@ -162,8 +216,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.ln()))
         }
     );
@@ -179,9 +236,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("base", ValueType::Numeric)
         ],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
-            let base = *get_argument!("base", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
+            let base = *get_argument!("base", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.log(base)))
         }
     );
@@ -194,8 +257,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "math",
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.sqrt()))
         }
     );
@@ -211,9 +277,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("root", ValueType::Numeric)
         ],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
-            let root = *get_argument!("root", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let n = *get_argument!("n", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
+            let root = *get_argument!("root", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(n.powf(1.0 / root)))
         }
     );

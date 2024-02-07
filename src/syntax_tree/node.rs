@@ -28,6 +28,10 @@ macro_rules! define_node {
                 &self.token
             }
 
+            fn token_offsetline(&mut self, offset: usize) {
+                self.token.line += offset;
+            }
+
             fn boxed(self) -> crate::Node
             where
                 Self: Sized + 'static,
@@ -69,6 +73,10 @@ macro_rules! define_node {
 
             fn token(&self) -> &crate::Token {
                 &self.token
+            }
+
+            fn token_offsetline(&mut self, offset: usize) {
+                self.token.line += offset;
             }
 
             fn boxed(self) -> crate::Node
@@ -164,14 +172,18 @@ lazy_static! {
         include_node!(map, UnterminatedComment);
         include_node!(map, UnexpectedDecorator);
         include_node!(map, IncompleteRangeExpression);
-        include_node!(map, IncompleteObject);
 
         //
         // Core
         include_node!(map, Script);
         include_node!(map, Line);
+        include_node!(map, Block);
+        include_node!(map, BreakExpression);
+        include_node!(map, SkipExpression);
+        include_node!(map, ReturnExpression);
         include_node!(map, TernaryExpression);
         include_node!(map, ForLoopExpression);
+        include_node!(map, SwitchExpression);
 
         //
         // Boolean
@@ -193,6 +205,7 @@ lazy_static! {
         // Assignments
         include_node!(map, FunctionAssignment);
         include_node!(map, VariableAssignment);
+        include_node!(map, OperativeAssignment);
         include_node!(map, DestructuringAssignment);
         include_node!(map, IndexAssignment);
 

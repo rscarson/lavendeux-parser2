@@ -3,7 +3,7 @@
 //! Nodes for unary operations
 //!
 use super::*;
-use crate::{Rule, State, ToToken, Value};
+use crate::{error::WrapError, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
 use polyvalue::operations::*;
 
@@ -55,7 +55,7 @@ define_node!(
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
             let right = operands.next().unwrap().get_value(state)?;
-            left = Value::bitwise_op(&left, &right, *op)?;
+            left = Value::bitwise_op(&left, &right, *op).to_error(&this.token)?;
         }
 
         Ok(left)
@@ -85,7 +85,8 @@ define_node!(
     },
     value = |this: &BitwiseNotExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
-        let value = Value::bitwise_op(&value, &value.clone(), BitwiseOperation::Not)?;
+        let value = Value::bitwise_op(&value, &value.clone(), BitwiseOperation::Not)
+            .to_error(&this.token)?;
         Ok(value)
     }
 );
@@ -146,7 +147,7 @@ mod test {
             BitwiseNotExpression,
             |tree: &mut BitwiseNotExpression| {
                 let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "95");
+                assert_eq!(value.to_string(), "-161");
             }
         );
 

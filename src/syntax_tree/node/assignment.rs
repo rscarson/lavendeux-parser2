@@ -4,52 +4,16 @@
 //! To variables, functions and compound values
 //!
 use super::*;
-use crate::{parse_input, user_function::UserFunction, Error, Rule, State, ToToken, Value};
+use crate::{error::WrapError, Error, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
-use polyvalue::{operations::IndexingOperationExt, types::Array, ValueTrait};
-
-// identifier ~ "(" ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION |
-// identifier ~ "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION
-define_node!(
-    FunctionAssignment {
-        name: String,
-        arguments: Vec<String>,
-        expression: String
+use polyvalue::{
+    operations::{
+        ArithmeticOperation, ArithmeticOperationExt, BitwiseOperation, BitwiseOperationExt,
+        IndexingMutationExt,
     },
-    rules = [FUNCTION_ASSIGNMENT_STATEMENT],
-
-    new = |input:Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner();
-
-        // Name of the function is the first child
-        let name = children.next().unwrap().as_str().to_string();
-
-        // Parse arguments
-        let mut arguments = Vec::new();
-        while children.peek().is_some() {
-            let arg = children.next().unwrap();
-            arguments.push(arg.as_str().to_string());
-        }
-
-        // Confirm validity of the function body by parsing it here
-        let expression = arguments.pop().unwrap();
-        parse_input(&expression, Rule::TOPLEVEL_EXPRESSION)?;
-
-        Ok(Self {
-            name,
-            arguments,
-            expression,
-            token
-        }.boxed())
-    },
-
-    value = |assignment: &FunctionAssignment, state: &mut State| {
-        let function = UserFunction::new(&assignment.name, assignment.arguments.clone(), assignment.expression.clone())?;
-        state.set_user_function(function);
-        Ok(Value::from(assignment.expression.clone()))
-    }
-);
+    types::Array,
+    ValueTrait,
+};
 
 // identifier ~ "=" ~ TOPLEVEL_EXPRESSION
 define_node!(
@@ -57,7 +21,7 @@ define_node!(
         name: String,
         value: Node
     },
-    rules = [VARIABLE_ASSIGNMENT_STATEMENT],
+    rules = [VARIABLE_ASSIGNMENT_EXPRESSION],
     new = |input: Pair<Rule>| {
         let token = input.to_token();
         let mut children = input.into_inner();
@@ -73,6 +37,110 @@ define_node!(
     }
 );
 
+#[derive(Debug, Clone)]
+pub enum OperativeAssignmentOperation {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
+    Exponent,
+    BitAnd,
+    BitOr,
+    BitXor,
+    BitShiftLeft,
+    BitShiftRight,
+}
+define_node!(
+    OperativeAssignment {
+        name: String,
+        operation: OperativeAssignmentOperation,
+        value: Node
+    },
+    rules = [OPERATIVE_ASSIGNMENT_EXPRESSION],
+    new = |input: Pair<Rule>| {
+        let token = input.to_token();
+        let mut children = input.into_inner();
+
+        let name = children.next().unwrap().as_str().to_string();
+        let operation = match children.next().unwrap().as_str() {
+            "+=" => OperativeAssignmentOperation::Add,
+            "-=" => OperativeAssignmentOperation::Subtract,
+            "*=" => OperativeAssignmentOperation::Multiply,
+            "/=" => OperativeAssignmentOperation::Divide,
+            "%=" => OperativeAssignmentOperation::Modulo,
+            "**=" => OperativeAssignmentOperation::Exponent,
+
+            "&=" => OperativeAssignmentOperation::BitAnd,
+            "|=" => OperativeAssignmentOperation::BitOr,
+            "^=" => OperativeAssignmentOperation::BitXor,
+            "<<=" => OperativeAssignmentOperation::BitShiftLeft,
+            ">>=" => OperativeAssignmentOperation::BitShiftRight,
+
+            _ => unreachable!(),
+        };
+        let value = children.next().unwrap().to_ast_node()?;
+
+        Ok(Self {
+            name,
+            operation,
+            value,
+            token,
+        }
+        .boxed())
+    },
+    value = |assignment: &OperativeAssignment, state: &mut State| {
+        let left = state
+            .get_variable(&assignment.name)
+            .ok_or(Error::VariableName {
+                name: assignment.name.clone(),
+                token: assignment.token().clone(),
+            })?;
+        let right = (*assignment.value).get_value(state)?;
+
+        let result = match assignment.operation {
+            OperativeAssignmentOperation::Add => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Add)
+            }
+            OperativeAssignmentOperation::Subtract => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Subtract)
+            }
+            OperativeAssignmentOperation::Multiply => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Multiply)
+            }
+            OperativeAssignmentOperation::Divide => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Divide)
+            }
+            OperativeAssignmentOperation::Modulo => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Modulo)
+            }
+            OperativeAssignmentOperation::Exponent => {
+                Value::arithmetic_op(&left, &right, ArithmeticOperation::Exponentiate)
+            }
+
+            OperativeAssignmentOperation::BitAnd => {
+                Value::bitwise_op(&left, &right, BitwiseOperation::And)
+            }
+            OperativeAssignmentOperation::BitOr => {
+                Value::bitwise_op(&left, &right, BitwiseOperation::Or)
+            }
+            OperativeAssignmentOperation::BitXor => {
+                Value::bitwise_op(&left, &right, BitwiseOperation::Xor)
+            }
+            OperativeAssignmentOperation::BitShiftLeft => {
+                Value::bitwise_op(&left, &right, BitwiseOperation::LeftShift)
+            }
+            OperativeAssignmentOperation::BitShiftRight => {
+                Value::bitwise_op(&left, &right, BitwiseOperation::RightShift)
+            }
+        }
+        .to_error(&assignment.token)?;
+
+        state.set_variable(&assignment.name, result.clone());
+        Ok(result)
+    }
+);
+
 // identifier ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")+ ~ "=" ~ TOPLEVEL_EXPRESSION
 define_node!(
     IndexAssignment {
@@ -80,7 +148,7 @@ define_node!(
         indices: Vec<Node>,
         value: Node
     },
-    rules = [INDEX_ASSIGNMENT_STATEMENT],
+    rules = [INDEX_ASSIGNMENT_EXPRESSION],
 
     new = |input:Pair<Rule>| {
         let token = input.to_token();
@@ -117,11 +185,11 @@ define_node!(
         })?;
         let mut ptr = &mut dst;
         for index in &indices {
-            ptr = ptr.get_index_mut(index)?;
+            ptr = ptr.get_index_mut(index).to_error(&assignment.token)?;
         }
 
         // Set the value
-        ptr.set_index(&final_index, value.clone())?;
+        ptr.set_index(&final_index, value.clone()).to_error(&assignment.token)?;
 
         // Set state and return
         state.set_variable(&assignment.name, dst);
@@ -134,7 +202,7 @@ define_node!(
         names: Vec<String>,
         value: Node
     },
-    rules = [DESTRUCTURING_ASSIGNMENT_STATEMENT],
+    rules = [DESTRUCTURING_ASSIGNMENT_EXPRESSION],
 
     new = |input:Pair<Rule>| {
         let token = input.to_token();
@@ -159,7 +227,7 @@ define_node!(
 
     value = |assignment: &DestructuringAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
-        let values = value.as_a::<Array>()?.inner().clone();
+        let values = value.as_a::<Array>().to_error(&assignment.token)?.inner().clone();
         if values.len() != assignment.names.len() {
             return Err(Error::DestructuringAssignment {
                 expected_length: assignment.names.len(),
@@ -186,7 +254,7 @@ mod test {
     fn test_destructuring_assignment() {
         assert_tree!(
             "(a, b, c) = a",
-            DESTRUCTURING_ASSIGNMENT_STATEMENT,
+            DESTRUCTURING_ASSIGNMENT_EXPRESSION,
             DestructuringAssignment,
             |tree: &mut DestructuringAssignment| {
                 assert_eq!(tree.names.len(), 3);
@@ -217,7 +285,7 @@ mod test {
             |tree: &mut FunctionAssignment| {
                 assert_eq!(tree.name, "test");
                 assert_eq!(0, tree.arguments.len());
-                assert_eq!(tree.expression, "1");
+                assert_eq!(tree.expressions, vec!["1"]);
             }
         );
 
@@ -228,7 +296,7 @@ mod test {
             |tree: &mut FunctionAssignment| {
                 assert_eq!(tree.name, "test");
                 assert_eq!(tree.arguments[0], "a");
-                assert_eq!(tree.expression, "2*a");
+                assert_eq!(tree.expressions, vec!["2*a"]);
             }
         );
     }
@@ -237,7 +305,7 @@ mod test {
     fn test_variable_assignment() {
         assert_tree!(
             "a = 1",
-            VARIABLE_ASSIGNMENT_STATEMENT,
+            VARIABLE_ASSIGNMENT_EXPRESSION,
             VariableAssignment,
             |tree: &mut VariableAssignment| {
                 assert_eq!(tree.name, "a");
@@ -249,14 +317,14 @@ mod test {
             }
         );
 
-        assert_tree_error!("pi = 2", Pest);
+        assert_tree_error!("pi = 2", External);
     }
 
     #[test]
     fn test_index_assignment() {
         assert_tree!(
             "a[-1] = 1",
-            INDEX_ASSIGNMENT_STATEMENT,
+            INDEX_ASSIGNMENT_EXPRESSION,
             IndexAssignment,
             |tree: &mut IndexAssignment| {
                 assert_eq!(tree.name, "a");
@@ -273,7 +341,7 @@ mod test {
 
         assert_tree!(
             "a[2] = 1",
-            INDEX_ASSIGNMENT_STATEMENT,
+            INDEX_ASSIGNMENT_EXPRESSION,
             IndexAssignment,
             |tree: &mut IndexAssignment| {
                 assert_eq!(tree.name, "a");
@@ -289,7 +357,7 @@ mod test {
 
         assert_tree!(
             "a[0] = 1",
-            INDEX_ASSIGNMENT_STATEMENT,
+            INDEX_ASSIGNMENT_EXPRESSION,
             IndexAssignment,
             |tree: &mut IndexAssignment| {
                 assert_eq!(tree.name, "a");
@@ -306,7 +374,7 @@ mod test {
 
         assert_tree!(
             "a[0][1] = 1",
-            INDEX_ASSIGNMENT_STATEMENT,
+            INDEX_ASSIGNMENT_EXPRESSION,
             IndexAssignment,
             |tree: &mut IndexAssignment| {
                 assert_eq!(tree.name, "a");
@@ -324,7 +392,7 @@ mod test {
 
         assert_tree!(
             "a[0][0][1] = 1",
-            INDEX_ASSIGNMENT_STATEMENT,
+            INDEX_ASSIGNMENT_EXPRESSION,
             IndexAssignment,
             |tree: &mut IndexAssignment| {
                 assert_eq!(tree.name, "a");

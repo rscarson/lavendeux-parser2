@@ -9,6 +9,7 @@ mod stdlib {
     use std::collections::HashMap;
 
     mod array;
+    mod bitwise;
     mod dev;
     mod math;
     mod network;
@@ -20,6 +21,7 @@ mod stdlib {
 
     pub fn register_all(map: &mut HashMap<String, Function>) {
         array::register_all(map);
+        bitwise::register_all(map);
         dev::register_all(map);
         math::register_all(map);
         network::register_all(map);

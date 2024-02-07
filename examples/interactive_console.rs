@@ -25,9 +25,9 @@ fn main() -> Result<(), Error> {
     let mut lavendeux = Lavendeux::new(Default::default());
 
     // Load extensions
-    lavendeux.load_extension("example_extensions/simple_extension.js")?;
-    lavendeux.load_extension("example_extensions/zarbans_grotto.js")?;
-    lavendeux.load_extension("example_extensions/lavendeux-colour.js")?;
+    Lavendeux::load_extension("example_extensions/simple_extension.js")?;
+    Lavendeux::load_extension("example_extensions/zarbans_grotto.js")?;
+    Lavendeux::load_extension("example_extensions/lavendeux-colour.js")?;
 
     // Preload command stack from arguments
     let mut stack: VecDeque<String> = env::args().skip(1).collect();

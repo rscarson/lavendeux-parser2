@@ -30,7 +30,6 @@ error_node!(UnterminatedLiteral, ERROR_UNTERMINATED_LITERAL);
 error_node!(UnterminatedComment, ERROR_UNTERMINATED_COMMENT);
 error_node!(UnexpectedDecorator, ERROR_UNEXPECTED_DECORATOR);
 error_node!(IncompleteRangeExpression, RANGE_OPERATOR);
-error_node!(IncompleteObject, ERROR_INCOMPLETE_OBJECT);
 
 #[cfg(test)]
 mod test {
@@ -46,6 +45,5 @@ mod test {
         assert_tree_error!("..", IncompleteRangeExpression);
         assert_tree_error!("..1", IncompleteRangeExpression);
         assert_tree_error!("1 + 1 matches", IncompleteMatchingExpression);
-        assert_tree_error!("{0}", IncompleteObject);
     }
 }

@@ -3,7 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use polyvalue::Value;
 use rustyscript::{deno_core::extension, Module, ModuleHandle, Runtime, RuntimeOptions};
 
-use crate::{Error, Token};
+use crate::{error::ExternalError, Error, Token};
 
 use super::extension::ExtensionDetails;
 
@@ -24,7 +24,7 @@ pub struct ExtensionRuntime {
 impl ExtensionRuntime {
     const SCRIPT_TIMEOUT: u64 = 1000;
 
-    pub fn new(module: Module) -> Result<Self, Error> {
+    pub fn new(module: Module) -> Result<Self, ExternalError> {
         // Start the runtime
         let mut inner = Runtime::new(RuntimeOptions {
             timeout: Duration::from_millis(Self::SCRIPT_TIMEOUT),

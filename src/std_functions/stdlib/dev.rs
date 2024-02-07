@@ -1,9 +1,9 @@
 use crate::{
-    get_argument, get_optional_argument, optional_argument, required_argument, static_function,
-    std_functions::Function, Error, State,
+    error::WrapError, get_argument, get_optional_argument, optional_argument, required_argument,
+    static_function, std_functions::Function, Error, State,
 };
 use polyvalue::{
-    types::{Array, Int, Str},
+    types::{Array, Str, I64},
     Value, ValueTrait, ValueType,
 };
 use std::{collections::HashMap, fs::File, io::BufRead};
@@ -36,21 +36,23 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             optional_argument!("lines", ValueType::Int)
         ],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let n = get_optional_argument!("lines", arguments)
                 .unwrap_or(Value::from(1))
-                .as_a::<Int>()?
+                .as_a::<I64>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let file = get_argument!("file", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
-            let file = File::open(&file)?;
+            let file = File::open(&file).to_error(token)?;
 
             let lines = std::io::BufReader::new(file)
                 .lines()
-                .map(|f| Ok::<Value, Error>(Value::from(f?)))
+                .map(|f| Ok::<Value, Error>(Value::from(f.to_error(token)?)))
                 .collect::<Result<Vec<_>, _>>()?;
 
             // return last n
@@ -74,10 +76,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "dev",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use sha2::{Digest, Sha256};
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
 
@@ -97,10 +100,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "dev",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use sha2::{Digest, Sha512};
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
 
@@ -120,10 +124,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "dev",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use md5::{Digest, Md5};
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
 
@@ -143,10 +148,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "dev",
         arguments = [required_argument!("array", ValueType::Array)],
         returns = ValueType::Any,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use rand::seq::SliceRandom;
             let input = get_argument!("array", arguments)
-                .as_a::<Array>()?
+                .as_a::<Array>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let random = input.choose(&mut rand::thread_rng()).unwrap();
@@ -164,8 +170,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         returns = ValueType::Any,
         handler = |_: &mut State, arguments, token, _| {
             use rand::Rng;
-            let m = get_optional_argument!("m", arguments).and_then(|v| Some(*v.as_a::<Int>().unwrap().inner()));
-            let n = get_optional_argument!("n", arguments).and_then(|v| Some(*v.as_a::<Int>().unwrap().inner()));
+            let m = get_optional_argument!("m", arguments).and_then(|v| Some(*v.as_a::<I64>().unwrap().inner()));
+            let n = get_optional_argument!("n", arguments).and_then(|v| Some(*v.as_a::<I64>().unwrap().inner()));
 
             match (m, n) {
                 (None, None) => Ok(Value::from(rand::random::<f64>())),

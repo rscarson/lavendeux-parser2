@@ -1,5 +1,6 @@
 use crate::{
-    get_argument, required_argument, static_function, std_functions::Function, Error, State,
+    error::WrapError, get_argument, required_argument, static_function, std_functions::Function,
+    Error, State,
 };
 use polyvalue::{types::Float, Value, ValueTrait, ValueType};
 use std::collections::HashMap;
@@ -13,8 +14,11 @@ macro_rules! trig_function {
             category = "trig",
             arguments = [required_argument!("n", ValueType::Numeric)],
             returns = ValueType::Float,
-            handler = |_: &mut State, arguments, _token, _| {
-                let n = *get_argument!("n", arguments).as_a::<Float>()?.inner();
+            handler = |_: &mut State, arguments, token, _| {
+                let n = *get_argument!("n", arguments)
+                    .as_a::<Float>()
+                    .to_error(token)?
+                    .inner();
                 Ok(Value::from(n.$name()))
             }
         );
@@ -30,8 +34,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "trig",
         arguments = [required_argument!("radians", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let radians = *get_argument!("radians", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let radians = *get_argument!("radians", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(radians * 180.0 / std::f64::consts::PI))
         }
     );
@@ -44,8 +51,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "trig",
         arguments = [required_argument!("degrees", ValueType::Numeric)],
         returns = ValueType::Float,
-        handler = |_: &mut State, arguments, _token, _| {
-            let degrees = *get_argument!("degrees", arguments).as_a::<Float>()?.inner();
+        handler = |_: &mut State, arguments, token, _| {
+            let degrees = *get_argument!("degrees", arguments)
+                .as_a::<Float>()
+                .to_error(token)?
+                .inner();
             Ok(Value::from(degrees * std::f64::consts::PI / 180.0))
         }
     );

@@ -1,10 +1,10 @@
 use crate::{
-    get_argument, required_argument, static_decorator, static_function, std_functions::Function,
-    Error, State,
+    error::WrapError, get_argument, required_argument, static_decorator, static_function,
+    std_functions::Function, Error, State,
 };
 use polyvalue::{
-    types::{Bool, Float, Int},
-    ValueTrait, ValueType,
+    types::{Bool, Float, I64},
+    Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -19,9 +19,20 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "hex",
         description = "Base 16 number formatting, such as 0xFF",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Int>()?.inner();
-            Ok(format!("{:#0x}", input))
+        handler = &|input, token| {
+            match input {
+                Value::U8(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::I8(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::U16(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::I16(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::U32(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::I32(v) => Ok(format!("{:#0x}", v.inner())),
+                Value::U64(v) => Ok(format!("{:#0x}", v.inner())),
+                _ => {
+                    let input = *input.as_a::<I64>().to_error(token)?.inner();
+                    Ok(format!("{:#0x}", input))
+                }
+            }
         }
     );
 
@@ -30,9 +41,20 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "oct",
         description = "Base 8 number formatting, such as 0o77",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Int>()?.inner();
-            Ok(format!("{:#0o}", input))
+        handler = &|input, token| {
+            match input {
+                Value::U8(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::I8(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::U16(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::I16(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::U32(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::I32(v) => Ok(format!("{:#0o}", v.inner())),
+                Value::U64(v) => Ok(format!("{:#0o}", v.inner())),
+                _ => {
+                    let input = *input.as_a::<I64>().to_error(token)?.inner();
+                    Ok(format!("{:#0o}", input))
+                }
+            }
         }
     );
 
@@ -41,9 +63,20 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "bin",
         description = "Base 2 number formatting, such as 0b101",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Int>()?.inner();
-            Ok(format!("{:#0b}", input))
+        handler = &|input, token| {
+            match input {
+                Value::U8(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::I8(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::U16(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::I16(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::U32(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::I32(v) => Ok(format!("{:#0b}", v.inner())),
+                Value::U64(v) => Ok(format!("{:#0b}", v.inner())),
+                _ => {
+                    let input = *input.as_a::<I64>().to_error(token)?.inner();
+                    Ok(format!("{:#0b}", input))
+                }
+            }
         }
     );
 
@@ -52,8 +85,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "sci",
         description = "Scientific notation formatting, such as 1.2e3",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Int>()?.inner();
+        handler = &|input, token| {
+            let input = *input.as_a::<I64>().to_error(token)?.inner();
             Ok(format!("{:e}", input))
         }
     );
@@ -63,8 +96,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "float",
         description = "Formats a number as a floating point number",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = input.as_a::<Float>()?;
+        handler = &|input, token| {
+            let input = input.as_a::<Float>().to_error(token)?;
             Ok(input.to_string())
         }
     );
@@ -74,8 +107,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "int",
         description = "Format a number as an integer",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = input.as_a::<Int>()?;
+        handler = &|input, token| {
+            let input = input.as_a::<I64>().to_error(token)?;
             Ok(input.to_string())
         }
     );
@@ -85,8 +118,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "bool",
         description = "Format a value as a boolean",
         expected_type = ValueType::Any,
-        handler = &|input, _token| {
-            let input = input.as_a::<Bool>()?;
+        handler = &|input, token| {
+            let input = input.as_a::<Bool>().to_error(token)?;
             Ok(input.to_string())
         }
     );

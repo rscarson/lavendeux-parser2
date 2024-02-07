@@ -14,7 +14,7 @@ LINE = {
 }
 
 STATEMENT = _{
-    FUNCTION_ASSIGNMENT_STATEMENT | INDEX_ASSIGNMENT_STATEMENT | VARIABLE_ASSIGNMENT_STATEMENT | DESTRUCTURING_ASSIGNMENT_STATEMENT
+    FUNCTION_ASSIGNMENT_STATEMENT
     | TOPLEVEL_EXPRESSION
 }
 
@@ -33,52 +33,75 @@ EOL = _{NEWLINE | ";"}
 // Assignment expressions
 // 
 
+FUNCTION_EQUAL_OPERATOR = {"="}
+FUNCTION_BODY = _{
+    "{" ~ LINE+ ~ "}"
+    | TOPLEVEL_EXPRESSION
+}
 FUNCTION_ASSIGNMENT_STATEMENT = {
-    identifier ~ "(" ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION |
-    identifier ~ "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION
-}
-
-VARIABLE_ASSIGNMENT_STATEMENT = {identifier ~ "=" ~ TOPLEVEL_EXPRESSION}
-
-DESTRUCTURING_ASSIGNMENT_STATEMENT = {
-    "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION
-}
-
-INDEX_ASSIGNMENT_STATEMENT = {
-    identifier ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")+ ~ "=" ~ TOPLEVEL_EXPRESSION
+    identifier ~ "(" ~ ")" ~ FUNCTION_EQUAL_OPERATOR ~ FUNCTION_BODY |
+    identifier ~ "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ FUNCTION_EQUAL_OPERATOR ~ FUNCTION_BODY
 }
 
 //
 // Top of expression tree
 //
 
+BLOCK = {
+    "{" ~ LINE+ ~ "}"
+    | TOPLEVEL_EXPRESSION
+}
+
 TOPLEVEL_EXPRESSION = _{ 
-    IF_EXPRESSION
+    SKIP_KEYWORD | BREAK_KEYWORD
+    | IF_EXPRESSION
     | SWITCH_EXPRESSION
     | FOR_LOOP_EXPRESSION
+    | VARIABLE_ASSIGNMENT_EXPRESSION
+    | OPERATIVE_ASSIGNMENT_EXPRESSION
+    | DESTRUCTURING_ASSIGNMENT_EXPRESSION
+    | INDEX_ASSIGNMENT_EXPRESSION
     | TERNARY_EXPRESSION
 }
 
+// 
+// Assignment expressions
+//
+
+VARIABLE_ASSIGNMENT_EXPRESSION = {identifier ~ "=" ~ TOPLEVEL_EXPRESSION}
+
+OPERATIVE_ASSIGNMENT_OPERATOR = {"+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**="}
+OPERATIVE_ASSIGNMENT_EXPRESSION = {
+    identifier ~ OPERATIVE_ASSIGNMENT_OPERATOR ~ TOPLEVEL_EXPRESSION
+}
+
+DESTRUCTURING_ASSIGNMENT_EXPRESSION = {
+    "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION
+}
+
+INDEX_ASSIGNMENT_EXPRESSION = {
+    identifier ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")+ ~ "=" ~ TOPLEVEL_EXPRESSION
+}
+
+// 
+// Flow Control expressions
+//
+
 IF_EXPRESSION = {
-    ("if" ~ TOPLEVEL_EXPRESSION ~ "then" ~ TOPLEVEL_EXPRESSION ~ "else")+ ~ TOPLEVEL_EXPRESSION
+    ("if" ~ TOPLEVEL_EXPRESSION ~ EOL? ~ "then" ~ EOL? ~ BLOCK ~ EOL? ~ "else")+ ~ BLOCK
 }
 
 FOR_LOOP_EXPRESSION = {
-    "for" ~ (identifier ~ "in")? ~ TOPLEVEL_EXPRESSION ~ "do" ~ TOPLEVEL_EXPRESSION
+    "for" ~ (identifier ~ "in")? ~ TOPLEVEL_EXPRESSION ~ "do" ~ BLOCK
 }
 
-SHOVEL_OPERATOR = @{"=>"}
-SWITCH_CASE_EXPRESSION = {
-    TOPLEVEL_EXPRESSION ~ SHOVEL_OPERATOR ~ TOPLEVEL_EXPRESSION
+SWITCH_CASE_EXPRESSION = _{
+    ATOMIC_VALUE ~ "=>" ~ BLOCK
 }
 SWITCH_EXPRESSION = {
-    "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ (SWITCH_CASE_EXPRESSION ~ ",")* ~ SWITCH_CASE_EXPRESSION ~ "}"
-    | "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ SWITCH_CASE_EXPRESSION ~ "}"
+    "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ "," ~ EOL*)* ~ SWITCH_CASE_EXPRESSION ~ ","? ~ EOL* ~ "}"
+    | "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ EOL* ~ SWITCH_CASE_EXPRESSION ~ ","? ~ EOL* ~ "}"
 }
-
-//
-// Flow control expressions
-//
 
 TERNARY_EXPRESSION = {
     BOOLEAN_OR_EXPRESSION ~ ("?" ~ BOOLEAN_OR_EXPRESSION ~ ":" ~ BOOLEAN_OR_EXPRESSION)*
@@ -152,26 +175,34 @@ ARITHMETIC_EXPONENTIATION_EXPRESSION = {
 
 MATCHING_OPERATOR = {"contains" | "matches" | "is" | "startswith" | "endswith" | "starts_with" | "ends_with"}
 MATCHING_EXPRESSION = {
-    RANGE_EXPRESSION ~ (MATCHING_OPERATOR ~ RANGE_EXPRESSION?)?
-}
-
-
-RANGE_OPERATOR = {".."}
-RANGE_EXPRESSION = {
-    RANGE_OPERATOR ~ CASTING_EXPRESSION
-    | RANGE_OPERATOR
-    | CASTING_EXPRESSION ~ (RANGE_OPERATOR ~ CASTING_EXPRESSION)?
-    | CASTING_EXPRESSION ~ RANGE_OPERATOR
+    CASTING_EXPRESSION ~ (MATCHING_OPERATOR ~ CASTING_EXPRESSION?)?
 }
 
 TARGET_TYPE = @{identifier}
 CASTING_EXPRESSION = {
-    DELETE_EXPRESSION ~ ("as" ~ TARGET_TYPE)?
+    RANGE_EXPRESSION ~ ("as" ~ TARGET_TYPE)?
+}
+
+RANGE_OPERATOR = {".."}
+RANGE_EXPRESSION = {
+    RANGE_OPERATOR ~ DELETE_EXPRESSION
+    | RANGE_OPERATOR
+    | DELETE_EXPRESSION ~ (RANGE_OPERATOR ~ DELETE_EXPRESSION)?
+    | DELETE_EXPRESSION ~ RANGE_OPERATOR
 }
 
 DELETE_KEYWORD = {"delete" | "del" | "unset"}
 DELETE_EXPRESSION = {
-    DELETE_KEYWORD ~ identifier ~ ("[" ~ BOOLEAN_NOT_EXPRESSION ~ "]")*
+    DELETE_KEYWORD ~ identifier ~ ("[" ~ RETURN_EXPRESSION ~ "]")*
+    | RETURN_EXPRESSION
+}
+
+SKIP_KEYWORD = {"skip" | "continue"}
+BREAK_KEYWORD = {"break"}
+
+RETURN_KEYWORD = {"return" | "skip"}
+RETURN_EXPRESSION = {
+    RETURN_KEYWORD ~ BOOLEAN_NOT_EXPRESSION?
     | BOOLEAN_NOT_EXPRESSION
 }
 
@@ -191,17 +222,21 @@ BITWISE_NOT_EXPRESSION = {
 
 ARITHMETIC_NEG_OPERATOR = {"-"}
 ARITHMETIC_NEG_EXPRESSION = {
-    ARITHMETIC_NEG_OPERATOR* ~ FUNCTION_CALL_EXPRESSION
+    ARITHMETIC_NEG_OPERATOR* ~ POSTFIX_FUNCTION_CALL_EXPRESSION
 }
 
 //
 // Function call stuff
-// 
+//
+
+POSTFIX_FUNCTION_CALL_EXPRESSION = {
+    FUNCTION_CALL_EXPRESSION ~ ("." ~ identifier ~ "(" ~ (FUNCTION_CALL_EXPRESSION ~ ("," ~ FUNCTION_CALL_EXPRESSION)*)? ~ ")")?
+}
 
 FUNCTION_START_MARKER = {"("}
 FUNCTION_CALL_EXPRESSION = {
-    identifier ~ FUNCTION_START_MARKER ~ ")" |
-    identifier ~ FUNCTION_START_MARKER ~ TOPLEVEL_EXPRESSION ~ ("," ~ TOPLEVEL_EXPRESSION)* ~ ")"
+    identifier ~ FUNCTION_START_MARKER ~ ")"
+    | identifier ~ FUNCTION_START_MARKER ~ TOPLEVEL_EXPRESSION ~ ("," ~ TOPLEVEL_EXPRESSION)* ~ ")"
     | INDEXING_EXPRESSION
 }
 
@@ -226,7 +261,7 @@ TERM = _{
 ATOMIC_VALUE = _{
     | currency_literal | fixed_literal
     | sci_literal | float_literal
-    | hex_literal | bin_literal | oct_literal | int_literal
+    | sized_literal
     | bool_literal | string_literal | regex_literal
     | array_literal | object_literal
     | const_literal
@@ -246,7 +281,7 @@ object_literal = {
 }
 
 fixed_literal = @{
-    ('0'..'9')+ ~ ("." ~ ('0'..'9')+)? ~ ("D" | "d")
+    ('0'..'9')+ ~ ("." ~ ('0'..'9')+)? ~ ("D" | "d" | "F" | "f")
 }
 
 // Fixed-point currency values
@@ -265,23 +300,27 @@ currency_suffix = @{
     "TWD" | "NT$" | "NGN" | "CLP" | "CL$" | "ARS" | "AR$" | "COP" | "CO$" | "PEN" | "S/." | "DOP" | "RD$"
 }
 currency_literal = {
-    ((float_literal | int_literal) ~ currency_symbol) 
-    | (currency_symbol ~ (float_literal | int_literal))
-    | ((float_literal | int_literal) ~ currency_suffix)
+    ((float_literal | dec_literal) ~ currency_symbol) 
+    | (currency_symbol ~ (float_literal | dec_literal))
+    | ((float_literal | dec_literal) ~ currency_suffix)
 }
 
 // Floating-point literals
-sci_literal = @{(float_literal | int_literal) ~ ^"e" ~ ("+"|"-")? ~ ('0'..'9')+}
-float_literal = @{int_literal? ~ "." ~ ('0'..'9')+}
+sci_literal = @{(float_literal | dec_literal) ~ ^"e" ~ ("+"|"-")? ~ ('0'..'9')+}
+float_literal = @{dec_literal? ~ "." ~ ('0'..'9')+}
 
 const_literal = @{"pi" | "e" | "tau"}
 
 // Integer literals
-int_comma = _{('0'..'9'){1,3} ~ ("," ~ ('0'..'9'){3})+}
-int_literal = @{int_comma | ('0'..'9')+}
+int_sep = _{('0'..'9'){1,3} ~ ("_" ~ ('0'..'9'){3})+}
+dec_literal = @{int_sep | ('0'..'9')+}
 hex_literal = @{(^"0x") ~ ('a'..'f' | 'A'..'F' | '0'..'9')+}
 bin_literal = @{(^"0b") ~ ('0'..'1')+}
 oct_literal = @{(^"0o" | "0") ~ ('0'..'7')+}    
+int_literal = @{hex_literal | bin_literal | oct_literal | dec_literal}
+
+sized_literal_suffix = {"u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"}
+sized_literal = @{int_literal ~ sized_literal_suffix?}
 
 // Other literals
 bool_literal = @{^"true" | ^"false"}
@@ -306,7 +345,6 @@ identifier = @{reserved_words? ~ ('a'..'z' | 'A'..'Z' | "_") ~ ('a'..'z' | 'A'..
 errors = _{
     ERROR_UNTERMINATED_LITERAL | ERROR_UNTERMINATED_LINEBREAK | ERROR_UNTERMINATED_COMMENT
     | ERROR_UNEXPECTED_DECORATOR
-    | ERROR_INCOMPLETE_OBJECT
 }
 
 ERROR_UNTERMINATED_LITERAL = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))*) | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))*)}
@@ -314,5 +352,3 @@ ERROR_UNTERMINATED_LINEBREAK = @{"\\" ~ EOI}
 ERROR_UNTERMINATED_COMMENT = @{"/*" ~ ANY*}
 
 ERROR_UNEXPECTED_DECORATOR = @{"@" ~ identifier ~ WHITESPACE* ~ (!WHITESPACE ~ !EOL ~ ANY)+ | SOI ~ "@" ~ ANY*}
-
-ERROR_INCOMPLETE_OBJECT = @{ "{" ~ ANY* }

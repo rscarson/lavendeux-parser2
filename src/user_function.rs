@@ -16,7 +16,7 @@ thread_local! {
     static USER_FUNCTION_CACHE: OnceCell<RefCell<HashMap<String, Rc<Node>>>> = OnceCell::new();
 }
 
-fn cached_fn_compile(src: &str) -> Result<Rc<Node>, Error> {
+fn cached_fn_compile(src: &str, line_offset: usize) -> Result<Rc<Node>, Error> {
     USER_FUNCTION_CACHE.with(|once_lock| {
         let rt_mut = once_lock.get_or_init(|| RefCell::new(HashMap::new()));
         let mut cache = rt_mut.borrow_mut();
@@ -24,7 +24,8 @@ fn cached_fn_compile(src: &str) -> Result<Rc<Node>, Error> {
         match cache.entry(src.to_string()) {
             Entry::Occupied(o) => Ok(o.get().clone()),
             Entry::Vacant(v) => {
-                let node = pest::parse_input(src, pest::Rule::TOPLEVEL_EXPRESSION)?;
+                let mut node = pest::parse_input(src, pest::Rule::TOPLEVEL_EXPRESSION)?;
+                node.token_offsetline(line_offset);
                 Ok(v.insert(Rc::new(node)).clone())
             }
         }
@@ -35,22 +36,37 @@ fn cached_fn_compile(src: &str) -> Result<Rc<Node>, Error> {
 pub struct UserFunction {
     name: String,
     arguments: Vec<String>,
-    src: String,
+    src: Vec<String>,
+    offset: usize,
 }
 
 impl UserFunction {
     /// Creates a new user function
-    pub fn new(name: &str, arguments: Vec<String>, src: String) -> Result<Self, Error> {
+    /// Will run each element in src, and return the last value
+    pub fn new(name: &str, arguments: Vec<String>, src: Vec<String>) -> Result<Self, Error> {
+        if src.is_empty() {
+            return Err(Error::Internal(
+                "User function must have at least one line".to_string(),
+            ));
+        }
+
         // Check that the function is valid
-        cached_fn_compile(&src)?;
+        src.iter()
+            .map(|l| cached_fn_compile(&l, 0))
+            .collect::<Result<Vec<_>, _>>()?;
 
         let inst = Self {
             name: name.to_string(),
             arguments,
             src,
+            offset: 0,
         };
 
         Ok(inst)
+    }
+
+    pub fn set_lineoffset(&mut self, offset: usize) {
+        self.offset = offset;
     }
 
     /// Returns the name of this function
@@ -64,13 +80,16 @@ impl UserFunction {
     }
 
     /// Returns the source of this function
-    pub fn src(&self) -> &str {
+    pub fn src(&self) -> &Vec<String> {
         &self.src
     }
 
     /// Returns the body of this function
-    pub fn body(&self) -> Rc<Node> {
-        cached_fn_compile(&self.src).unwrap()
+    pub fn body(&self) -> Vec<Rc<Node>> {
+        self.src
+            .iter()
+            .map(|s| cached_fn_compile(s, self.offset).unwrap())
+            .collect()
     }
 
     /// Executes this function
@@ -82,25 +101,36 @@ impl UserFunction {
     ) -> Result<Value, Error> {
         // Create a new scope
         state.scope_into(token)?;
+        state.lock_scope();
 
         // Set the arguments
         for (name, value) in self.arguments.iter().zip(arguments) {
-            state.set_variable(name, value);
+            state.set_variable_in_scope(name, value);
         }
 
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
-        let body_result = self.body().get_value(state);
-        state.scope_out();
+        for node in self.body().iter().take(self.body().len() - 1) {
+            match node.get_value(state) {
+                Ok(_) => {}
+                Err(e) => {
+                    state.scope_out();
+                    return Err(e);
+                }
+            }
+        }
 
-        body_result
+        // Execute the last node
+        let result = self.body().iter().last().unwrap().get_value(state);
+        state.scope_out();
+        result
     }
 
     /// Converts this function into a standard function
     pub fn to_std_function(&self) -> Function {
         Function::new(
             &self.name,
-            &self.src(),
+            &self.src().join("; "),
             "user-defined",
             self.arguments()
                 .iter()
@@ -124,13 +154,23 @@ impl UserFunction {
 
 impl Display for UserFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}({}) = {}",
-            self.name(),
-            self.arguments().join(", "),
-            self.src()
-        )
+        if self.src.len() > 1 {
+            write!(
+                f,
+                "{}({}) = {{{}}}",
+                self.name(),
+                self.arguments().join(", "),
+                self.src().join("; ")
+            )
+        } else {
+            write!(
+                f,
+                "{}({}) = {}",
+                self.name(),
+                self.arguments().join(", "),
+                self.src().join("; ")
+            )
+        }
     }
 }
 
@@ -141,8 +181,8 @@ mod test {
     #[test]
     fn test_precompilation() {
         let src = "fn test(a, b) = a + b";
-        cached_fn_compile(src).unwrap();
-        cached_fn_compile(src).unwrap();
+        cached_fn_compile(src, 0).unwrap();
+        cached_fn_compile(src, 0).unwrap();
 
         USER_FUNCTION_CACHE.with(|once_lock| {
             let rt_mut = once_lock.get_or_init(|| RefCell::new(HashMap::new()));
@@ -157,37 +197,34 @@ mod test {
         let fn1 = UserFunction::new(
             "test",
             vec!["a".to_string(), "b".to_string()],
-            "a + b".to_string(),
+            vec!["a + b".to_string()],
         )
         .unwrap();
         assert_eq!(fn1.name(), "test");
         assert_eq!(fn1.arguments(), &["a".to_string(), "b".to_string()]);
-        assert_eq!(fn1.src(), "a + b");
+        assert_eq!(fn1.src(), &["a + b"]);
         let res = fn1.execute(
             &mut State::new(),
             vec![Value::from(1.0), Value::from(2.0)],
-            fn1.body().token(),
+            &Token::dummy(),
         );
         assert_eq!(res.unwrap(), Value::from(3.0));
 
         // no args now
-        let fn2 = UserFunction::new("test2", vec![], "1 + 2".to_string()).unwrap();
+        let fn2 = UserFunction::new("test2", vec![], vec!["1 + 2".to_string()]).unwrap();
         assert_eq!(fn2.name(), "test2");
         assert_eq!(fn2.arguments().len(), 0);
-        assert_eq!(fn2.src(), "1 + 2");
-        let res = fn2.execute(&mut State::new(), vec![], fn2.body().token());
-        assert_eq!(res.unwrap(), Value::from(3));
+        assert_eq!(fn2.src(), &["1 + 2"]);
+        let res = fn2.execute(&mut State::new(), vec![], &Token::dummy());
+        assert_eq!(res.unwrap(), Value::from(3i64));
 
         // 1 arg
-        let fn3 = UserFunction::new("test3", vec!["a".to_string()], "a + 2".to_string()).unwrap();
+        let fn3 =
+            UserFunction::new("test3", vec!["a".to_string()], vec!["a + 2".to_string()]).unwrap();
         assert_eq!(fn3.name(), "test3");
         assert_eq!(fn3.arguments(), &["a".to_string()]);
-        assert_eq!(fn3.src(), "a + 2");
-        let res = fn3.execute(
-            &mut State::new(),
-            vec![Value::from(1.0)],
-            fn3.body().token(),
-        );
+        assert_eq!(fn3.src(), &["a + 2"]);
+        let res = fn3.execute(&mut State::new(), vec![Value::from(1.0)], &Token::dummy());
         assert_eq!(res.unwrap(), Value::from(3.0));
     }
 
@@ -196,15 +233,16 @@ mod test {
         let fn1 = UserFunction::new(
             "test",
             vec!["a".to_string(), "b".to_string()],
-            "a + b".to_string(),
+            vec!["a + b".to_string()],
         )
         .unwrap();
         assert_eq!(format!("{}", fn1), "test(a, b) = a + b");
 
-        let fn2 = UserFunction::new("test2", vec![], "1 + 2".to_string()).unwrap();
+        let fn2 = UserFunction::new("test2", vec![], vec!["1 + 2".to_string()]).unwrap();
         assert_eq!(format!("{}", fn2), "test2() = 1 + 2");
 
-        let fn3 = UserFunction::new("test3", vec!["a".to_string()], "a + 2".to_string()).unwrap();
+        let fn3 =
+            UserFunction::new("test3", vec!["a".to_string()], vec!["a + 2".to_string()]).unwrap();
         assert_eq!(format!("{}", fn3), "test3(a) = a + 2");
     }
 
@@ -213,7 +251,7 @@ mod test {
         let fn1 = UserFunction::new(
             "test",
             vec!["a".to_string(), "b".to_string()],
-            "a + b".to_string(),
+            vec!["a + b".to_string()],
         )
         .unwrap();
         let std_fn = fn1.to_std_function();
@@ -224,7 +262,7 @@ mod test {
         let res = std_fn.execute(
             &mut state,
             vec![Value::from(1.0), Value::from(2.0)],
-            fn1.body().token(),
+            &Token::dummy(),
         );
         assert_eq!(res.unwrap(), Value::from(3.0));
     }

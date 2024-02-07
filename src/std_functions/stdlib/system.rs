@@ -1,11 +1,103 @@
 use crate::{
-    get_argument, required_argument, static_function, std_functions::Function, Error, Lavendeux,
-    State,
+    error::WrapError, get_argument, required_argument, static_function, std_functions::Function,
+    Error, Lavendeux, State,
 };
 use polyvalue::{types::Object, Value, ValueType};
 use std::collections::HashMap;
 
 pub fn register_all(map: &mut HashMap<String, Function>) {
+    static_function!(
+        registry = map,
+        name = "error",
+        description = "Throws an error with the given message",
+        category = "system",
+        arguments = [required_argument!("message", ValueType::String)],
+        returns = ValueType::Any,
+        handler = |_state: &mut State, arguments, token, _| {
+            let message = get_argument!("message", arguments).to_string();
+            Err(Error::Custom {
+                message: message,
+                token: token.clone(),
+            })
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "throw",
+        description = "Throws an error with the given message",
+        category = "system",
+        arguments = [required_argument!("message", ValueType::String)],
+        returns = ValueType::Any,
+        handler = |_state: &mut State, arguments, token, _| {
+            let message = get_argument!("message", arguments).to_string();
+            Err(Error::Custom {
+                message: message,
+                token: token.clone(),
+            })
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "debug",
+        description = "Prints a debug message to the console",
+        category = "system",
+        arguments = [required_argument!("message", ValueType::String)],
+        returns = ValueType::Any,
+        handler = |_state: &mut State, arguments, _token, _| {
+            let message = get_argument!("message", arguments).to_string();
+            println!("{message}");
+            Ok(Value::from(message))
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "assert",
+        description = "Throws an error if the condition is false",
+        category = "system",
+        arguments = [required_argument!("condition", ValueType::Any)],
+        returns = ValueType::Any,
+        handler = |_state: &mut State, arguments, token, _| {
+            let cond = get_argument!("condition", arguments);
+            if cond.is_truthy() {
+                return Ok(cond);
+            } else {
+                let message = "Assertion failed".to_string();
+                return Err(Error::Custom {
+                    message: message,
+                    token: token.clone(),
+                });
+            }
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "assert_eq",
+        description = "Throws an error if the two values are not equal",
+        category = "system",
+        arguments = [
+            required_argument!("condition", ValueType::Any),
+            required_argument!("expected", ValueType::Any)
+        ],
+        returns = ValueType::Any,
+        handler = |_state: &mut State, arguments, token, _| {
+            let cond = get_argument!("condition", arguments);
+            let expected = get_argument!("expected", arguments);
+            if cond == expected {
+                return Ok(Value::from(vec![cond, expected]));
+            } else {
+                let message = format!("Assertion failed: {:?} != {:?}", cond, expected);
+                return Err(Error::Custom {
+                    message: message,
+                    token: token.clone(),
+                });
+            }
+        }
+    );
+
     static_function!(
         registry = map,
         name = "assign",
@@ -52,9 +144,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "system",
         arguments = [required_argument!("expression", ValueType::String)],
         returns = ValueType::Any,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let expression = get_argument!("expression", arguments).to_string();
-            crate::extensions::ExtensionController::exec(&expression)
+            crate::extensions::ExtensionController::exec(&expression).to_error(token)
         }
     );
 
@@ -66,10 +158,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "system",
         arguments = [required_argument!("filename", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let filename = get_argument!("filename", arguments).to_string();
             crate::extensions::ExtensionController::with(|controller| {
-                let extension = controller.register(&filename)?;
+                let extension = controller.register(&filename).to_error(token)?;
                 Ok(Value::from(extension.signature()))
             })
         }
@@ -107,17 +199,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
     static_function!(
         registry = map,
-        name = "eval_file",
+        name = "include",
         description = "Evaluates a file as a Lavendeux expression and returns the result",
         category = "system",
         arguments = [required_argument!("filename", ValueType::String)],
         returns = ValueType::Any,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let filename = get_argument!("filename", arguments).to_string();
-            match std::fs::read_to_string(filename) {
-                Ok(expression) => Lavendeux::eval(&expression, state),
-                Err(e) => Err(Error::Io(e)),
-            }
+            let script = std::fs::read_to_string(filename).to_error(token)?;
+            Lavendeux::eval(&script, state)
         }
     );
 
@@ -128,14 +218,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "system",
         arguments = [],
         returns = ValueType::Object,
-        handler = |state: &mut State, _arguments, _token, _| {
+        handler = |state: &mut State, _arguments, token, _| {
             Ok(Object::try_from(
                 state
                     .all_variables()
                     .iter()
                     .map(|(k, v)| (Value::from(k.to_string()), v.clone()))
                     .collect::<Vec<(Value, Value)>>(),
-            )?
+            )
+            .to_error(token)?
             .into())
         }
     );

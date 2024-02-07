@@ -1,10 +1,59 @@
 use crate::{
-    get_argument, required_argument, static_function, std_functions::Function, Error, State,
+    error::WrapError, get_argument, required_argument, static_function, std_functions::Function,
+    Error, State,
 };
-use polyvalue::{types::Str, Value, ValueTrait, ValueType};
+use polyvalue::{
+    types::{Array, Str, I64},
+    Value, ValueTrait, ValueType,
+};
 use std::collections::HashMap;
 
 pub fn register_all(map: &mut HashMap<String, Function>) {
+    static_function!(
+        registry = map,
+        name = "ord",
+        description = "Returns the Unicode code point of the first character in a string",
+        category = "string",
+        arguments = [required_argument!("input", ValueType::String)],
+        returns = ValueType::Int,
+        handler = |_: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Str>()
+                .to_error(token)?;
+            if input.inner().is_empty() {
+                return Err(Error::ValueFormat {
+                    expected_format: "non-empty string".to_string(),
+                    token: token.clone(),
+                });
+            }
+            Ok(Value::from(input.inner().chars().next().unwrap() as u32))
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "chr",
+        description =
+            "Returns a string containing the character represented by a Unicode code point",
+        category = "string",
+        arguments = [required_argument!("input", ValueType::Int)],
+        returns = ValueType::String,
+        handler = |_: &mut State, arguments, token, _| {
+            let input = *get_argument!("input", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
+            if let Some(c) = std::char::from_u32(input as u32) {
+                return Ok(Value::from(c.to_string()));
+            } else {
+                return Err(Error::ValueFormat {
+                    expected_format: "valid Unicode code point".to_string(),
+                    token: token.clone(),
+                });
+            }
+        }
+    );
+
     static_function!(
         registry = map,
         name = "uppercase",
@@ -12,9 +61,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.to_uppercase()))
@@ -28,9 +78,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.to_lowercase()))
@@ -44,9 +95,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.trim()))
@@ -60,9 +112,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.trim_start()))
@@ -76,9 +129,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.trim_end()))
@@ -96,20 +150,73 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             required_argument!("new", ValueType::String)
         ],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let old = get_argument!("old", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let new = get_argument!("new", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(input.replace(&old, &new)))
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "repeat",
+        description = "Repeats a string a specified number of times",
+        category = "string",
+        arguments = [
+            required_argument!("input", ValueType::String),
+            required_argument!("times", ValueType::Int)
+        ],
+        returns = ValueType::String,
+        handler = |_: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Str>()
+                .to_error(token)?
+                .inner()
+                .clone();
+            let times = *get_argument!("times", arguments)
+                .as_a::<I64>()
+                .to_error(token)?
+                .inner();
+            if times < 0 {
+                return Err(Error::ValueFormat {
+                    expected_format: "non-negative integer".to_string(),
+                    token: token.clone(),
+                });
+            }
+            Ok(Value::from(input.repeat(times as usize)))
+        }
+    );
+
+    static_function!(
+        registry = map,
+        name = "concat",
+        description = "Treats the argument as an array of strings and concatenates them",
+        category = "string",
+        arguments = [required_argument!("input", ValueType::Array)],
+        returns = ValueType::String,
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<Array>()
+                .to_error(token)?;
+            let mut result = String::new();
+            for value in input.inner() {
+                let s = value.as_a::<Str>().to_error(token)?.inner().to_string();
+                result.push_str(&s);
+            }
+            Ok(Value::from(result))
         }
     );
 
@@ -120,12 +227,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::Any)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
-            Ok(Value::from(serde_json::to_string_pretty(&input)?))
+            Ok(Value::from(
+                serde_json::to_string_pretty(&input).to_error(token)?,
+            ))
         }
     );
 
@@ -137,9 +247,10 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             Ok(Value::from(urlencoding::encode(&input).into_owned()))
@@ -154,12 +265,15 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
-            Ok(Value::from(urlencoding::decode(&input)?.into_owned()))
+            Ok(Value::from(
+                urlencoding::decode(&input).to_error(token)?.into_owned(),
+            ))
         }
     );
 
@@ -171,10 +285,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "string",
         arguments = [required_argument!("input", ValueType::String)],
         returns = ValueType::String,
-        handler = |_: &mut State, arguments, _token, _| {
+        handler = |_: &mut State, arguments, token, _| {
             use base64::{engine::general_purpose, Engine as _};
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             let mut buf = String::new();
@@ -194,7 +309,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |_: &mut State, arguments, token, _| {
             use base64::{engine::general_purpose, Engine as _};
             let input = get_argument!("input", arguments)
-                .as_a::<Str>()?
+                .as_a::<Str>()
+                .to_error(token)?
                 .inner()
                 .clone();
             if let Ok(bytes) = general_purpose::STANDARD.decode(input) {

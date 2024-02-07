@@ -3,9 +3,9 @@
 //! Nodes for unary operations
 //!
 use super::*;
-use crate::{Rule, State, ToToken};
+use crate::{error::WrapError, Rule, State, ToToken};
 use pest::iterators::Pair;
-use polyvalue::{operations::*, types::Str, Value, ValueType};
+use polyvalue::{operations::*, ValueType};
 
 define_node!(
     IndexingExpression {
@@ -34,24 +34,10 @@ define_node!(
         let base = this.base.get_value(state)?;
         let index = this.index.get_value(state)?;
 
-        match base {
-            // String indexing is separate because it cannot follow
-            // the trait used by other types
-            Value::String(s) => {
-                let range = Str::index_value_to_range(&index)?;
-                let value = s.substr(&range.start()..=&range.end())?;
-                Ok(Value::from(value))
-            }
-
-            // Range op indexing
-            _ if index.is_a(ValueType::Array) => {
-                let results = base.get_indices(&index)?;
-                let results = results.iter().cloned().cloned().collect::<Vec<_>>();
-                Ok(Value::from(results))
-            }
-
-            // Normal indexing
-            _ => Ok(base.get_index(&index).cloned()?),
+        if index.is_a(ValueType::Compound) && !index.is_a(ValueType::String) {
+            Ok(base.get_indices(&index).to_error(&this.token)?)
+        } else {
+            Ok(base.get_index(&index).to_error(&this.token)?)
         }
     }
 );

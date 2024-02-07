@@ -1,5 +1,5 @@
 use crate::{Rule, Token};
-use polyvalue::ValueType;
+use polyvalue::{Value, ValueType};
 use thiserror::Error;
 
 /// A stub of rustyscript::Error for use when the extensions feature is disabled
@@ -17,22 +17,6 @@ pub mod rustyscript {
     }
 
     impl std::error::Error for Error {}
-}
-
-/// A wrapper for an error that also contains the token that caused it
-#[derive(Debug)]
-pub struct ErrorWithToken {
-    /// Token that caused the error
-    pub token: Token,
-
-    /// Error that occurred
-    pub source: Error,
-}
-impl std::error::Error for ErrorWithToken {}
-impl std::fmt::Display for ErrorWithToken {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "\n| {}\n= {}", self.token, self.source)
-    }
 }
 
 const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issues/new?assignees=&labels=&template=bug_report.md&title=";
@@ -55,6 +39,32 @@ pub enum Error {
     /// A timeout error caused by a script taking too long to execute
     #[error("Script execution timed out")]
     Timeout,
+
+    /// An error caused by a custom error message
+    #[error("\n| {token}\n= {message}")]
+    Custom{
+        message: String,
+        token: Token,
+    },
+
+    /// An error used to return a value from a function early
+    #[error("\n| {token}\n= Returned from the root scope")]
+    Return {
+        value: Value,
+        token: Token,
+    },
+
+    /// An error used to skip a value from a loop
+    #[error("\n| {token}\n= Skipped from outside a loop")]
+    Skip {
+        token: Token,
+    },
+
+    /// An error used to skip a value from a loop
+    #[error("\n| {token}\n= Break called from outside a loop")]
+    Break {
+        token: Token,
+    },
 
     ///////////////////////////////////////////////////////////////////////////
     // Syntax Errors
@@ -115,6 +125,23 @@ pub enum Error {
 
     #[error("\n| {token}\n= Expected a key-value pair, for example: {{0: 'test'}}")]
     IncompleteObject {
+        token: Token,
+    },
+
+    #[error("\n| {token}\n= Match expression is not exhaustive. Add a default case '_' to match all values")]
+    NonExhaustiveSwitch {
+        token: Token,
+    },
+
+    #[error("\n| {token}\n= All cases after the default case '_' are unreachable")]
+    UnreachableSwitchCase {
+        token: Token,
+    },
+
+    #[error("\n| {token}\n= {case} is not valid for this switch statement. Expected a {expected_type}")]
+    SwitchCaseTypeMismatch {
+        case: Value,
+        expected_type: ValueType,
         token: Token,
     },
 
@@ -180,6 +207,13 @@ pub enum Error {
     // Deals with issues during builtin, user, or extension function calls
     ///////////////////////////////////////////////////////////////////////////
 
+    #[error("\n| {token}\n= Error in `{name}()`: {source}")]
+    FunctionCall {
+        name: String,
+        source: Box<Error>,
+        token: Token,
+    },
+
     #[error("\n| {token}\n= Recursive function went too deep")]
     StackOverflow {
         token: Token,
@@ -242,7 +276,29 @@ pub enum Error {
     // External Errors
     // Deals with issues inside dependencies
     ///////////////////////////////////////////////////////////////////////////
- 
+    
+    /// Error dealing with 3rd party lib issues
+    #[error("\n| {token}\n= {error}")]
+    External {
+        error: ExternalError,
+        token: Token,
+    },
+
+    /// Error dealing with 3rd party lib issues
+    #[error("{0}")]
+    ExternalNoToken(#[from] ExternalError),
+}
+
+#[derive(Error, Debug)]
+#[rustfmt::skip]
+pub enum ExternalError {
+    #[error("{0}")]
+    Internal(#[from] Box<Error>),
+
+    /// Error dealing with polyvalue issues
+    #[error("{0}")]
+    Value(#[from] polyvalue::Error),
+
     /// Error dealing with filesystem issues
     #[error("{0}")]
     Io(#[from] std::io::Error),
@@ -258,10 +314,6 @@ pub enum Error {
     /// Error dealing with JS execution issues
     #[error("{0}")]
     Javascript(#[from] rustyscript::Error),
-    
-    /// Error dealing with arithmetic issues
-    #[error("{0}")]
-    ValueError(#[from] polyvalue::Error),
 
     /// Error dealing with int parsing issues
     #[error("{0}")]
@@ -275,3 +327,52 @@ pub enum Error {
     #[error("{0}")]
     SerdeJsonError(#[from] serde_json::Error),
 }
+
+impl ExternalError {
+    pub fn to_error(self, token: &Token) -> Error {
+        Error::External {
+            error: self,
+            token: token.clone(),
+        }
+    }
+}
+
+pub trait WrapError<T> {
+    fn to_error(self, token: &Token) -> Result<T, Error>;
+}
+
+impl<T> WrapError<T> for Result<T, ExternalError> {
+    fn to_error(self, token: &Token) -> Result<T, Error> {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => Err(Error::External {
+                error: e,
+                token: token.clone(),
+            }),
+        }
+    }
+}
+
+macro_rules! wrap_dep_error {
+    ($e:ty) => {
+        impl<T> WrapError<T> for Result<T, $e> {
+            fn to_error(self, token: &Token) -> Result<T, Error> {
+                self.or_else(|e| {
+                    Err(Error::External {
+                        error: e.into(),
+                        token: token.clone(),
+                    })
+                })
+            }
+        }
+    };
+}
+
+wrap_dep_error!(polyvalue::Error);
+wrap_dep_error!(std::io::Error);
+wrap_dep_error!(reqwest::Error);
+wrap_dep_error!(pest::error::Error<Rule>);
+wrap_dep_error!(rustyscript::Error);
+wrap_dep_error!(std::num::ParseIntError);
+wrap_dep_error!(std::string::FromUtf8Error);
+wrap_dep_error!(serde_json::Error);

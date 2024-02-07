@@ -1,7 +1,7 @@
 use rustyscript::Module;
 
 use super::{extension::ExtensionDetails, worker::ExtensionWorker};
-use crate::{state::State, std_functions::Function, token, Error, Value};
+use crate::{error::ExternalError, state::State, std_functions::Function, token, Error, Value};
 use std::{
     collections::HashMap,
     sync::{Mutex, OnceLock},
@@ -32,7 +32,7 @@ impl ExtensionController {
     }
 
     /// Execute some code on the runtime instance
-    pub fn exec(code: &str) -> Result<Value, Error> {
+    pub fn exec(code: &str) -> Result<Value, ExternalError> {
         let result: serde_json::Value = rustyscript::evaluate(code)?;
         Ok(Value::try_from(result)?)
     }
@@ -46,7 +46,7 @@ impl ExtensionController {
         callback(&mut *guard)
     }
 
-    pub fn add_extension(&mut self, module: Module) -> Result<ExtensionDetails, Error> {
+    pub fn add_extension(&mut self, module: Module) -> Result<ExtensionDetails, ExternalError> {
         let filename = module.filename().to_string();
         let worker = ExtensionWorker::new(module)?;
 
@@ -61,9 +61,9 @@ impl ExtensionController {
     }
 
     /// Register an extension
-    pub fn register(&mut self, filename: &str) -> Result<ExtensionDetails, Error> {
+    pub fn register(&mut self, filename: &str) -> Result<ExtensionDetails, ExternalError> {
         let module = Module::load(filename)?;
-        self.add_extension(module)
+        Ok(self.add_extension(module)?)
     }
 
     /// Unregister an extension

@@ -17,15 +17,7 @@ macro_rules! test_decorator {
     ($name:literal, $input:expr, $expected:expr) => {
         assert_eq!(
             state::State::new()
-                .decorate(
-                    $name,
-                    &Token {
-                        rule: crate::Rule::ATOMIC_VALUE,
-                        input: $input.to_string(),
-                        references: None,
-                    },
-                    $input
-                )
+                .decorate($name, &Token::dummy(), $input)
                 .unwrap(),
             $expected
         );

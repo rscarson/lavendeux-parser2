@@ -3,7 +3,7 @@ use rustyscript::{ModuleHandle, Runtime};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{Error, Token};
+use crate::{error::WrapError, Error, Token};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FunctionDefinition {
@@ -86,27 +86,33 @@ impl FunctionDefinition {
             .collect::<Vec<Value>>();
 
         // Inject parser state
-        runtime.call_function(
-            handle,
-            "saveState",
-            &[serde_json::to_value(variables.clone())?],
-        )?;
+        runtime
+            .call_function(
+                handle,
+                "saveState",
+                &[serde_json::to_value(variables.clone()).to_error(token)?],
+            )
+            .to_error(token)?;
 
         let mut args = args
             .iter()
             .map(|v| serde_json::to_value(v.clone()))
-            .collect::<Result<Vec<serde_json::Value>, _>>()?;
+            .collect::<Result<Vec<serde_json::Value>, _>>()
+            .to_error(token)?;
         args.insert(0, self.name.clone().into());
-        let result: Value = runtime.call_function(handle, "callLavendeuxFunction", &args)?;
+        let result: Value = runtime
+            .call_function(handle, "callLavendeuxFunction", &args)
+            .to_error(token)?;
 
         // Extract parser state
-        let variables_out: HashMap<String, Value> =
-            runtime.call_function(handle, "loadState", &[])?;
+        let variables_out: HashMap<String, Value> = runtime
+            .call_function(handle, "loadState", &[])
+            .to_error(token)?;
         for (key, value) in variables_out {
             variables.insert(key, value);
         }
 
-        Ok(result.as_type(self.returns)?)
+        Ok(result.as_type(self.returns).to_error(token)?)
     }
 }
 
@@ -168,14 +174,6 @@ mod test {
     use super::super::runtime::ExtensionRuntime;
     use super::*;
 
-    fn fake_token() -> Token {
-        Token {
-            rule: crate::pest::Rule::ATOMIC_VALUE,
-            input: "fake".to_string(),
-            references: None,
-        }
-    }
-
     #[test]
     fn test_load_simple() {
         let module = Module::load("example_extensions/simple_extension.js").unwrap();
@@ -192,17 +190,17 @@ mod test {
                 "add",
                 &[super::Value::from(1.0), super::Value::from(2.0)],
                 &mut variables,
-                &fake_token(),
+                &Token::dummy(),
             )
             .unwrap();
-        assert_eq!(result, Value::from(3));
+        assert_eq!(result, Value::from(3i64));
 
         let result = runtime
             .call_function(
                 "@colour",
                 &[super::Value::from(0xFF)],
                 &mut variables,
-                &fake_token(),
+                &Token::dummy(),
             )
             .unwrap();
         assert_eq!(result, Value::from("#ff0000"));
@@ -224,7 +222,7 @@ mod test {
                 "put",
                 &[super::Value::from("foo"), super::Value::from(2.1)],
                 &mut variables,
-                &fake_token(),
+                &Token::dummy(),
             )
             .unwrap();
 
@@ -239,7 +237,7 @@ mod test {
                 "get",
                 &[super::Value::from("foo")],
                 &mut variables,
-                &fake_token(),
+                &Token::dummy(),
             )
             .unwrap();
         assert_eq!(result, Value::from(2.1), "get should return the variable");

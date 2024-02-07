@@ -1,10 +1,10 @@
 use crate::{
-    get_argument, required_argument, static_decorator, static_function, std_functions::Function,
-    Error, State,
+    error::WrapError, get_argument, required_argument, static_decorator, static_function,
+    std_functions::Function, Error, State,
 };
 use polyvalue::{
     operations::ArithmeticOperationExt,
-    types::{Float, Int},
+    types::{Float, I64},
     ValueTrait, ValueType,
 };
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Interprets an integer as a roman numeral",
         expected_type = ValueType::Numeric,
         handler = &|input, token| {
-            let mut input = *input.as_a::<Int>()?.inner();
+            let mut input = *input.as_a::<I64>().to_error(token)?.inner();
             if input > 3999 {
                 return Err(Error::Overflow {
                     token: token.clone(),
@@ -54,8 +54,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "ordinal",
         description = "Interprets an integer as an ordinal number",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Int>()?.inner();
+        handler = &|input, token| {
+            let input = *input.as_a::<I64>().to_error(token)?.inner();
             let ordinal = match input % 10 {
                 1 => format!("{}st", input),
                 2 => format!("{}nd", input),
@@ -72,12 +72,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Interprets an integer as a timestamp, and formats it in UTC standard",
         expected_type = ValueType::Numeric,
         handler = &|input, token| {
-            let input = input.as_a::<Int>()?;
-            let input = Int::arithmetic_op(
+            let input = input.as_a::<I64>().to_error(token)?;
+            let input = I64::arithmetic_op(
                 &input,
-                &Int::new(1000),
+                &I64::new(1000),
                 polyvalue::operations::ArithmeticOperation::Multiply,
-            )?;
+            )
+            .to_error(token)?;
             let input = *input.inner();
 
             match chrono::NaiveDateTime::from_timestamp_millis(input) {
@@ -99,8 +100,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         name = "percent",
         description = "Interprets a number as a percentage",
         expected_type = ValueType::Numeric,
-        handler = &|input, _token| {
-            let input = *input.as_a::<Float>()?.inner();
+        handler = &|input, token| {
+            let input = *input.as_a::<Float>().to_error(token)?.inner();
             Ok(format!("{}%", input * 100.0))
         }
     );

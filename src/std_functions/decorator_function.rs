@@ -1,4 +1,4 @@
-use crate::{Error, Token};
+use crate::{error::WrapError, Error, Token};
 use polyvalue::{
     types::{Array, Object},
     Value, ValueTrait, ValueType,
@@ -44,7 +44,7 @@ pub fn recursively_apply_decorator(
 ) -> Result<Value, Error> {
     match input.own_type() {
         ValueType::Array => {
-            let mut input = input.as_a::<Array>()?;
+            let mut input = input.as_a::<Array>().to_error(token)?;
             for e in input.inner_mut() {
                 *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
                     .into();
@@ -53,7 +53,7 @@ pub fn recursively_apply_decorator(
         }
 
         ValueType::Object => {
-            let mut input = input.as_a::<Object>()?;
+            let mut input = input.as_a::<Object>().to_error(token)?;
             for e in input.inner_mut().values_mut() {
                 *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
                     .into();

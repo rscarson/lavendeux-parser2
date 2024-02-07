@@ -4,9 +4,9 @@
 //! These nodes are how the user will interact with the syntax tree.
 //!
 use super::*;
-use crate::{Error, Rule, State, ToToken, Value};
+use crate::{error::WrapError, Error, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
-use polyvalue::types::{Array, Bool, Range};
+use polyvalue::types::{Array, Object, Range};
 use polyvalue::{ValueTrait, ValueType};
 
 // LINE* ~ EOI
@@ -86,6 +86,91 @@ define_node!(
     }
 );
 
+define_node!(
+    Block {
+        lines: Vec<Node>
+    },
+    rules = [BLOCK],
+
+    new = |input:Pair<Rule>| {
+        let token = input.to_token();
+        let children = input.into_inner();
+
+        let lines = children
+            .map(|child| Ok(child.to_ast_node()?))
+            .collect::<Result<Vec<Node>, Error>>()?;
+
+        Ok(Self {
+            lines,
+            token
+        }.boxed())
+    },
+
+    value = |block: &Block, state: &mut State| {
+        let mut result = Value::from("");
+        for line in &block.lines {
+            result = line.get_value(state)?;
+        }
+
+        Ok(result)
+    }
+);
+
+define_node!(
+    BreakExpression,
+    rules = [BREAK_KEYWORD],
+    new = |input: Pair<Rule>| {
+        let token = input.to_token();
+        let mut children = input.into_inner();
+        children.next(); // Break keyword
+
+        Ok(Self { token }.boxed())
+    },
+    value = |this: &BreakExpression, _state: &mut State| {
+        Err(Error::Break {
+            token: this.token.clone(),
+        })
+    }
+);
+
+define_node!(
+    SkipExpression,
+    rules = [SKIP_KEYWORD],
+    new = |input: Pair<Rule>| {
+        let token = input.to_token();
+        let mut children = input.into_inner();
+        children.next(); // skip keyword
+
+        Ok(Self { token }.boxed())
+    },
+    value = |this: &SkipExpression, _state: &mut State| {
+        Err(Error::Skip {
+            token: this.token.clone(),
+        })
+    }
+);
+
+define_node!(
+    ReturnExpression { expression: Node },
+    rules = [RETURN_EXPRESSION],
+    new = |input: Pair<Rule>| {
+        let token = input.to_token();
+        let mut children = input.into_inner();
+
+        children.next(); // skip keyword
+        let expression = children.next().unwrap().to_ast_node()?;
+
+        Ok(Self { expression, token }.boxed())
+    },
+    value = |return_expr: &ReturnExpression, state: &mut State| {
+        let value = return_expr.expression.get_value(state)?;
+        Err(Error::Return {
+            value,
+            token: return_expr.token.clone(),
+        })
+    }
+);
+
 // BOOLEAN_OR_EXPRESSION ~ ("?" ~ BOOLEAN_OR_EXPRESSION ~ ":" ~ BOOLEAN_OR_EXPRESSION)*
 define_node!(
     TernaryExpression {
@@ -119,8 +204,7 @@ define_node!(
     },
     value = |ternary: &TernaryExpression, state: &mut State| {
         let condition = ternary.condition.get_value(state)?;
-        let condition = *condition.as_a::<Bool>()?.inner();
-        if condition {
+        if condition.is_truthy() {
             ternary.if_true.get_value(state)
         } else {
             ternary.if_false.get_value(state)
@@ -157,28 +241,65 @@ define_node!(
 
         match iterable.own_type() {
             ValueType::Range => {
-                let iterable = iterable.as_a::<Range>()?;
+                let iterable = iterable.as_a::<Range>().to_error(&for_loop.token)?;
+
                 let mut result = vec![];
                 state.scope_into(for_loop.token())?;
                 for i in iterable.inner().clone() {
-                    let value = Value::from(i);
                     if let Some(variable) = &for_loop.variable {
-                        state.set_variable(variable, value.clone());
+                        state.set_variable(variable, i.into());
                     }
 
-                    let value = for_loop.body.get_value(state).or_else(|e| {
-                        state.scope_out();
-                        Err(e)
-                    })?;
-                    result.push(value);
+                    let value = for_loop.body.get_value(state);
+                    match value {
+                        Ok(value) => result.push(value),
+                        Err(Error::Skip { .. }) => {},
+                        Err(Error::Break { .. }) => {
+                            break;
+                        },
+
+                        Err(e) => {
+                            state.scope_out();
+                            return Err(e);
+                        }
+                    }
                 }
                 state.scope_out();
 
                 Ok(Value::Array(result.into()).into())
             },
 
+            ValueType::Object => {
+                let iterable = iterable.as_a::<Object>().to_error(&for_loop.token)?;
+
+                let mut result = vec![];
+                state.scope_into(for_loop.token())?;
+                for value in iterable.inner().keys() {
+                    if let Some(variable) = &for_loop.variable {
+                        state.set_variable(variable, value.clone());
+                    }
+
+                    let value = for_loop.body.get_value(state);
+                    match value {
+                        Ok(value) => result.push(value),
+                        Err(Error::Skip { .. }) => {},
+                        Err(Error::Break { .. }) => {
+                            break;
+                        },
+
+                        Err(e) => {
+                            state.scope_out();
+                            return Err(e);
+                        }
+                    }
+                }
+                state.scope_out();
+
+                Ok(Value::Array(result.into()).into())
+            }
+
             _ => {
-                let iterable = iterable.as_a::<Array>()?;
+                let iterable = iterable.as_a::<Array>().to_error(&for_loop.token)?;
 
                 let mut result = vec![];
                 state.scope_into(for_loop.token())?;
@@ -187,17 +308,101 @@ define_node!(
                         state.set_variable(variable, value.clone());
                     }
 
-                    let value = for_loop.body.get_value(state).or_else(|e| {
-                        state.scope_out();
-                        Err(e)
-                    })?;
-                    result.push(value);
+                    let value = for_loop.body.get_value(state);
+                    match value {
+                        Ok(value) => result.push(value),
+                        Err(Error::Skip { .. }) => {},
+                        Err(Error::Break { .. }) => {
+                            break;
+                        },
+
+                        Err(e) => {
+                            state.scope_out();
+                            return Err(e);
+                        }
+                    }
                 }
                 state.scope_out();
 
                 Ok(Value::Array(result.into()).into())
             }
         }
+    }
+);
+
+#[derive(Debug)]
+pub enum SwitchCase {
+    Default(Node),
+    Case(Node, Node),
+}
+
+define_node!(
+    SwitchExpression {
+        match_on: Node,
+        cases: Vec<SwitchCase>
+    },
+    rules = [SWITCH_EXPRESSION],
+
+    new = |input:Pair<Rule>| {
+        let token = input.to_token();
+        let mut children = input.into_inner();
+
+        let match_on = children.next().unwrap().to_ast_node()?;
+        let mut cases = vec![];
+
+        while let Some(case) = children.next() {
+            let body = children.next().unwrap().to_ast_node()?;
+
+            if case.as_str() == "_" {
+                cases.push(SwitchCase::Default(body));
+                if children.next().is_some() {
+                    return Err(Error::UnreachableSwitchCase {
+                        token: token.clone(),
+                    });
+                }
+
+                break;
+            } else {
+                cases.push(SwitchCase::Case(case.to_ast_node()?, body));
+            }
+        }
+
+        Ok(Self {
+            match_on,
+            cases,
+            token
+        }.boxed())
+    },
+
+    value = |switch: &SwitchExpression, state: &mut State| {
+        let match_on = switch.match_on.get_value(state)?;
+
+        for case in &switch.cases {
+            match case {
+                SwitchCase::Default(body) => {
+                    return body.get_value(state);
+                },
+
+                SwitchCase::Case(value, body) => {
+                    let value = value.get_value(state)?;
+                    if value.own_type() != match_on.own_type() {
+                        return Err(Error::SwitchCaseTypeMismatch {
+                            case: value,
+                            expected_type: match_on.own_type(),
+                            token: switch.token.clone(),
+                        });
+                    }
+
+                    if value == match_on {
+                        return body.get_value(state);
+                    }
+                }
+            }
+        }
+
+        Err(Error::NonExhaustiveSwitch {
+            token: switch.token.clone(),
+        })
     }
 );
 

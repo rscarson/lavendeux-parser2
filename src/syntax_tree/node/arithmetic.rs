@@ -3,7 +3,7 @@
 //! Nodes for infix mathematical operations
 //!
 use super::*;
-use crate::{Rule, State, ToToken, Value};
+use crate::{error::WrapError, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
 use polyvalue::operations::*;
 
@@ -61,7 +61,7 @@ define_node!(
         let mut left = operands.next().unwrap().get_value(state)?;
         while let Some(op) = operators.next() {
             let right = operands.next().unwrap().get_value(state)?;
-            left = Value::arithmetic_op(&left, &right, *op)?;
+            left = Value::arithmetic_op(&left, &right, *op).to_error(&this.token)?;
         }
 
         Ok(left)
@@ -91,7 +91,8 @@ define_node!(
     },
     value = |this: &ArithmeticNegExpression, state: &mut State| {
         let value = this.expression.get_value(state)?;
-        let value = Value::arithmetic_op(&value, &value.clone(), ArithmeticOperation::Negate)?;
+        let value = Value::arithmetic_op(&value, &value.clone(), ArithmeticOperation::Negate)
+            .to_error(&this.token)?;
         Ok(value)
     }
 );
