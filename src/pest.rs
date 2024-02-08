@@ -49,6 +49,16 @@ macro_rules! assert_tree {
 }
 
 #[macro_export]
+macro_rules! assert_tree_value {
+    ($input:literal, $expected:expr) => {
+        assert_eq!(
+            $crate::Lavendeux::eval($input, &mut $crate::State::new()).unwrap(),
+            vec![$expected].into()
+        );
+    };
+}
+
+#[macro_export]
 macro_rules! node_is_type {
     ($node:expr, $type:path) => {
         $node.as_any().downcast_ref::<$type>().is_some()
@@ -62,12 +72,23 @@ macro_rules! node_is_type {
 #[macro_export]
 macro_rules! assert_tree_error {
     ($input:literal, $err:ident) => {
-        if let Err(err) = $crate::pest::parse_input($input, Rule::SCRIPT) {
-            if !matches!(err, Error::$err { .. }) {
-                panic!("Expected error {:?} but got {:?}", stringify!($err), err);
+        match $crate::pest::parse_input($input, Rule::SCRIPT) {
+            Ok(tree) => {
+                // check if get_value errors instead
+                match tree.get_value(&mut $crate::State::new()) {
+                    Ok(_) => panic!("Expected error"),
+                    Err(err) => {
+                        if !matches!(err, Error::$err { .. }) {
+                            panic!("Expected error {:?} but got {:?}", stringify!($err), err);
+                        }
+                    }
+                }
             }
-        } else {
-            panic!("Expected error");
+            Err(err) => {
+                if !matches!(err, Error::$err { .. }) {
+                    panic!("Expected error {:?} but got {:?}", stringify!($err), err);
+                }
+            }
         }
     };
 }
@@ -138,13 +159,18 @@ pub fn parse_input(input: &str, rule: Rule) -> Result<Node, Error> {
             }
         }
         Err(err) => {
-            let token = Token {
-                line: 0,
-                rule: rule,
-                input: input.to_string(),
-                references: None,
+            let span = match err.location {
+                pest::error::InputLocation::Pos(pos) => pos..=(input.len() - 1),
+                pest::error::InputLocation::Span(span) => span.0..=span.1,
             };
-            Err(crate::error::ExternalError::from(err).to_error(&token))
+            let span = input[span].to_string();
+
+            let line = match err.line_col {
+                pest::error::LineColLocation::Pos((line, _)) => line,
+                pest::error::LineColLocation::Span((line, _), _) => line,
+            };
+
+            Err(Error::Syntax { line, span })
         }
     }
 }

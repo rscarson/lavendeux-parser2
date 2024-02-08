@@ -42,6 +42,6 @@ impl ToToken for Pair<'_, Rule> {
 
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Line {}: {}", self.line, self.input)
+        write!(f, "Line {}: {}", self.line + 1, self.input)
     }
 }

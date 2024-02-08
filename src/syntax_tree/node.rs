@@ -129,6 +129,9 @@ pub use values::*;
 mod core;
 pub use core::*;
 
+mod control;
+pub use control::*;
+
 mod error;
 pub use error::*;
 
@@ -172,6 +175,7 @@ lazy_static! {
         include_node!(map, UnterminatedComment);
         include_node!(map, UnexpectedDecorator);
         include_node!(map, IncompleteRangeExpression);
+        include_node!(map, UnterminatedReturn);
 
         //
         // Core

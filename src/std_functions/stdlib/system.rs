@@ -191,9 +191,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         category = "system",
         arguments = [required_argument!("expression", ValueType::String)],
         returns = ValueType::Any,
-        handler = |state: &mut State, arguments, _token, _| {
+        handler = |state: &mut State, arguments, token, _| {
             let expression = get_argument!("expression", arguments).to_string();
-            Lavendeux::eval(&expression, state)
+
+            state.scope_into(&token)?;
+            let res = Lavendeux::eval(&expression, state);
+            state.scope_out();
+            res
         }
     );
 
@@ -207,7 +211,12 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |state: &mut State, arguments, token, _| {
             let filename = get_argument!("filename", arguments).to_string();
             let script = std::fs::read_to_string(filename).to_error(token)?;
-            Lavendeux::eval(&script, state)
+
+            state.scope_into(&token)?;
+            state.lock_scope();
+            let res = Lavendeux::eval(&script, state);
+            state.scope_out();
+            res
         }
     );
 

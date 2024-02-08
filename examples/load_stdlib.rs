@@ -7,7 +7,7 @@ fn main() {
             println!("Successfully loaded stdlib - no errors!");
         }
         Err(e) => {
-            println!("{}", e);
+            panic!("Failed to load stdlib: {}", e);
         }
     }
 }

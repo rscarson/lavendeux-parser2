@@ -100,7 +100,7 @@ define_node!(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_tree;
+    use crate::{assert_tree, assert_tree_value};
 
     #[test]
     fn test_arithmetic_expr() {
@@ -136,6 +136,10 @@ mod test {
                 assert_eq!(value.to_string(), "6");
             }
         );
+
+        assert_tree_value!("4/2", 2i64.into());
+        assert_tree_value!("4%2", 0i64.into());
+        assert_tree_value!("2**3", 8i64.into());
     }
 
     #[test]

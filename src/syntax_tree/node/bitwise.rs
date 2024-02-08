@@ -94,7 +94,7 @@ define_node!(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_tree;
+    use crate::{assert_tree, assert_tree_value};
 
     #[test]
     fn test_bitwise_expr() {
@@ -137,6 +137,9 @@ mod test {
                 assert_eq!(BitwiseOperation::Or, tree.operator_stack[0]);
             }
         );
+
+        assert_tree_value!("0x0A << 2", 40i64.into());
+        assert_tree_value!("0x0A >> 2", 2i64.into());
     }
 
     #[test]

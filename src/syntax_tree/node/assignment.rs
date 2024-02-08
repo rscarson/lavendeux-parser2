@@ -9,7 +9,7 @@ use pest::iterators::Pair;
 use polyvalue::{
     operations::{
         ArithmeticOperation, ArithmeticOperationExt, BitwiseOperation, BitwiseOperationExt,
-        IndexingMutationExt,
+        BooleanOperation, BooleanOperationExt, IndexingMutationExt,
     },
     types::Array,
     ValueTrait,
@@ -37,7 +37,7 @@ define_node!(
     }
 );
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OperativeAssignmentOperation {
     Add,
     Subtract,
@@ -50,6 +50,8 @@ pub enum OperativeAssignmentOperation {
     BitXor,
     BitShiftLeft,
     BitShiftRight,
+    And,
+    Or,
 }
 define_node!(
     OperativeAssignment {
@@ -76,6 +78,9 @@ define_node!(
             "^=" => OperativeAssignmentOperation::BitXor,
             "<<=" => OperativeAssignmentOperation::BitShiftLeft,
             ">>=" => OperativeAssignmentOperation::BitShiftRight,
+
+            "&&=" => OperativeAssignmentOperation::And,
+            "||=" => OperativeAssignmentOperation::Or,
 
             _ => unreachable!(),
         };
@@ -132,6 +137,13 @@ define_node!(
             }
             OperativeAssignmentOperation::BitShiftRight => {
                 Value::bitwise_op(&left, &right, BitwiseOperation::RightShift)
+            }
+
+            OperativeAssignmentOperation::And => {
+                Value::boolean_op(&left, &right, BooleanOperation::And)
+            }
+            OperativeAssignmentOperation::Or => {
+                Value::boolean_op(&left, &right, BooleanOperation::Or)
             }
         }
         .to_error(&assignment.token)?;
@@ -246,9 +258,104 @@ define_node!(
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{assert_tree, assert_tree_error};
 
-    use super::*;
+    #[test]
+    fn test_operative_assignment() {
+        assert_tree!(
+            "a += 1",
+            OPERATIVE_ASSIGNMENT_EXPRESSION,
+            OperativeAssignment,
+            |tree: &mut OperativeAssignment| {
+                assert_eq!(tree.name, "a");
+                assert_eq!(tree.operation, OperativeAssignmentOperation::Add);
+                assert_eq!(tree.value.to_string(), "1");
+
+                let mut state = State::new();
+                state.set_variable("a", Value::from(1));
+                tree.get_value(&mut state).unwrap();
+                assert_eq!(state.get_variable("a").unwrap().to_string(), "2");
+            }
+        );
+
+        assert_tree!(
+            "a -= 1",
+            OPERATIVE_ASSIGNMENT_EXPRESSION,
+            OperativeAssignment,
+            |tree: &mut OperativeAssignment| {
+                assert_eq!(tree.name, "a");
+                assert_eq!(tree.operation, OperativeAssignmentOperation::Subtract);
+                assert_eq!(tree.value.to_string(), "1");
+
+                let mut state = State::new();
+                state.set_variable("a", Value::from(1));
+                tree.get_value(&mut state).unwrap();
+                assert_eq!(state.get_variable("a").unwrap().to_string(), "0");
+            }
+        );
+
+        assert_tree!(
+            "a *= 2",
+            OPERATIVE_ASSIGNMENT_EXPRESSION,
+            OperativeAssignment,
+            |tree: &mut OperativeAssignment| {
+                assert_eq!(tree.name, "a");
+                assert_eq!(tree.operation, OperativeAssignmentOperation::Multiply);
+                assert_eq!(tree.value.to_string(), "2");
+
+                let mut state = State::new();
+                state.set_variable("a", Value::from(2));
+                tree.get_value(&mut state).unwrap();
+                assert_eq!(state.get_variable("a").unwrap().to_string(), "4");
+            }
+        );
+
+        assert_tree!(
+            "a /= 2",
+            OPERATIVE_ASSIGNMENT_EXPRESSION,
+            OperativeAssignment,
+            |tree: &mut OperativeAssignment| {
+                assert_eq!(tree.name, "a");
+                assert_eq!(tree.operation, OperativeAssignmentOperation::Divide);
+                assert_eq!(tree.value.to_string(), "2");
+
+                let mut state = State::new();
+                state.set_variable("a", Value::from(2));
+                tree.get_value(&mut state).unwrap();
+                assert_eq!(state.get_variable("a").unwrap().to_string(), "1");
+            }
+        );
+
+        let mut parser = crate::Lavendeux::new(Default::default());
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a %= 2").unwrap(), vec![0i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a **= 2").unwrap(), vec![4i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a &= 2").unwrap(), vec![2i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a |= 2").unwrap(), vec![2i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a ^= 2").unwrap(), vec![0i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a <<= 2").unwrap(), vec![8i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a >>= 2").unwrap(), vec![0i64.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a &&= 0").unwrap(), vec![false.into()]);
+
+        parser.state_mut().set_variable("a", Value::from(2));
+        assert_eq!(parser.parse("a ||= 0").unwrap(), vec![true.into()]);
+    }
 
     #[test]
     fn test_destructuring_assignment() {
@@ -274,6 +381,10 @@ mod test {
                 assert_eq!(state.get_variable("c").unwrap().to_string(), "3");
             }
         );
+
+        let mut parser = crate::Lavendeux::new(Default::default());
+        assert!(parser.parse("(a, b) = [1]").is_err());
+        assert!(parser.parse("(a, b) = [1, 2, 3]").is_err());
     }
 
     #[test]
@@ -317,7 +428,7 @@ mod test {
             }
         );
 
-        assert_tree_error!("pi = 2", External);
+        assert_tree_error!("pi = 2", Syntax);
     }
 
     #[test]

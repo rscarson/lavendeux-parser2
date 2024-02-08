@@ -1,4 +1,5 @@
 use crate::pest::{parse_input, Rule};
+use crate::preprocessor::{Preprocessor, PreprocessorDirectives};
 use crate::std_functions::Function;
 use crate::{Error, State, Value};
 use polyvalue::types::Array;
@@ -42,58 +43,28 @@ impl Lavendeux {
         self.state.register_function(function);
     }
 
-    /// Designed to catch unmatched brackets that can slow down parsing
-    pub fn preprocess_input(input: &str) -> Result<(), Error> {
-        let (mut p, mut b, mut c) = (0, 0, 0);
-        for char in input.chars() {
-            match char {
-                '(' => p += 1,
-                ')' => p -= 1,
-                '[' => b += 1,
-                ']' => b -= 1,
-                '{' => c += 1,
-                '}' => c -= 1,
-                _ => (),
-            }
-        }
+    pub fn state(&self) -> &State {
+        &self.state
+    }
 
-        if p > 0 {
-            Err(Error::UnterminatedParen {
-                token: crate::Token {
-                    line: 0,
-                    rule: Rule::SCRIPT,
-                    input: input.to_string(),
-                    references: None,
-                },
-            })
-        } else if b > 0 {
-            Err(Error::UnterminatedArray {
-                token: crate::Token {
-                    line: 0,
-                    rule: Rule::SCRIPT,
-                    input: input.to_string(),
-                    references: None,
-                },
-            })
-        } else if c > 0 {
-            Err(Error::UnterminatedObject {
-                token: crate::Token {
-                    line: 0,
-                    rule: Rule::SCRIPT,
-                    input: input.to_string(),
-                    references: None,
-                },
-            })
-        } else {
-            Ok(())
-        }
+    pub fn state_mut(&mut self) -> &mut State {
+        &mut self.state
+    }
+
+    /// Designed to catch unmatched brackets that can slow down parsing
+    pub fn preprocess_input(input: &str) -> Result<PreprocessorDirectives, Error> {
+        Preprocessor::process(input)
     }
 
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
     pub fn eval(input: &str, state: &mut State) -> Result<Value, Error> {
-        Self::preprocess_input(input)?;
-        let script = parse_input(input, Rule::SCRIPT)?;
+        let directives = Self::preprocess_input(input)?;
+        for (name, value) in directives.consts {
+            state.set_variable(&name, value.into());
+        }
+
+        let script = parse_input(&directives.script, Rule::SCRIPT)?;
         script.get_value(state)
     }
 

@@ -48,7 +48,8 @@ FUNCTION_ASSIGNMENT_STATEMENT = {
 //
 
 BLOCK = {
-    "{" ~ LINE+ ~ "}"
+    "{" ~ LINE+ ~ TOPLEVEL_EXPRESSION? ~ "}"
+    | "{" ~ TOPLEVEL_EXPRESSION ~ "}"
     | TOPLEVEL_EXPRESSION
 }
 
@@ -70,7 +71,7 @@ TOPLEVEL_EXPRESSION = _{
 
 VARIABLE_ASSIGNMENT_EXPRESSION = {identifier ~ "=" ~ TOPLEVEL_EXPRESSION}
 
-OPERATIVE_ASSIGNMENT_OPERATOR = {"+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**="}
+OPERATIVE_ASSIGNMENT_OPERATOR = {"+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "&&=" | "||="}
 OPERATIVE_ASSIGNMENT_EXPRESSION = {
     identifier ~ OPERATIVE_ASSIGNMENT_OPERATOR ~ TOPLEVEL_EXPRESSION
 }
@@ -99,8 +100,8 @@ SWITCH_CASE_EXPRESSION = _{
     ATOMIC_VALUE ~ "=>" ~ BLOCK
 }
 SWITCH_EXPRESSION = {
-    "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ "," ~ EOL*)* ~ SWITCH_CASE_EXPRESSION ~ ","? ~ EOL* ~ "}"
-    | "match" ~ TOPLEVEL_EXPRESSION ~ "{" ~ EOL* ~ SWITCH_CASE_EXPRESSION ~ ","? ~ EOL* ~ "}"
+    "match" ~ TERNARY_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ "," ~ EOL*)+ ~ (SWITCH_CASE_EXPRESSION ~ EOL*)? ~ "}"
+    | "match" ~ TERNARY_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ EOL*) ~ "}"
 }
 
 TERNARY_EXPRESSION = {
@@ -200,9 +201,9 @@ DELETE_EXPRESSION = {
 SKIP_KEYWORD = {"skip" | "continue"}
 BREAK_KEYWORD = {"break"}
 
-RETURN_KEYWORD = {"return" | "skip"}
+RETURN_KEYWORD = {"return"}
 RETURN_EXPRESSION = {
-    RETURN_KEYWORD ~ BOOLEAN_NOT_EXPRESSION?
+    RETURN_KEYWORD ~ BOOLEAN_NOT_EXPRESSION
     | BOOLEAN_NOT_EXPRESSION
 }
 
@@ -222,7 +223,15 @@ BITWISE_NOT_EXPRESSION = {
 
 ARITHMETIC_NEG_OPERATOR = {"-"}
 ARITHMETIC_NEG_EXPRESSION = {
-    ARITHMETIC_NEG_OPERATOR* ~ POSTFIX_FUNCTION_CALL_EXPRESSION
+    ARITHMETIC_NEG_OPERATOR* ~ INDEXING_EXPRESSION
+}
+
+//
+// Postfix indexing expression - for arrays and objects
+//
+
+INDEXING_EXPRESSION = {
+    POSTFIX_FUNCTION_CALL_EXPRESSION ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")*
 }
 
 //
@@ -237,15 +246,7 @@ FUNCTION_START_MARKER = {"("}
 FUNCTION_CALL_EXPRESSION = {
     identifier ~ FUNCTION_START_MARKER ~ ")"
     | identifier ~ FUNCTION_START_MARKER ~ TOPLEVEL_EXPRESSION ~ ("," ~ TOPLEVEL_EXPRESSION)* ~ ")"
-    | INDEXING_EXPRESSION
-}
-
-//
-// Postfix indexing expression - for arrays and objects
-//
-
-INDEXING_EXPRESSION = {
-    TERM ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")*
+    | TERM
 }
 
 //
@@ -254,7 +255,7 @@ INDEXING_EXPRESSION = {
 // 
 
 TERM = _{
-    | "(" ~ TOPLEVEL_EXPRESSION ~ ")"
+    "(" ~ TOPLEVEL_EXPRESSION ~ ")"
     | ATOMIC_VALUE
 }
 
@@ -333,6 +334,7 @@ regex_literal = @{
 reserved_words = {
     "pi" | "e" | "tau" | "true" | "false" |
     "match" | "if" | "then" | "else" | "for" | "do" | "in" | "as"
+    | RETURN_KEYWORD | SKIP_KEYWORD | BREAK_KEYWORD
     | DELETE_KEYWORD
     | MATCHING_OPERATOR
 }
@@ -344,7 +346,7 @@ identifier = @{reserved_words? ~ ('a'..'z' | 'A'..'Z' | "_") ~ ('a'..'z' | 'A'..
 
 errors = _{
     ERROR_UNTERMINATED_LITERAL | ERROR_UNTERMINATED_LINEBREAK | ERROR_UNTERMINATED_COMMENT
-    | ERROR_UNEXPECTED_DECORATOR
+    | ERROR_UNEXPECTED_DECORATOR | ERROR_UNTERMINATED_RETURN
 }
 
 ERROR_UNTERMINATED_LITERAL = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))*) | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))*)}
@@ -352,3 +354,4 @@ ERROR_UNTERMINATED_LINEBREAK = @{"\\" ~ EOI}
 ERROR_UNTERMINATED_COMMENT = @{"/*" ~ ANY*}
 
 ERROR_UNEXPECTED_DECORATOR = @{"@" ~ identifier ~ WHITESPACE* ~ (!WHITESPACE ~ !EOL ~ ANY)+ | SOI ~ "@" ~ ANY*}
+ERROR_UNTERMINATED_RETURN = @{"return" ~ (ANY)*}

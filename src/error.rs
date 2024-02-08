@@ -47,6 +47,13 @@ pub enum Error {
         token: Token,
     },
 
+    /// An error caused by a problem with the syntax of the script
+    #[error("\n| {token}\n= Invalid preprocessor directive: {directive}")]
+    InvalidDirective {
+        token: Token,
+        directive: String,
+    },
+
     /// An error used to return a value from a function early
     #[error("\n| {token}\n= Returned from the root scope")]
     Return {
@@ -70,6 +77,12 @@ pub enum Error {
     // Syntax Errors
     // Deals with issues during Pest tree parsing
     ///////////////////////////////////////////////////////////////////////////
+
+    /// An error caused by a problem with the syntax of the script
+    #[error("\n| {token}\n= Did not specify a value for return")]
+    UnterminatedReturn {
+        token: Token,
+    },
 
     /// An error caused by using a decorator in the wrong place
     #[error("\n| {token}\n= @decorators must be at the end of a statement")]
@@ -277,6 +290,19 @@ pub enum Error {
     // Deals with issues inside dependencies
     ///////////////////////////////////////////////////////////////////////////
     
+    /// An error caused by a problem with the syntax of the script
+    #[error("\n| Line {line}: {}\n= Syntax error; unexpected token {}", 
+    span.split("\n").next().unwrap_or(""),
+    if span.is_empty() {
+        "end-of-input".to_string()
+    } else {
+        span.chars().next().unwrap().to_string()
+    } )]
+    Syntax {
+        line: usize,
+        span: String 
+    },
+
     /// Error dealing with 3rd party lib issues
     #[error("\n| {token}\n= {error}")]
     External {
@@ -308,8 +334,12 @@ pub enum ExternalError {
     Network(#[from] reqwest::Error),
 
     /// Error dealing with pest parsing problems
-    #[error("{0}")]
+    #[error("{}", .0.variant.message())]
     Pest(#[from] pest::error::Error<Rule>),
+
+    /// Error dealing with pest parsing problems
+    #[error("{}", .0.variant.message())]
+    PrePest(#[from] pest::error::Error<crate::preprocessor::Rule>),
 
     /// Error dealing with JS execution issues
     #[error("{0}")]

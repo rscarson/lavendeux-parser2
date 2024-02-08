@@ -30,6 +30,7 @@ error_node!(UnterminatedLiteral, ERROR_UNTERMINATED_LITERAL);
 error_node!(UnterminatedComment, ERROR_UNTERMINATED_COMMENT);
 error_node!(UnexpectedDecorator, ERROR_UNEXPECTED_DECORATOR);
 error_node!(IncompleteRangeExpression, RANGE_OPERATOR);
+error_node!(UnterminatedReturn, ERROR_UNTERMINATED_RETURN);
 
 #[cfg(test)]
 mod test {

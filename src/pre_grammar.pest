@@ -1,0 +1,25 @@
+file = _{token* ~ EOI}
+token = _{directive | bracetoken | raw_token | string_literal}
+
+directive_name = @{ ('A'..'Z' | 'a'..'z' | "_") ~ ('A'..'Z' | 'a'..'z' | '0'..'9' | "_")* }
+directive_value = {("\"" ~ ((!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ((!"\'" ~ ANY))* ~ "\'")}
+directive = {"#" ~ (" " | "   ")* ~ directive_name ~ (" " | "   ")* ~ directive_value}
+
+string_literal = {("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
+
+bracetoken = _{
+    brack_open | brack_close | 
+    brace_open | brace_close |
+    paren_open | paren_close
+}
+brack_open = {"["}
+brack_close = {"]"}
+brace_open = {"{"}
+brace_close = {"}"}
+paren_open = {"("}
+paren_close = {")"}
+
+raw_token = {
+    // anything at all followed by bracetoken or eoi
+    (!(bracetoken|EOI|string_literal) ~ ANY)+
+}

@@ -163,7 +163,7 @@ define_node!(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::assert_tree;
+    use crate::{assert_tree, assert_tree_value, Lavendeux};
 
     #[test]
     fn test_matching_expr() {
@@ -176,6 +176,12 @@ mod test {
                 assert_eq!(value.to_string(), "false");
             }
         );
+
+        assert_tree_value!("'a' contains 'a'", true.into());
+        assert_tree_value!("'a' matches 'a'", true.into());
+        assert_tree_value!("'a' is string", true.into());
+        assert_tree_value!("'abc' startswith 'a'", true.into());
+        assert_tree_value!("'abc' ends_with 'c'", true.into());
     }
 
     #[test]
@@ -269,6 +275,21 @@ mod test {
                 assert_eq!(value.to_string(), "false");
             }
         );
+
+        // test short circuiting
+        let mut parser = Lavendeux::new(Default::default());
+        parser.state_mut().set_variable("a", Value::from(true));
+        assert_eq!(
+            parser.parse("false && (del a)").unwrap()[0],
+            Value::from(false)
+        );
+        assert_eq!(parser.state().get_variable("a").unwrap(), Value::from(true));
+
+        assert_eq!(
+            parser.parse("true || (del a)").unwrap()[0],
+            Value::from(true)
+        );
+        assert_eq!(parser.state().get_variable("a").unwrap(), Value::from(true));
     }
 
     #[test]
