@@ -1,5 +1,5 @@
 use crate::syntax_tree::node::*;
-use crate::{Error, Node, State, Token, Value};
+use crate::{error::WrapSyntaxError, Error, Node, State, Token, Value};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
@@ -52,7 +52,7 @@ macro_rules! assert_tree {
 macro_rules! assert_tree_value {
     ($input:literal, $expected:expr) => {
         assert_eq!(
-            $crate::Lavendeux::eval($input, &mut $crate::State::new()).unwrap(),
+            $crate::Lavendeux::eval($input, &mut $crate::State::new(),).unwrap(),
             vec![$expected].into()
         );
     };
@@ -148,29 +148,31 @@ impl ToAstNode for Pair<'_, Rule> {
 
 /// Main function to parse the input into a syntax tree
 pub fn parse_input(input: &str, rule: Rule) -> Result<Node, Error> {
-    match LavendeuxParser::parse(rule, input) {
-        Ok(pairs) => {
-            if let Some(pair) = pairs.flatten().next() {
-                pair.to_ast_node()
-            } else {
-                Err(Error::Internal(format!(
-                    "Grammar issue; empty input should be valid",
-                )))
-            }
-        }
-        Err(err) => {
-            let span = match err.location {
-                pest::error::InputLocation::Pos(pos) => pos..=(input.len() - 1),
-                pest::error::InputLocation::Span(span) => span.0..=span.1,
-            };
-            let span = input[span].to_string();
+    let pairs = LavendeuxParser::parse(rule, input).wrap_syntax_error(input)?;
+    if let Some(pair) = pairs.flatten().next() {
+        pair.to_ast_node()
+    } else {
+        Err(Error::Internal(
+            "Grammar issue; empty input should be valid".to_string(),
+        ))
+    }
+}
 
-            let line = match err.line_col {
-                pest::error::LineColLocation::Pos((line, _)) => line,
-                pest::error::LineColLocation::Span((line, _), _) => line,
-            };
-
-            Err(Error::Syntax { line, span })
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_calllimit() {
+        // generate an absurdly large test expression to see if the parser can handle it
+        let mut test = String::new();
+        for _ in 0..1000 {
+            test.push_str("1 + 1 * (");
         }
+        for _ in 0..1000 {
+            test.push_str(")");
+        }
+        println!("{test}");
+        // crate::Lavendeux::new(Default::default())
+        //      .parse(&test)
+        //     .expect("Could not handle large input");
     }
 }

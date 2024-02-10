@@ -222,10 +222,10 @@ define_node!(
 
         let value = children.next().unwrap().to_ast_node()?; // last child is the value
 
-        let mut children = children.rev();
+        let children = children.rev();
 
         let mut names = Vec::new();
-        while let Some(next) = children.next() {
+        for next in children {
             let name = next.as_str().to_string();
             names.push(name);
         }
@@ -239,7 +239,7 @@ define_node!(
 
     value = |assignment: &DestructuringAssignment, state: &mut State| {
         let value = (*assignment.value).get_value(state)?;
-        let values = value.as_a::<Array>().to_error(&assignment.token)?.inner().clone();
+        let values = value.clone().as_a::<Array>().to_error(&assignment.token)?.inner().clone();
         if values.len() != assignment.names.len() {
             return Err(Error::DestructuringAssignment {
                 expected_length: assignment.names.len(),

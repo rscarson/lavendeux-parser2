@@ -4,7 +4,10 @@ use crate::{
     user_function::UserFunction,
     Error, Token, Value,
 };
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Clone)]
 pub struct State {
@@ -17,8 +20,8 @@ pub struct State {
     /// The time that the current parse started
     /// This is used to prevent infinite loops
     /// and implement a timeout
-    parse_starttime: std::time::Instant,
-    timeout: u64,
+    parse_starttime: Instant,
+    timeout: Duration,
 
     /// Registered variables
     /// Used as a stack for scoping
@@ -35,15 +38,13 @@ pub struct State {
     std_functions: HashMap<String, Function>,
 }
 
-impl State {
-    const MAX_DEPTH: usize = 999;
-
-    pub fn with_timeout(ms: u64) -> Self {
+impl Default for State {
+    fn default() -> Self {
         let mut instance = Self {
             depth: 0,
             locked: 0,
             parse_starttime: std::time::Instant::now(),
-            timeout: ms,
+            timeout: Duration::from_secs(0),
             variables: vec![HashMap::new()],
             user_functions: HashMap::new(),
             std_functions: HashMap::new(),
@@ -54,10 +55,21 @@ impl State {
 
         instance
     }
+}
+
+impl State {
+    const MAX_DEPTH: usize = 999;
+
+    pub fn with_timeout(timeout: Duration) -> Self {
+        Self {
+            timeout,
+            ..Self::default()
+        }
+    }
 
     /// Creates a new parser state
     pub fn new() -> Self {
-        Self::with_timeout(0)
+        Self::default()
     }
 
     /// Returns the current depth of the parser
@@ -68,12 +80,12 @@ impl State {
     /// Sets the timeout of the parser
     /// Used on parse start
     pub fn start_timer(&mut self) {
-        self.parse_starttime = std::time::Instant::now();
+        self.parse_starttime = Instant::now();
     }
 
     /// Checks the timeout of the parser
     pub fn check_timer(&self) -> Result<(), Error> {
-        if self.timeout > 0 && self.parse_starttime.elapsed().as_millis() > self.timeout as u128 {
+        if !self.timeout.is_zero() && self.parse_starttime.elapsed() > self.timeout {
             Err(Error::Timeout)
         } else {
             Ok(())
@@ -252,16 +264,19 @@ impl State {
             Some(f)
         } else if let Some(f) = self.get_user_function(name) {
             Some(f.to_std_function())
-        } else if let Some(f) = self.get_ext_function(name) {
-            Some(f)
         } else {
-            None
+            self.get_ext_function(name)
         }
     }
 
     /// Decorates the given value with the given decorator
     pub fn decorate(&mut self, name: &str, token: &Token, value: Value) -> Result<String, Error> {
         let mut value = value;
+
+        println!(
+            "List of functions: {:?}",
+            self.std_functions.keys().collect::<Vec<_>>()
+        );
 
         if let Some(f) = self.get_function(&format!("@{name}")) {
             value = f.execute(self, vec![value.clone()], token)?;
@@ -303,7 +318,7 @@ impl State {
         let user_fn_map = self
             .user_functions
             .iter()
-            .filter(|(n, _)| !n.starts_with("_"))
+            .filter(|(n, _)| !n.starts_with('_'))
             .map(|(n, f)| (n.clone(), f.to_std_function()))
             .collect::<HashMap<String, Function>>();
         let user_fn_strings = std_functions::collect_help(user_fn_map, filter.clone());
@@ -345,7 +360,7 @@ mod test {
 
     #[test]
     fn test_timer() {
-        let mut state = State::with_timeout(200);
+        let mut state = State::with_timeout(Duration::from_millis(100));
         state.start_timer();
         std::thread::sleep(std::time::Duration::from_millis(250));
         assert!(matches!(state.check_timer().unwrap_err(), Error::Timeout));

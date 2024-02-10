@@ -21,7 +21,7 @@ define_node!(
         let statements = input
             .into_inner()
             .filter(|child| child.as_rule() != Rule::EOI && child.as_rule() != Rule::EOL)
-            .map(|child| Ok(child.to_ast_node()?))
+            .map(|child| child.to_ast_node())
             .collect::<Result<Vec<Node>, Error>>()?;
 
         Ok(Self {
@@ -32,7 +32,7 @@ define_node!(
 
     value = |script: &Script, state: &mut State| {
         let values = script.statements.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
-        Ok(Value::Array(values.into()))
+        Ok(Value::array(values))
     }
 );
 
@@ -59,7 +59,7 @@ define_node!(
             }.boxed());
         } else {
             let expression = next.unwrap().to_ast_node()?;
-            let decorator = children.next().and_then(|c| Some(c.as_str().to_string()));
+            let decorator = children.next().map(|c| c.as_str().to_string());
 
             Ok(Self {
                 expression: Some(expression),
@@ -74,12 +74,12 @@ define_node!(
             let value = expression.get_value(state)?;
             if let Some(decorator) = &line.decorator {
                 let result = state.decorate(decorator, line.token(), value)?;
-                Ok(Value::from(result).into())
+                Ok(Value::from(result))
             } else {
                 Ok(value)
             }
         } else {
-            Ok(Value::from("").into())
+            Ok(Value::from(""))
         }
     }
 );
@@ -95,7 +95,7 @@ define_node!(
         let children = input.into_inner();
 
         let lines = children
-            .map(|child| Ok(child.to_ast_node()?))
+            .map(|child| child.to_ast_node())
             .collect::<Result<Vec<Node>, Error>>()?;
 
         Ok(Self {

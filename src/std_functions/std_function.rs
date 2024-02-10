@@ -114,7 +114,7 @@ impl Function {
                 .map(|e| e.expects.to_string())
                 .collect::<Vec<String>>()
                 .join(", "),
-            self.returns.to_string()
+            self.returns
         )
     }
 

@@ -52,7 +52,7 @@ impl UserFunction {
 
         // Check that the function is valid
         src.iter()
-            .map(|l| cached_fn_compile(&l, 0))
+            .map(|l| cached_fn_compile(l, 0))
             .collect::<Result<Vec<_>, _>>()?;
 
         let inst = Self {

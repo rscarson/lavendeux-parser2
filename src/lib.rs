@@ -37,7 +37,7 @@ mod test {
     #[test]
     fn test_load_stdlib() {
         if let Err(e) =
-            Lavendeux::new(Default::default()).parse("#include 'examples/stdlib_example.lav'")
+            Lavendeux::new(Default::default()).parse("'examples/stdlib_example.lav'.include()")
         {
             panic!("Failed to load stdlib: {}", e);
         }

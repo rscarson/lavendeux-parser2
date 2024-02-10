@@ -52,8 +52,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .iter()
                 .map(|(k, v)| {
                     (
-                        k.as_a::<Str>().unwrap().inner().clone(),
-                        v.as_a::<Str>().unwrap().inner().clone(),
+                        k.clone().as_a::<Str>().unwrap().inner().clone(),
+                        v.clone().as_a::<Str>().unwrap().inner().clone(),
                     )
                 })
                 .collect::<HashMap<String, String>>();
@@ -91,8 +91,8 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .iter()
                 .map(|(k, v)| {
                     (
-                        k.as_a::<Str>().unwrap().inner().clone(),
-                        v.as_a::<Str>().unwrap().inner().clone(),
+                        k.clone().as_a::<Str>().unwrap().inner().clone(),
+                        v.clone().as_a::<Str>().unwrap().inner().clone(),
                     )
                 })
                 .collect::<HashMap<String, String>>();
@@ -122,7 +122,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 state,
                 &name,
                 crate::network_utils::ApiDefinition::from_value(endpoint).ok_or(Error::ValueFormat {
-                    expected_format: format!("<url: string> | {{<url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}}"),
+                    expected_format: "<url: string> | {<url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}".to_string(),
                     token: token.clone()
                 })?,
             ).to_error(token)?;
@@ -186,7 +186,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .clone();
             let endpoint = get_optional_argument!("endpoint", arguments)
                 .and_then(|v| v.as_a::<Str>().ok())
-                .and_then(|s| Some(s.inner().clone()));
+                .map(|s| s.inner().clone());
 
             let api = crate::network_utils::ApiManager::get(state, &name)
                 .ok_or(Error::ValueFormat {
@@ -223,7 +223,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .clone();
             let endpoint = get_optional_argument!("endpoint", arguments)
                 .and_then(|v| v.as_a::<Str>().ok())
-                .and_then(|s| Some(s.inner().clone()));
+                .map(|s| s.inner().clone());
             let body = get_optional_argument!("body", arguments)
                 .unwrap_or(Str::default().into())
                 .as_a::<Str>()
@@ -287,15 +287,16 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .to_error(token)?
                 .inner()
                 .clone();
-            let api = crate::network_utils::ApiManager::get(state, "chatgpt").ok_or(
-                Error::ValueFormat {
-                    expected_format: format!("API chatgpt is not defined. You can set it with add_api('chatgpt', 'endpoint')"),
-                    token: token.clone(),
-                }
-            )?;
+            let api = crate::network_utils::ApiManager::get(state, "chatgpt")
+                .ok_or(Error::ValueFormat {
+                expected_format:
+                    "API chatgpt is not defined. You can set it with add_api('chatgpt', 'endpoint')"
+                        .to_string(),
+                token: token.clone(),
+            })?;
             if api.auth_key.is_none() {
                 return Err(Error::ValueFormat {
-                    expected_format: format!("API key for chatgpt is not set. You can set one with api_key('chatgpt', '<key>')"),
+                    expected_format: "API key for chatgpt is not set. You can set one with api_key('chatgpt', '<key>')".to_string(),
                     token: token.clone(),
                 });
             }

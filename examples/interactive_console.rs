@@ -1,7 +1,8 @@
-use lavendeux_parser::{Error, Lavendeux};
+use lavendeux_parser::{Error, Lavendeux, ParserOptions};
 use std::collections::VecDeque;
 use std::env;
 use std::io::{stdin, stdout, Write};
+use std::time::Duration;
 
 /// Get the next command from the user
 fn next_command() -> String {
@@ -22,7 +23,11 @@ fn next_command() -> String {
 }
 
 fn main() -> Result<(), Error> {
-    let mut lavendeux = Lavendeux::new(Default::default());
+    let mut lavendeux = Lavendeux::new(ParserOptions {
+        timeout: Duration::from_secs(5),
+        pest_call_limit: 25000000,
+        ..Default::default()
+    });
 
     // Load extensions
     Lavendeux::load_extension("example_extensions/simple_extension.js")?;

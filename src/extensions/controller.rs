@@ -43,7 +43,7 @@ impl ExtensionController {
     pub fn with<T, F: FnOnce(&mut ExtensionController) -> T>(callback: F) -> T {
         let mutex = RUNTIME_CELL.get_or_init(|| Mutex::new(ExtensionController::new()));
         let mut guard = mutex.lock().unwrap();
-        callback(&mut *guard)
+        callback(&mut guard)
     }
 
     pub fn add_extension(&mut self, module: Module) -> Result<ExtensionDetails, ExternalError> {
@@ -63,7 +63,7 @@ impl ExtensionController {
     /// Register an extension
     pub fn register(&mut self, filename: &str) -> Result<ExtensionDetails, ExternalError> {
         let module = Module::load(filename)?;
-        Ok(self.add_extension(module)?)
+        self.add_extension(module)
     }
 
     /// Unregister an extension

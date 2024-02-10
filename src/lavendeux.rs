@@ -4,20 +4,24 @@ use crate::std_functions::Function;
 use crate::{Error, State, Value};
 use polyvalue::types::Array;
 use polyvalue::ValueTrait;
+use std::num::NonZeroUsize;
+use std::time::Duration;
 
 /// Available options for the parser
-/// timeout - The timeout in seconds for the parser
+/// timeout - The timeout for the parser
 /// stack_size - The stack size in bytes for the parsing thread
 #[derive(Debug, Clone)]
 pub struct ParserOptions {
-    pub timeout: u64,
+    pub timeout: Duration,
     pub stack_size: usize,
+    pub pest_call_limit: usize,
 }
 impl Default for ParserOptions {
     fn default() -> Self {
         Self {
-            timeout: 0,
+            timeout: Duration::from_secs(0),
             stack_size: 1024 * 1024 * 8,
+            pest_call_limit: 0,
         }
     }
 }
@@ -60,21 +64,18 @@ impl Lavendeux {
     /// threading, timeout, and without sanitizing scope depth
     pub fn eval(input: &str, state: &mut State) -> Result<Value, Error> {
         let directives = Self::preprocess_input(input)?;
-        for (name, value) in directives.consts {
-            state.set_variable(&name, value.into());
-        }
-
-        let script = parse_input(&directives.script, Rule::SCRIPT)?;
-        script.get_value(state)
+        parse_input(&directives.script, Rule::SCRIPT)?.get_value(state)
     }
 
     /// Parses the given input
     pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
         self.state.sanitize_scopes();
+        pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
+
         let value = std::thread::scope(|s| -> Result<Value, Error> {
             let handle = std::thread::Builder::new()
                 .stack_size(self.options.stack_size)
-                .name(format!("lavendeux-parser"))
+                .name("lavendeux-parser".to_string())
                 .spawn_scoped(s, || {
                     self.state.start_timer();
                     Self::eval(input, &mut self.state)
@@ -142,7 +143,11 @@ mod test {
 
     #[test]
     fn test_slow_brackets() {
-        let mut parser = Lavendeux::new(Default::default());
+        let mut parser = Lavendeux::new(ParserOptions {
+            timeout: Duration::from_millis(500),
+            pest_call_limit: 25000000,
+            ..Default::default()
+        });
         parser
             .parse("X[[[]3[4[bri[z[eeg(e4?estarts_witheHoAs(tX[[[]3[4[bri[z[eee(e4?estarts_<a")
             .unwrap_err();
@@ -155,6 +160,9 @@ mod test {
         parser
             .parse("eeeeeeA(peeeeeA(eeeeA(peeeeeA(eeA(pA(peeA(pA(pi^A")
             .unwrap_err();
+        parser
+                  .parse("forirPP[forPorP[f&r[forPorP[ffororPP[forororPP[forPorP[f&r[forPorP[ffororPP[forororPP[forPorP[f&r[forPorP[f&Br[PP]/b@]][f&r[P;;P]]]^d]f&[]P[f&r[forPorP[f&r[PP]-b@]]]^d]PP]][PorP[f&Br[PP]/b@]][f&r[P;;P]]]^d]f&[]P[f&r[forPorP[f&r[PP]-b@]]]^d]PP]][f&r[P;;P]]]^d]f&[]")
+                 .unwrap_err();
     }
 
     #[test]

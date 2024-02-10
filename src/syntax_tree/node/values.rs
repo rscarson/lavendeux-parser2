@@ -8,7 +8,7 @@ use crate::error::WrapError;
 use crate::{Error, Rule, State, ToToken, Value};
 use pest::iterators::Pair;
 use polyvalue::operations::IndexingMutationExt;
-use polyvalue::{types::*, ValueTrait, ValueType};
+use polyvalue::{types::*, InnerValue, ValueTrait, ValueType};
 use std::str::FromStr;
 
 fn parse_string(input: &str) -> String {
@@ -185,7 +185,7 @@ define_node!(
         let token = input.to_token();
         let elements = input
             .into_inner()
-            .map(|child| Ok(child.to_ast_node()?))
+            .map(|child| child.to_ast_node())
             .collect::<Result<Vec<Node>, Error>>()?;
 
         Ok(Self { elements, token }.boxed())
@@ -193,7 +193,7 @@ define_node!(
 
     value = |this: &ArrayValue, state: &mut State| {
         let values = this.elements.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
-        Ok(Value::Array(values.into()))
+        Ok(Value::array(values))
     }
 );
 
@@ -225,7 +225,7 @@ define_node!(
             object.insert(key, value).to_error(&this.token)?;
         }
 
-        Ok(Value::Object(object.into()))
+        Ok(Value::object(object))
     }
 );
 
@@ -265,8 +265,8 @@ define_node!(
         // 1. The start and end must be the same type
         // 2. The start and end must be integer or single character strings
         // 3. The start must be less than or equal to the end
-        match (&start, &end) {
-            (Value::String(start), Value::String(end)) => {
+        match (&start.inner(), &end.inner()) {
+            (InnerValue::String(start), InnerValue::String(end)) => {
                 if start.inner().len() != 1 || end.inner().len() != 1 {
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
@@ -293,7 +293,7 @@ define_node!(
                 Ok(Value::from(array))
             }
 
-            (Value::I64(start), Value::I64(end)) => {
+            (InnerValue::I64(start), InnerValue::I64(end)) => {
                 if start > end {
                     return Err(Error::InvalidRange {
                         start: start.to_string(),
@@ -335,7 +335,7 @@ define_node!(
     },
     value = |this: &CastingExpression, state: &mut State| {
         let value = this.value.get_value(state)?;
-        Ok(value.as_type(this.target_type).to_error(&this.token)?)
+        value.as_type(this.target_type).to_error(&this.token)
     }
 );
 
@@ -353,7 +353,7 @@ define_node!(
         children.next(); // Skip the delete keyword
         let src = children.next().unwrap().as_str().to_string();
         let indices = children
-            .map(|child| Ok(child.to_ast_node()?))
+            .map(|child| child.to_ast_node())
             .collect::<Result<Vec<Node>, Error>>()?;
 
         Ok(Self {
@@ -380,15 +380,13 @@ define_node!(
             let removed = pos.delete_index(&final_idx).to_error(&this.token)?;
             state.set_variable(&this.src, value);
             Ok(removed)
+        } else if let Some(function) = state.delete_user_function(&this.src) {
+            Ok(function.to_std_function().signature().into())
         } else {
-            if let Some(function) = state.delete_user_function(&this.src) {
-                Ok(function.to_std_function().signature().into())
-            } else {
-                state.delete_variable(&this.src).ok_or(Error::VariableName {
-                    name: this.src.clone(),
-                    token: this.token.clone(),
-                })
-            }
+            state.delete_variable(&this.src).ok_or(Error::VariableName {
+                name: this.src.clone(),
+                token: this.token.clone(),
+            })
         }
     }
 );

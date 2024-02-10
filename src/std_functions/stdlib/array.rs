@@ -5,7 +5,7 @@ use crate::{
 use polyvalue::{
     operations::IndexingMutationExt,
     types::{Array, Object, I64},
-    Value, ValueTrait, ValueType,
+    InnerValue, Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -96,7 +96,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             })?;
 
             // Update the array if it references a variable
-            let value = Value::Array(input.into());
+            let value = Value::array(input);
             if let Some(reference) = &token.references {
                 state.set_variable(reference, value);
             }
@@ -126,7 +126,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             input.push(element);
 
             // Update the array if it references a variable
-            let value = Value::Array(input.into());
+            let value = Value::array(input);
             if let Some(reference) = &token.references {
                 state.set_variable(reference, value.clone());
             }
@@ -156,7 +156,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let first = input.remove(0);
 
             // Update the array if it references a variable
-            let value = Value::Array(input.into());
+            let value = Value::array(input);
             if let Some(reference) = &token.references {
                 state.set_variable(reference, value);
             }
@@ -186,7 +186,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             input.insert(0, element);
 
             // Update the array if it references a variable
-            let value = Value::Array(input.into());
+            let value = Value::array(input);
             if let Some(reference) = &token.references {
                 state.set_variable(reference, value.clone());
             }
@@ -264,17 +264,18 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let input1 = get_argument!("input1", arguments);
             let input2 = get_argument!("input2", arguments);
 
-            match input1.resolve(&input2).to_error(token)? {
-                (Value::Array(a), Value::Array(b)) => {
+            let (left, right) = input1.resolve(&input2).to_error(token)?;
+            match (left.inner(), right.inner()) {
+                (InnerValue::Array(a), InnerValue::Array(b)) => {
                     let mut merged = a.inner().clone();
                     merged.extend(b.inner().clone());
-                    Ok(Value::Array(merged.into()))
+                    Ok(Value::array(merged))
                 }
 
-                (Value::Object(a), Value::Object(b)) => {
+                (InnerValue::Object(a), InnerValue::Object(b)) => {
                     let mut merged = a.inner().clone();
                     merged.extend(b.inner().clone());
-                    Ok(Value::Object(merged.into()))
+                    Ok(Value::object(merged))
                 }
 
                 _ => Err(Error::Internal("Type mismatch in merge".to_string())),
@@ -307,9 +308,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let right = split.split_off(index);
             let left = split;
 
-            Ok(Value::Array(
-                vec![Value::Array(left.into()), Value::Array(right.into())].into(),
-            ))
+            Ok(Value::array(vec![Value::array(left), Value::array(right)]))
         }
     );
 
@@ -335,7 +334,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
             let size = size as usize;
             let chunks = input.inner().chunks(size).map(|c| Value::from(c.to_vec()));
-            Ok(Value::Array(chunks.collect::<Vec<_>>().into()))
+            Ok(Value::array(chunks.collect::<Vec<_>>()))
         }
     );
 

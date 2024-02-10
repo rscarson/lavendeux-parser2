@@ -24,12 +24,12 @@ define_node!(
                 children.next().unwrap(); // skip marker
 
                 let arguments = children
-                .map(|child| Ok(child.to_ast_node()?))
+                .map(|child| child.to_ast_node())
                 .collect::<Result<Vec<Node>, Error>>()?;
 
                 // Function arguments can have variable references to the first argument in order to
                 // update values. This is especially useful for array functions like push, pop, etc.
-                let effective_reference = arguments.iter().next().and_then(|c| c.token().references.clone());
+                let effective_reference = arguments.first().and_then(|c| c.token().references.clone());
                 token.references = effective_reference;
 
                 Ok(Self { name, arguments, token }.boxed())
@@ -47,7 +47,7 @@ define_node!(
 
                 // Function arguments can have variable references to the first argument in order to
                 // update values. This is especially useful for array functions like push, pop, etc.
-                let effective_reference = arguments.iter().next().and_then(|c| c.token().references.clone());
+                let effective_reference = arguments.first().and_then(|c| c.token().references.clone());
                 token.references = effective_reference;
 
                 Ok(Self { name, arguments, token }.boxed())

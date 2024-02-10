@@ -27,7 +27,7 @@ pub fn collect_help(
 }
 
 fn function_help(function: &Function) -> String {
-    if function.description().len() > 0 {
+    if !function.description().is_empty() {
         format!("{} : {}", function.signature(), function.description())
     } else {
         function.signature()

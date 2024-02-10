@@ -16,7 +16,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |_state: &mut State, arguments, token, _| {
             let message = get_argument!("message", arguments).to_string();
             Err(Error::Custom {
-                message: message,
+                message,
                 token: token.clone(),
             })
         }
@@ -32,7 +32,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |_state: &mut State, arguments, token, _| {
             let message = get_argument!("message", arguments).to_string();
             Err(Error::Custom {
-                message: message,
+                message,
                 token: token.clone(),
             })
         }
@@ -62,13 +62,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |_state: &mut State, arguments, token, _| {
             let cond = get_argument!("condition", arguments);
             if cond.is_truthy() {
-                return Ok(cond);
+                Ok(cond)
             } else {
                 let message = "Assertion failed".to_string();
-                return Err(Error::Custom {
-                    message: message,
+                Err(Error::Custom {
+                    message,
                     token: token.clone(),
-                });
+                })
             }
         }
     );
@@ -87,13 +87,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let cond = get_argument!("condition", arguments);
             let expected = get_argument!("expected", arguments);
             if cond == expected {
-                return Ok(Value::from(vec![cond, expected]));
+                Ok(Value::from(vec![cond, expected]))
             } else {
                 let message = format!("Assertion failed: {:?} != {:?}", cond, expected);
-                return Err(Error::Custom {
-                    message: message,
+                Err(Error::Custom {
+                    message,
                     token: token.clone(),
-                });
+                })
             }
         }
     );
@@ -194,7 +194,7 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         handler = |state: &mut State, arguments, token, _| {
             let expression = get_argument!("expression", arguments).to_string();
 
-            state.scope_into(&token)?;
+            state.scope_into(token)?;
             let res = Lavendeux::eval(&expression, state);
             state.scope_out();
             res
@@ -212,11 +212,13 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
             let filename = get_argument!("filename", arguments).to_string();
             let script = std::fs::read_to_string(filename).to_error(token)?;
 
-            state.scope_into(&token)?;
+            state.scope_into(token)?;
             state.lock_scope();
             let res = Lavendeux::eval(&script, state);
             state.scope_out();
-            res
+
+            res?;
+            Ok(Value::from(""))
         }
     );
 

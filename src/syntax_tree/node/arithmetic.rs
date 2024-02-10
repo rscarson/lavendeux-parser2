@@ -56,10 +56,10 @@ define_node!(
 
     value = |this: &ArithmeticExpression, state: &mut State| {
         let mut operands = this.operand_stack.iter().rev().peekable();
-        let mut operators = this.operator_stack.iter().rev().peekable();
+        let operators = this.operator_stack.iter().rev().peekable();
 
         let mut left = operands.next().unwrap().get_value(state)?;
-        while let Some(op) = operators.next() {
+        for op in operators {
             let right = operands.next().unwrap().get_value(state)?;
             left = Value::arithmetic_op(&left, &right, *op).to_error(&this.token)?;
         }

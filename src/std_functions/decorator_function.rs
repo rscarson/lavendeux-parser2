@@ -46,8 +46,7 @@ pub fn recursively_apply_decorator(
         ValueType::Array => {
             let mut input = input.as_a::<Array>().to_error(token)?;
             for e in input.inner_mut() {
-                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
-                    .into();
+                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?;
             }
             Ok(Value::from(input.to_string()))
         }
@@ -55,8 +54,7 @@ pub fn recursively_apply_decorator(
         ValueType::Object => {
             let mut input = input.as_a::<Object>().to_error(token)?;
             for e in input.inner_mut().values_mut() {
-                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?
-                    .into();
+                *e = recursively_apply_decorator(e.clone(), token, required_type, name, handler)?;
             }
             Ok(Value::from(input.to_string()))
         }

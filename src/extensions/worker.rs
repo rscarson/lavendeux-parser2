@@ -50,11 +50,10 @@ fn runtime_thread(
         }
         Err(err) => {
             response_tx
-                .send(ExtensionWorkerResponse::Error(err.into()))
+                .send(ExtensionWorkerResponse::Error(err))
                 .unwrap();
-            return;
         }
-    };
+    }
 }
 
 /// This structure will store a threaded instance of a JS runtime
@@ -107,7 +106,7 @@ impl ExtensionWorker {
             ExtensionWorkerResponse::Start(extension) => extension,
             ExtensionWorkerResponse::Error(err) => return Err(err),
             _ => {
-                let e = Error::Internal(format!("JSRuntime worker responded incorrectly"));
+                let e = Error::Internal("JSRuntime worker responded incorrectly".to_string());
                 return Err(Box::new(e).into());
             }
         };
@@ -159,9 +158,7 @@ impl ExtensionWorker {
                 result
             }
             ExtensionWorkerResponse::Error(err) => Err(err.to_error(token)),
-            _ => Err(Error::Internal(format!(
-                "JSRuntime worker responded incorrectly"
-            ))),
+            _ => Err(Error::Internal("JSRuntime worker responded incorrectly".to_string())),
         }
     }
 
@@ -171,9 +168,8 @@ impl ExtensionWorker {
     }
 
     pub fn to_std_function(&self, function: &str) -> Option<Function> {
-        if let Some(function) = self.extension().all_functions().get(function) {
-            Some(Function::new(
-                &function.name(),
+        self.extension().all_functions().get(function).map(|function| Function::new(
+                function.name(),
                 function.description(),
                 &self.extension().signature(),
                 function
@@ -204,8 +200,5 @@ impl ExtensionWorker {
                 },
                 function.name().to_string(),
             ))
-        } else {
-            None
-        }
     }
 }

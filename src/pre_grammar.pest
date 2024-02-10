@@ -1,11 +1,17 @@
-file = _{token* ~ EOI}
-token = _{directive | bracetoken | raw_token | string_literal}
+SCRIPT = {
+    LINE* ~ EOI
+}
 
-directive_name = @{ ('A'..'Z' | 'a'..'z' | "_") ~ ('A'..'Z' | 'a'..'z' | '0'..'9' | "_")* }
-directive_value = {("\"" ~ ((!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ((!"\'" ~ ANY))* ~ "\'")}
-directive = {"#" ~ (" " | "   ")* ~ directive_name ~ (" " | "   ")* ~ directive_value}
+LINE = {
+    WHITESPACE* ~ TOKEN+ ~ (EOL | &EOI)
+    | WHITESPACE* ~ (EOL | INLINE_COMMENT)
+}
 
-string_literal = {("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
+TOKEN = _{
+    directive_include | bracetoken | raw_token | string_literal
+}
+
+directive_include = { "#include" ~ string_literal }
 
 bracetoken = _{
     brack_open | brack_close | 
@@ -23,3 +29,16 @@ raw_token = {
     // anything at all followed by bracetoken or eoi
     (!(bracetoken|EOI|string_literal) ~ ANY)+
 }
+
+string_literal = {("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
+
+//
+// Tokenizer configuration
+//
+
+INLINE_COMMENT = @{"//" ~ (!EOL ~ ANY)* ~ (&EOL | &EOI)}
+BLOCK_COMMENT = @{"/*" ~ (!"*/" ~ ANY)* ~ "*/"}
+COMMENT = _{INLINE_COMMENT | BLOCK_COMMENT}
+
+WHITESPACE = _{" " | "\t" | "\\" ~ EOL | COMMENT}
+EOL = _{NEWLINE | ";"}

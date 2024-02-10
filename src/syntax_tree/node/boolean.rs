@@ -54,11 +54,11 @@ define_node!(
     },
     value = |this: &BooleanExpression, state: &mut State| {
         let mut operands = this.operand_stack.iter().rev().peekable();
-        let mut operators = this.operator_stack.iter().rev().peekable();
+        let operators = this.operator_stack.iter().rev().peekable();
 
         let mut left = operands.next().unwrap().get_value(state)?;
-        while let Some(op) = operators.next() {
-            let ss_eval_op = *left.as_a::<Bool>().to_error(&this.token)?.inner();
+        for op in operators {
+            let ss_eval_op = *left.clone().as_a::<Bool>().to_error(&this.token)?.inner();
             if *op == BooleanOperation::And && !ss_eval_op {
                 // Short circuit
                 left = Value::from(false);
@@ -156,7 +156,7 @@ define_node!(
             Err(e) => return Err(e),
         };
 
-        Ok(Value::matching_op(&value, &pattern, this.operation).to_error(&this.token)?)
+        Value::matching_op(&value, &pattern, this.operation).to_error(&this.token)
     }
 );
 

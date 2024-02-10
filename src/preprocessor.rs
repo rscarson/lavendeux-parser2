@@ -1,4 +1,4 @@
-use crate::{error::WrapError, token::ToToken, Error, Token};
+use crate::{error::WrapSyntaxError, token::ToToken, Error, Token};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
@@ -19,14 +19,12 @@ impl ToToken for Pair<'_, Rule> {
 
 pub struct PreprocessorDirectives {
     pub script: String,
-    pub consts: Vec<(String, String)>,
 }
 
 impl Preprocessor {
     pub fn process(input: &str) -> Result<PreprocessorDirectives, Error> {
         let mut directives = PreprocessorDirectives {
             script: String::new(),
-            consts: Vec::new(),
         };
 
         let default_token = Token {
@@ -36,58 +34,14 @@ impl Preprocessor {
             references: None,
         };
 
-        let pairs = match Preprocessor::parse(Rule::file, input) {
-            Ok(pairs) => pairs,
-            Err(err) => {
-                let span = match err.location {
-                    pest::error::InputLocation::Pos(pos) => pos..=(input.len() - 1),
-                    pest::error::InputLocation::Span(span) => span.0..=span.1,
-                };
-                let span = input[span].to_string();
-
-                let line = match err.line_col {
-                    pest::error::LineColLocation::Pos((line, _)) => line,
-                    pest::error::LineColLocation::Span((line, _), _) => line,
-                };
-
-                return Err(Error::Syntax { line, span });
-            }
-        };
+        let pairs = Preprocessor::parse(Rule::SCRIPT, input).wrap_syntax_error(input)?;
 
         let mut sq = 0;
         let mut pa = 0;
         let mut cu = 0;
         for pair in pairs {
-            let mut text = pair.as_str().to_string();
-            let token = pair.to_token();
+            let text = pair.as_str().to_string();
             match pair.as_rule() {
-                Rule::directive => {
-                    let mut children = pair.into_inner();
-                    let name = children.next().unwrap().as_str();
-                    let value = children.next().unwrap().as_str().to_string();
-                    let value = &value[1..value.len() - 1].to_string();
-
-                    match name {
-                        "include" => {
-                            let include = std::fs::read_to_string(value).to_error(&token)?;
-                            text = include;
-                        }
-                        "define" => {
-                            let value = value.split("=").map(|s| s.trim()).collect::<Vec<&str>>();
-                            if value.len() != 2 {
-                                return Err(Error::InvalidDirective {
-                                    token: token.clone(),
-                                    directive: text,
-                                });
-                            }
-                            directives
-                                .consts
-                                .push((value[0].to_string(), value[1].to_string()));
-                        }
-                        _ => (),
-                    }
-                }
-
                 Rule::brack_open => pa += 1,
                 Rule::brack_close => pa -= 1,
 

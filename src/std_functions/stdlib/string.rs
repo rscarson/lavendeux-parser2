@@ -44,12 +44,12 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .to_error(token)?
                 .inner();
             if let Some(c) = std::char::from_u32(input as u32) {
-                return Ok(Value::from(c.to_string()));
+                Ok(Value::from(c.to_string()))
             } else {
-                return Err(Error::ValueFormat {
+                Err(Error::ValueFormat {
                     expected_format: "valid Unicode code point".to_string(),
                     token: token.clone(),
-                });
+                })
             }
         }
     );
@@ -202,6 +202,33 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
 
     static_function!(
         registry = map,
+        name = "format",
+        description = "Formats a string with the given arguments",
+        category = "string",
+        arguments = [
+            required_argument!("input", ValueType::String),
+            required_argument!("args", ValueType::Array)
+        ],
+        returns = ValueType::String,
+        handler = |_state: &mut State, arguments, token, _| {
+            let input = get_argument!("input", arguments)
+                .as_a::<String>()
+                .to_error(token)?;
+            let args = get_argument!("args", arguments)
+                .as_a::<Vec<_>>()
+                .to_error(token)?;
+            let mut result = input.clone();
+            for arg in args {
+                let arg = arg.clone().to_string();
+                // Replace first instance of {} with arg
+                result = result.replacen("{}", &arg, 1);
+            }
+            Ok(Value::from(result))
+        }
+    );
+
+    static_function!(
+        registry = map,
         name = "concat",
         description = "Treats the argument as an array of strings and concatenates them",
         category = "string",
@@ -213,7 +240,12 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .to_error(token)?;
             let mut result = String::new();
             for value in input.inner() {
-                let s = value.as_a::<Str>().to_error(token)?.inner().to_string();
+                let s = value
+                    .clone()
+                    .as_a::<Str>()
+                    .to_error(token)?
+                    .inner()
+                    .to_string();
                 result.push_str(&s);
             }
             Ok(Value::from(result))

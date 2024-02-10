@@ -4,7 +4,7 @@ use crate::{
 };
 use polyvalue::{
     types::{Bool, Float, I64},
-    Value, ValueTrait, ValueType,
+    InnerValue, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -20,14 +20,14 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Base 16 number formatting, such as 0xFF",
         expected_type = ValueType::Numeric,
         handler = &|input, token| {
-            match input {
-                Value::U8(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::I8(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::U16(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::I16(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::U32(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::I32(v) => Ok(format!("{:#0x}", v.inner())),
-                Value::U64(v) => Ok(format!("{:#0x}", v.inner())),
+            match input.inner() {
+                InnerValue::U8(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::I8(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::U16(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::I16(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::U32(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::I32(v) => Ok(format!("{:#0x}", v.inner())),
+                InnerValue::U64(v) => Ok(format!("{:#0x}", v.inner())),
                 _ => {
                     let input = *input.as_a::<I64>().to_error(token)?.inner();
                     Ok(format!("{:#0x}", input))
@@ -42,14 +42,14 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Base 8 number formatting, such as 0o77",
         expected_type = ValueType::Numeric,
         handler = &|input, token| {
-            match input {
-                Value::U8(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::I8(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::U16(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::I16(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::U32(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::I32(v) => Ok(format!("{:#0o}", v.inner())),
-                Value::U64(v) => Ok(format!("{:#0o}", v.inner())),
+            match input.inner() {
+                InnerValue::U8(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::I8(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::U16(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::I16(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::U32(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::I32(v) => Ok(format!("{:#0o}", v.inner())),
+                InnerValue::U64(v) => Ok(format!("{:#0o}", v.inner())),
                 _ => {
                     let input = *input.as_a::<I64>().to_error(token)?.inner();
                     Ok(format!("{:#0o}", input))
@@ -64,14 +64,14 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         description = "Base 2 number formatting, such as 0b101",
         expected_type = ValueType::Numeric,
         handler = &|input, token| {
-            match input {
-                Value::U8(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::I8(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::U16(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::I16(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::U32(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::I32(v) => Ok(format!("{:#0b}", v.inner())),
-                Value::U64(v) => Ok(format!("{:#0b}", v.inner())),
+            match input.inner() {
+                InnerValue::U8(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::I8(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::U16(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::I16(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::U32(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::I32(v) => Ok(format!("{:#0b}", v.inner())),
+                InnerValue::U64(v) => Ok(format!("{:#0b}", v.inner())),
                 _ => {
                     let input = *input.as_a::<I64>().to_error(token)?.inner();
                     Ok(format!("{:#0b}", input))

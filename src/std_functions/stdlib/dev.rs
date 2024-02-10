@@ -37,18 +37,17 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         ],
         returns = ValueType::Float,
         handler = |_: &mut State, arguments, token, _| {
-            let n = get_optional_argument!("lines", arguments)
+            let n = *get_optional_argument!("lines", arguments)
                 .unwrap_or(Value::from(1))
                 .as_a::<I64>()
                 .to_error(token)?
-                .inner()
-                .clone();
+                .inner();
             let file = get_argument!("file", arguments)
                 .as_a::<Str>()
                 .to_error(token)?
                 .inner()
                 .clone();
-            let file = File::open(&file).to_error(token)?;
+            let file = File::open(file).to_error(token)?;
 
             let lines = std::io::BufReader::new(file)
                 .lines()

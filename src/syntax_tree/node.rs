@@ -14,6 +14,7 @@ macro_rules! define_node {
                 write!(f, "{}", self.token().input)
             }
         }
+        #[allow(clippy::redundant_closure_call)]
         impl crate::AstNode for $name {
             fn from_pair(input: pest::iterators::Pair<crate::pest::Rule>) -> Result<crate::Node, crate::Error> {
                 ($new_hnd)(input)
@@ -61,6 +62,7 @@ macro_rules! define_node {
                 write!(f, "{}", self.token().input)
             }
         }
+        #[allow(clippy::redundant_closure_call)]
         impl crate::AstNode for $name {
             fn from_pair(input: pest::iterators::Pair<crate::pest::Rule>) -> Result<crate::Node, crate::Error> {
                 ($new_hnd)(input)
@@ -145,8 +147,10 @@ macro_rules! include_node {
 }
 
 use std::collections::HashMap;
+type NodeHandlerFn = fn(pest::iterators::Pair<crate::Rule>) -> Result<Node, Error>;
 lazy_static! {
-    static ref NODES: HashMap<crate::Rule, fn(pest::iterators::Pair<crate::Rule>) -> Result<Node, Error>> = {
+
+    static ref NODES: HashMap<crate::Rule, NodeHandlerFn> = {
         let mut map = HashMap::new();
 
         //
@@ -217,7 +221,6 @@ lazy_static! {
     };
 }
 
-pub fn node_map(
-) -> &'static HashMap<crate::Rule, fn(pest::iterators::Pair<crate::Rule>) -> Result<Node, Error>> {
+pub fn node_map() -> &'static HashMap<crate::Rule, NodeHandlerFn> {
     &NODES
 }

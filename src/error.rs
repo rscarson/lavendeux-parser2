@@ -1,4 +1,4 @@
-use crate::{Rule, Token};
+use crate::Token;
 use polyvalue::{Value, ValueType};
 use thiserror::Error;
 
@@ -292,7 +292,7 @@ pub enum Error {
     
     /// An error caused by a problem with the syntax of the script
     #[error("\n| Line {line}: {}\n= Syntax error; unexpected token {}", 
-    span.split("\n").next().unwrap_or(""),
+    span.split('\n').next().unwrap_or(""),
     if span.is_empty() {
         "end-of-input".to_string()
     } else {
@@ -333,14 +333,6 @@ pub enum ExternalError {
     #[error("{0}")]
     Network(#[from] reqwest::Error),
 
-    /// Error dealing with pest parsing problems
-    #[error("{}", .0.variant.message())]
-    Pest(#[from] pest::error::Error<Rule>),
-
-    /// Error dealing with pest parsing problems
-    #[error("{}", .0.variant.message())]
-    PrePest(#[from] pest::error::Error<crate::preprocessor::Rule>),
-
     /// Error dealing with JS execution issues
     #[error("{0}")]
     Javascript(#[from] rustyscript::Error),
@@ -359,10 +351,36 @@ pub enum ExternalError {
 }
 
 impl ExternalError {
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_error(self, token: &Token) -> Error {
         Error::External {
             error: self,
             token: token.clone(),
+        }
+    }
+}
+
+pub trait WrapSyntaxError<T, R> {
+    fn wrap_syntax_error(self, input: &str) -> Result<T, Error>;
+}
+impl<T, R> WrapSyntaxError<T, R> for Result<T, pest::error::Error<R>> {
+    fn wrap_syntax_error(self, input: &str) -> Result<T, Error> {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                let span = match e.location {
+                    pest::error::InputLocation::Pos(pos) => pos..(input.len()),
+                    pest::error::InputLocation::Span(span) => span.0..span.1,
+                };
+                let span = input[span].to_string();
+
+                let line = match e.line_col {
+                    pest::error::LineColLocation::Pos((line, _)) => line,
+                    pest::error::LineColLocation::Span((line, _), _) => line,
+                };
+
+                Err(Error::Syntax { line, span })
+            }
         }
     }
 }
@@ -401,7 +419,6 @@ macro_rules! wrap_dep_error {
 wrap_dep_error!(polyvalue::Error);
 wrap_dep_error!(std::io::Error);
 wrap_dep_error!(reqwest::Error);
-wrap_dep_error!(pest::error::Error<Rule>);
 wrap_dep_error!(rustyscript::Error);
 wrap_dep_error!(std::num::ParseIntError);
 wrap_dep_error!(std::string::FromUtf8Error);

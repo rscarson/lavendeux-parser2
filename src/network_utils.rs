@@ -1,5 +1,5 @@
 use polyvalue::types::{Object, ObjectInner, Str};
-use polyvalue::{Value, ValueTrait};
+use polyvalue::{Value, ValueTrait, ValueType};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
@@ -126,63 +126,59 @@ impl ApiDefinition {
     }
 
     pub fn from_value(value: Value) -> Option<Self> {
-        match value {
-            Value::String(url) => Some(ApiDefinition {
-                base_url: url.to_string(),
+        if let Some(mut obj) = value.if_is_a::<Object>(ValueType::Object) {
+            let base_url = obj
+                .remove(&Value::from("url"))
+                .unwrap_or(Value::from(""))
+                .as_a::<Str>()
+                .ok()?
+                .to_string();
+            let description = obj
+                .remove(&Value::from("description"))
+                .unwrap_or(Value::from(""))
+                .as_a::<Str>()
+                .ok()?
+                .to_string();
+            let examples = obj
+                .remove(&Value::from("examples"))
+                .unwrap_or(Value::from(""))
+                .as_a::<Str>()
+                .ok()?
+                .to_string();
+            let auth_key = obj
+                .remove(&Value::from("auth_key"))
+                .map(|v| v.as_a::<Str>().unwrap().to_string());
+
+            let additional_headers = obj
+                .remove(&Value::from("headers"))
+                .unwrap_or(Value::from(ObjectInner::new()))
+                .as_a::<Object>()
+                .ok()?
+                .inner()
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone().as_a::<Str>().unwrap().to_string(),
+                        v.clone().as_a::<Str>().unwrap().to_string(),
+                    )
+                })
+                .collect::<HashMap<String, String>>();
+
+            Some(ApiDefinition {
+                base_url,
+                additional_headers,
+                description,
+                examples,
+                auth_key,
+            })
+        } else {
+            Some(ApiDefinition {
+                base_url: value.to_string(),
                 additional_headers: HashMap::new(),
                 description: "".to_string(),
                 examples: "".to_string(),
                 auth_key: None,
-            }),
-
-            Value::Object(mut obj) => {
-                let base_url = obj
-                    .remove(&Value::from("url"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()
-                    .ok()?
-                    .to_string();
-                let description = obj
-                    .remove(&Value::from("description"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()
-                    .ok()?
-                    .to_string();
-                let examples = obj
-                    .remove(&Value::from("examples"))
-                    .unwrap_or(Value::from(""))
-                    .as_a::<Str>()
-                    .ok()?
-                    .to_string();
-                let auth_key = obj
-                    .remove(&Value::from("auth_key"))
-                    .and_then(|v| Some(v.as_a::<Str>().unwrap().to_string()));
-
-                let additional_headers = obj
-                    .remove(&Value::from("headers"))
-                    .unwrap_or(Value::from(ObjectInner::new()))
-                    .as_a::<Object>()
-                    .ok()?
-                    .inner()
-                    .iter()
-                    .map(|(k, v)| {
-                        (
-                            k.as_a::<Str>().unwrap().to_string(),
-                            v.as_a::<Str>().unwrap().to_string(),
-                        )
-                    })
-                    .collect::<HashMap<String, String>>();
-
-                Some(ApiDefinition {
-                    base_url,
-                    additional_headers,
-                    description,
-                    examples,
-                    auth_key,
-                })
-            }
-
-            _ => None,
+            })
         }
     }
 
@@ -238,7 +234,7 @@ impl ApiManager {
             .iter()
             .map(|(k, v)| {
                 (
-                    k.as_a::<Str>().unwrap().to_string(),
+                    k.clone().as_a::<Str>().unwrap().to_string(),
                     ApiDefinition::from_value(v.clone()),
                 )
             })

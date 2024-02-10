@@ -5,7 +5,7 @@ use crate::{
 use polyvalue::{
     fpdec::Round,
     types::{Array, CurrencyInner, Float, I64},
-    Value, ValueTrait, ValueType,
+    InnerValue, Value, ValueTrait, ValueType,
 };
 use std::collections::HashMap;
 
@@ -98,11 +98,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
         arguments = [required_argument!("n", ValueType::Numeric)],
         returns = ValueType::Float,
         handler = |_: &mut State, arguments, _token, _| {
-            match &get_argument!("n", arguments) {
-                Value::Float(n) => Ok(Value::from(n.inner().abs())),
-                Value::I64(n) => Ok(Value::from(n.inner().abs())),
-                Value::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
-                Value::Currency(n) => {
+            match &get_argument!("n", arguments).inner() {
+                InnerValue::Float(n) => Ok(Value::from(n.inner().abs())),
+                InnerValue::I64(n) => Ok(Value::from(n.inner().abs())),
+                InnerValue::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
+                InnerValue::Currency(n) => {
                     let symbol = n.symbol().clone();
                     let precision = n.precision();
                     let value = n.inner().value().inner().abs();
@@ -133,9 +133,9 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                 .as_a::<I64>()
                 .to_error(token)?
                 .inner();
-            match &get_argument!("n", arguments) {
+            match &get_argument!("n", arguments).inner() {
                 // Round floats to n decimal places
-                Value::Float(n) => {
+                InnerValue::Float(n) => {
                     let n = n.inner();
                     let n = n * 10.0_f64.powi(precision as i32);
                     let n = n.round();
@@ -143,11 +143,11 @@ pub fn register_all(map: &mut HashMap<String, Function>) {
                     Ok(Value::from(n))
                 }
 
-                Value::Fixed(n) => Ok(Value::from(n.inner().clone().round(precision as i8))),
-                Value::Currency(n) => {
+                InnerValue::Fixed(n) => Ok(Value::from(n.inner().clone().round(precision as i8))),
+                InnerValue::Currency(n) => {
                     let symbol = n.symbol().clone();
                     let precision = n.precision();
-                    let value = n.inner().value().inner().clone().round(precision as i8);
+                    let value = n.inner().value().inner().clone().round(precision);
                     Ok(CurrencyInner::new(symbol, precision, value.into()).into())
                 }
                 _ => Err(Error::Internal("Invalid argument type".to_string())),

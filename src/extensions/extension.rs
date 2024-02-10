@@ -32,7 +32,7 @@ impl FunctionDefinition {
 
     pub fn signature(&self) -> String {
         if self.name.starts_with('@') {
-            return format!("<{}> @{}", self.arguments[0], self.name);
+            format!("<{}> @{}", self.arguments[0], self.name)
         } else {
             let str_args = self
                 .arguments
@@ -112,7 +112,7 @@ impl FunctionDefinition {
             variables.insert(key, value);
         }
 
-        Ok(result.as_type(self.returns).to_error(token)?)
+        result.as_type(self.returns).to_error(token)
     }
 }
 

@@ -159,7 +159,7 @@ define_node!(
                 }
                 state.scope_out();
 
-                Ok(Value::Array(result.into()).into())
+                Ok(Value::array(result))
             },
 
             ValueType::Object => {
@@ -188,7 +188,7 @@ define_node!(
                 }
                 state.scope_out();
 
-                Ok(Value::Array(result.into()).into())
+                Ok(Value::array(result))
             }
 
             _ => {
@@ -217,7 +217,7 @@ define_node!(
                 }
                 state.scope_out();
 
-                Ok(Value::Array(result.into()).into())
+                Ok(Value::array(result))
             }
         }
     }
