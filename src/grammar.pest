@@ -4,18 +4,12 @@
 //
 
 SCRIPT = {
-    LINE* ~ EOI
+    LINE* ~ &EOI
 }
 
-LINE = {
-    WHITESPACE* ~ STATEMENT ~ "@" ~ identifier ~ (EOL | &EOI)
+LINE = _{
     | WHITESPACE* ~ STATEMENT ~ (EOL | &EOI)
     | WHITESPACE* ~ (EOL | INLINE_COMMENT)
-}
-
-STATEMENT = _{
-    FUNCTION_ASSIGNMENT_STATEMENT
-    | TOPLEVEL_EXPRESSION
 }
 
 //
@@ -29,329 +23,251 @@ COMMENT = _{INLINE_COMMENT | BLOCK_COMMENT}
 WHITESPACE = _{" " | "\t" | "\\" ~ EOL | COMMENT}
 EOL = _{NEWLINE | ";"}
 
-// 
-// Assignment expressions
-// 
-
-FUNCTION_EQUAL_OPERATOR = {"="}
-FUNCTION_BODY = _{
-    "{" ~ LINE+ ~ "}"
-    | TOPLEVEL_EXPRESSION
-}
-FUNCTION_ASSIGNMENT_STATEMENT = {
-    identifier ~ "(" ~ ")" ~ FUNCTION_EQUAL_OPERATOR ~ FUNCTION_BODY |
-    identifier ~ "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ FUNCTION_EQUAL_OPERATOR ~ FUNCTION_BODY
-}
-
 //
 // Top of expression tree
 //
 
+STATEMENT = _{
+    | FUNCTION_ASSIGNMENT_STATEMENT
+    | EXPR
+}
+
+function_name = @{"@"? ~ identifier}
+FUNCTION_ASSIGNMENT_STATEMENT = {
+    | EOL* ~ function_name ~ EOL* ~ 
+        "(" ~ EOL* ~ 
+            (function_argument ~ EOL* ~ ("," ~ EOL* ~ function_argument ~ EOL*)* ~ ","? ~ EOL*)? ~ 
+        ")" ~ (EOL* ~ function_typespec)? ~ EOL* ~ 
+        "=" ~ EOL* ~ BLOCK
+}
+	function_typespec = {":" ~ EOL* ~ identifier}
+	function_argument = {identifier ~ EOL* ~ (":" ~ EOL* ~ identifier)?}
+
 BLOCK = {
-    "{" ~ LINE+ ~ TOPLEVEL_EXPRESSION? ~ "}"
-    | "{" ~ TOPLEVEL_EXPRESSION ~ "}"
-    | TOPLEVEL_EXPRESSION
-}
-
-TOPLEVEL_EXPRESSION = _{ 
-    SKIP_KEYWORD | BREAK_KEYWORD
-    | IF_EXPRESSION
-    | SWITCH_EXPRESSION
-    | FOR_LOOP_EXPRESSION
-    | VARIABLE_ASSIGNMENT_EXPRESSION
-    | OPERATIVE_ASSIGNMENT_EXPRESSION
-    | DESTRUCTURING_ASSIGNMENT_EXPRESSION
-    | INDEX_ASSIGNMENT_EXPRESSION
-    | TERNARY_EXPRESSION
-}
-
-// 
-// Assignment expressions
-//
-
-VARIABLE_ASSIGNMENT_EXPRESSION = {identifier ~ "=" ~ TOPLEVEL_EXPRESSION}
-
-OPERATIVE_ASSIGNMENT_OPERATOR = {"+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | "**=" | "&&=" | "||="}
-OPERATIVE_ASSIGNMENT_EXPRESSION = {
-    identifier ~ OPERATIVE_ASSIGNMENT_OPERATOR ~ TOPLEVEL_EXPRESSION
-}
-
-DESTRUCTURING_ASSIGNMENT_EXPRESSION = {
-    "(" ~ identifier ~ ("," ~ identifier)* ~ ")" ~ "=" ~ TOPLEVEL_EXPRESSION
-}
-
-INDEX_ASSIGNMENT_EXPRESSION = {
-    identifier ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")+ ~ "=" ~ TOPLEVEL_EXPRESSION
-}
-
-// 
-// Flow Control expressions
-//
-
-IF_EXPRESSION = {
-    ("if" ~ TOPLEVEL_EXPRESSION ~ EOL? ~ "then" ~ EOL? ~ BLOCK ~ EOL? ~ "else")+ ~ BLOCK
-}
-
-FOR_LOOP_EXPRESSION = {
-    "for" ~ (identifier ~ "in")? ~ TOPLEVEL_EXPRESSION ~ "do" ~ BLOCK
-}
-
-SWITCH_CASE_EXPRESSION = _{
-    ATOMIC_VALUE ~ "=>" ~ BLOCK
-}
-SWITCH_EXPRESSION = {
-    "match" ~ TERNARY_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ "," ~ EOL*)+ ~ (SWITCH_CASE_EXPRESSION ~ EOL*)? ~ "}"
-    | "match" ~ TERNARY_EXPRESSION ~ "{" ~ EOL* ~ (SWITCH_CASE_EXPRESSION ~ EOL*) ~ "}"
-}
-
-TERNARY_EXPRESSION = {
-    BOOLEAN_OR_EXPRESSION ~ ("?" ~ BOOLEAN_OR_EXPRESSION ~ ":" ~ BOOLEAN_OR_EXPRESSION)*
+    | "{" ~ LINE* ~ (STATEMENT)? ~ EOL? ~ "}"
+    | EXPR
 }
 
 //
-// Boolean infix expressions
+// Expressions tree
 //
 
-BOOLEAN_OR_OPERATOR = {"||"}
-BOOLEAN_OR_EXPRESSION = {
-    BOOLEAN_AND_EXPRESSION ~ (BOOLEAN_OR_OPERATOR ~ BOOLEAN_AND_EXPRESSION)*
-}
+EXPR = {prefix_op? ~ EOL* ~ TERM ~ postfix_operation* ~ ( EOL* ~ infix_op ~ prefix_op? ~ EOL* ~ TERM ~ postfix_operation*)*}
+    //
+    // Postfix
+    postfix_operation = _{POSTFIX_DECORATE | POSTFIX_INDEX | POSTFIX_CALL | postfix_arith}
+        POSTFIX_DECORATE = {"@" ~ EOL* ~ identifier}
+        POSTFIX_EMPTYINDEX = {(l_bracket ~ EOL* ~ "]")}
+            l_bracket = {"["}
+        POSTFIX_INDEX = {(("[" ~ EOL* ~ EXPR ~ EOL* ~ "]") | POSTFIX_EMPTYINDEX)+}
+        POSTFIX_CALL = {("." ~ EOL* ~ identifier ~ EOL*)? ~ "(" ~ (EOL* ~ (EXPR ~ EOL* ~ "," ~ EOL*)* ~ EXPR ~ EOL* ~ ","?)? ~ EOL* ~ ")"}
+        postfix_arith = _{POSTFIX_INC | POSTFIX_DEC}
+            POSTFIX_INC = {"++"}
+            POSTFIX_DEC = {"--"}
+    
+    //
+    // Prefix
+    prefix_op = _{PREFIX_DEL | prefix_arith | PREFIX_BOOL_NOT | PREFIX_BIT_NOT}
+        PREFIX_DEL = @{del_keyword ~ WHITESPACE* ~ "@"?}
+            del_keyword = @{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
+        PREFIX_BOOL_NOT = {"!" ~ !"="}
+        PREFIX_BIT_NOT = {"~" ~ !"="}
+        prefix_arith = _{PREFIX_INC | PREFIX_DEC | PREFIX_NEG}
+            PREFIX_NEG = {"-" ~ !"="}
+            PREFIX_INC = {"++"}
+            PREFIX_DEC = {"--"}
 
-BOOLEAN_AND_OPERATOR = {"&&"}
-BOOLEAN_AND_EXPRESSION = {
-    BOOLEAN_CMP_EXPRESSION ~ (BOOLEAN_AND_OPERATOR ~ BOOLEAN_CMP_EXPRESSION)*
-}
+    //
+    // Infix
+    infix_op = _{OP_BOOL_OR | OP_BOOL_AND | assignment_infix_op | bitwise_infix_op | bool_infix_op | arithmetic_infix_op | OP_ASSIGN | match_infix_op | OP_RANGE | OP_CAST | OP_TERNARY}
+        //
+        // Assignment
+        assignment_infix_op = _{
+            | OP_ASSIGN_ADD | OP_ASSIGN_SUB | OP_ASSIGN_POW | OP_ASSIGN_MUL | OP_ASSIGN_DIV | OP_ASSIGN_MOD
+            | OP_BASSIGN_AND | OP_BASSIGN_OR
+            | OP_ASSIGN_AND | OP_ASSIGN_XOR | OP_ASSIGN_OR | OP_ASSIGN_SL | OP_ASSIGN_SR
+        }
+            OP_ASSIGN_ADD = {"+="}
+            OP_ASSIGN_SUB = {"-="}
+            OP_ASSIGN_POW = {"**="}
+            OP_ASSIGN_MUL = {"*="}
+            OP_ASSIGN_DIV = {"/="}
+            OP_ASSIGN_MOD = {"%="}
+            OP_BASSIGN_AND = {"&&="}
+            OP_BASSIGN_OR = {"||="}
+            OP_ASSIGN_OR = {"|="}
+            OP_ASSIGN_AND = {"&="}
+            OP_ASSIGN_XOR = {"^="}
+            OP_ASSIGN_SL = {"<<="}
+            OP_ASSIGN_SR = {">>="}
+            OP_ASSIGN = {"="}
 
-BOOLEAN_CMP_OPERATOR = {"<=" | ">=" | "==" | "!=" | "<" | ">"}
-BOOLEAN_CMP_EXPRESSION = {
-    BITWISE_OR_EXPRESSION ~ (BOOLEAN_CMP_OPERATOR ~ BITWISE_OR_EXPRESSION)*
-}
+        //
+        // Boolean
+        bool_infix_op = _{OP_BOOL_OR | OP_BOOL_AND | OP_BOOL_EQ | OP_BOOL_NE | OP_BOOL_LE | OP_BOOL_GE | OP_BOOL_LT | OP_BOOL_GT}
+            OP_BOOL_OR = {"||"}
+            OP_BOOL_AND = {"&&"}
+            OP_BOOL_EQ = {"=="}
+            OP_BOOL_NE = {"!="}
+            OP_BOOL_LE = {"<="}
+            OP_BOOL_GE = {">="}
+            OP_BOOL_LT = {"<"}
+            OP_BOOL_GT = {">"}
 
-//
-// Bitwise infix expressions
-//
+        //
+        // Bitwise
+        bitwise_infix_op = _{OP_BIT_OR | OP_BIT_XOR | OP_BIT_AND | OP_BIT_SL | OP_BIT_SR}
+            OP_BIT_OR = {"|"}
+            OP_BIT_XOR = {"^"}
+            OP_BIT_AND = {"&"}
+            OP_BIT_SL = {"<<"}
+            OP_BIT_SR = {">>"}
 
-BITWISE_OR_OPERATOR = {"|" | "^"}
-BITWISE_OR_EXPRESSION = {
-    BITWISE_XOR_EXPRESSION ~ (BITWISE_OR_OPERATOR ~ BITWISE_XOR_EXPRESSION)*
-}
+        //
+        // Arithmetic
+        arithmetic_infix_op = _{OP_ADD | OP_SUB | OP_POW | OP_DIV | OP_MOD | OP_MUL}
+            OP_ADD = {"+"}
+            OP_SUB = {"-"}
+            OP_MUL = {"*"}
+            OP_DIV = {"/"}
+            OP_MOD = {"%"}
+            OP_POW = {"**"}
 
-BITWISE_XOR_OPERATOR = {"^"}
-BITWISE_XOR_EXPRESSION = {
-    BITWISE_AND_EXPRESSION ~ (BITWISE_XOR_OPERATOR ~ BITWISE_AND_EXPRESSION)*
-}
-
-BITWISE_AND_OPERATOR = {"&"}
-BITWISE_AND_EXPRESSION = {
-    BITWISE_SHIFT_EXPRESSION ~ (BITWISE_AND_OPERATOR ~ BITWISE_SHIFT_EXPRESSION)*
-}
-
-BITWISE_SHIFT_OPERATOR = {"<<" | ">>"}
-BITWISE_SHIFT_EXPRESSION = {
-    ARITHMETIC_AS_EXPRESSION ~ (BITWISE_SHIFT_OPERATOR ~ ARITHMETIC_AS_EXPRESSION)*
-}
-
-//
-// Arithmetic infix expressions
-//
-
-ARITHMETIC_AS_OPERATOR = {"+" | "-"}
-ARITHMETIC_AS_EXPRESSION = {
-    ARITHMETIC_MD_EXPRESSION ~ (ARITHMETIC_AS_OPERATOR ~ ARITHMETIC_MD_EXPRESSION)*
-}
-
-ARITHMETIC_MD_OPERATOR = {"*" | "/" | "%"}
-ARITHMETIC_MD_EXPRESSION = {
-    ARITHMETIC_EXPONENTIATION_EXPRESSION ~ (ARITHMETIC_MD_OPERATOR ~ ARITHMETIC_EXPONENTIATION_EXPRESSION)*
-}
-
-ARITHMETIC_EXPONENTIATION_OPERATOR = {"**"}
-ARITHMETIC_EXPONENTIATION_EXPRESSION = {
-    MATCHING_EXPRESSION ~ (ARITHMETIC_EXPONENTIATION_OPERATOR ~ MATCHING_EXPRESSION)*
-}
-
-//
-// Ranges and casting
-//
-
-MATCHING_OPERATOR = {"contains" | "matches" | "is" | "startswith" | "endswith" | "starts_with" | "ends_with"}
-MATCHING_EXPRESSION = {
-    CASTING_EXPRESSION ~ (MATCHING_OPERATOR ~ CASTING_EXPRESSION?)?
-}
-
-TARGET_TYPE = @{identifier}
-CASTING_EXPRESSION = {
-    RANGE_EXPRESSION ~ ("as" ~ TARGET_TYPE)?
-}
-
-RANGE_OPERATOR = {".."}
-RANGE_EXPRESSION = {
-    RANGE_OPERATOR ~ DELETE_EXPRESSION
-    | RANGE_OPERATOR
-    | DELETE_EXPRESSION ~ (RANGE_OPERATOR ~ DELETE_EXPRESSION)?
-    | DELETE_EXPRESSION ~ RANGE_OPERATOR
-}
-
-DELETE_KEYWORD = {"delete" | "del" | "unset"}
-DELETE_EXPRESSION = {
-    DELETE_KEYWORD ~ identifier ~ ("[" ~ RETURN_EXPRESSION ~ "]")*
-    | RETURN_EXPRESSION
-}
-
-SKIP_KEYWORD = {"skip" | "continue"}
-BREAK_KEYWORD = {"break"}
-
-RETURN_KEYWORD = {"return"}
-RETURN_EXPRESSION = {
-    RETURN_KEYWORD ~ BOOLEAN_NOT_EXPRESSION
-    | BOOLEAN_NOT_EXPRESSION
-}
-
-//
-// Prefix unary expressions
-//
-
-BOOLEAN_NOT_OPERATOR = {"!"}
-BOOLEAN_NOT_EXPRESSION = {
-    BOOLEAN_NOT_OPERATOR* ~ BITWISE_NOT_EXPRESSION
-}
-
-BITWISE_NOT_OPERATOR = {"~"}
-BITWISE_NOT_EXPRESSION = {
-    BITWISE_NOT_OPERATOR* ~ ARITHMETIC_NEG_EXPRESSION
-}
-
-ARITHMETIC_NEG_OPERATOR = {"-"}
-ARITHMETIC_NEG_EXPRESSION = {
-    ARITHMETIC_NEG_OPERATOR* ~ INDEXING_EXPRESSION
-}
+        //
+        // Match
+        match_infix_op = _{OP_MATCH_CONTAINS | OP_MATCH_MATCHES | OP_MATCH_IS | OP_MATCH_STARTSWITH | OP_MATCH_ENDSWITH}
+            OP_MATCH_CONTAINS = @{"contains" ~ !ASCII_ALPHA}
+            OP_MATCH_MATCHES = @{"matches" ~ !ASCII_ALPHA}
+            OP_MATCH_IS = @{"is" ~ !ASCII_ALPHA}
+            OP_MATCH_STARTSWITH = @{("startswith" | "starts_with") ~ !ASCII_ALPHA}
+            OP_MATCH_ENDSWITH = @{("endswith" | "ends_with") ~ !ASCII_ALPHA}
+            
+        //
+        // Other
+        OP_RANGE = {".."}
+        OP_CAST = @{"as" ~ !ASCII_ALPHA}
+        OP_TERNARY = {"?" ~ EOL* ~ EXPR ~ EOL* ~ ":"}
 
 //
-// Postfix indexing expression - for arrays and objects
+// Term
+// The basic building block of the language
 //
 
-INDEXING_EXPRESSION = {
-    POSTFIX_FUNCTION_CALL_EXPRESSION ~ ("[" ~ (TOPLEVEL_EXPRESSION) ~ "]")*
+TERM = _{
+    // These can be identified by the first character
+    | "(" ~ EXPR ~ ")"
+    | ARRAY_TERM
+    | OBJECT_TERM
+
+    // These can be identified by the first word
+    | KEYWORD_EXPRESSION
+
+    // Value primitives
+    | ATOMIC_VALUE
 }
 
+// 1 + 2 [2] ? 3 : 4
+// Keyword expressions
 //
-// Function call stuff
-//
 
-POSTFIX_FUNCTION_CALL_EXPRESSION = {
-    FUNCTION_CALL_EXPRESSION ~ ("." ~ identifier ~ "(" ~ (FUNCTION_CALL_EXPRESSION ~ ("," ~ FUNCTION_CALL_EXPRESSION)*)? ~ ")")?
+KEYWORD_EXPRESSION = _ {
+    | SKIP_KEYWORD | BREAK_KEYWORD | RETURN_EXPRESSION
+    | FOR_LOOP_EXPRESSION | SWITCH_EXPRESSION | IF_EXPRESSION
 }
 
-FUNCTION_START_MARKER = {"("}
-FUNCTION_CALL_EXPRESSION = {
-    identifier ~ FUNCTION_START_MARKER ~ ")"
-    | identifier ~ FUNCTION_START_MARKER ~ TOPLEVEL_EXPRESSION ~ ("," ~ TOPLEVEL_EXPRESSION)* ~ ")"
-    | TERM
-}
+    SKIP_KEYWORD = {"skip" | "continue"}
+    BREAK_KEYWORD = {"break"}
+
+    RETURN_EXPRESSION = { "return" ~ EOL* ~ BLOCK }
+
+    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &"{") ~ EOL* ~ BLOCK }
+
+    SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ "{" ~ EOL* ~ (switch_case ~ EOL* ~ "," ~ EOL*)* ~ switch_case ~ EOL* ~ ","? ~ EOL* ~ "}" }
+        switch_case = _{ ATOMIC_VALUE ~ EOL* ~ "=>" ~ EOL* ~ BLOCK }
+
+    IF_EXPRESSION = { if_block ~ ("else" ~ EOL* ~ if_block ~ EOL*)* ~ ("else" ~ EOL* ~ BLOCK)? }
+        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &"{") ~ EOL* ~ BLOCK ~ EOL* }
+
+    ARRAY_TERM = { open_bracket ~ EOL* ~ ((EXPR) ~ (EOL* ~ "," ~ EOL* ~ (EXPR) ~ EOL*)* ~ ","? ~ EOL*)? ~"]" }
+        open_bracket = {"["}
+
+    OBJECT_TERM = {
+        "{" ~ EOL* ~ ((object_keyvalue_pair ~ EOL* ~ "," ~ EOL*)* ~ object_keyvalue_pair ~ EOL*)? ~ ","? ~ EOL* ~ "}"
+        | "{" ~ EOL* ~ "}"
+    }
+        object_keyvalue_pair = _{(EXPR) ~ ":" ~ (EXPR)}
 
 //
 // Value Literals
-// And value-literal adjascent gubbins
-// 
-
-TERM = _{
-    "(" ~ TOPLEVEL_EXPRESSION ~ ")"
-    | ATOMIC_VALUE
-}
+// Single literals of the various types
+//
 
 ATOMIC_VALUE = _{
     | currency_literal | fixed_literal
     | sci_literal | float_literal
-    | sized_literal
+    | int_literal
     | bool_literal | string_literal | regex_literal
-    | array_literal | object_literal
-    | const_literal
     | identifier
-    | errors
+    | const_literal
 }
 
-array_literal = {
-    "[" ~ TOPLEVEL_EXPRESSION ~ ("," ~ TOPLEVEL_EXPRESSION)* ~ "]"
-    | "[" ~ "]"
-}
+    fixed_literal = @{
+        ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ~ ("D" | "d" | "F" | "f")
+    }
 
-object_literal_pair = _{TOPLEVEL_EXPRESSION ~ ":" ~ TOPLEVEL_EXPRESSION}
-object_literal = {
-    "{" ~ object_literal_pair ~ ("," ~ object_literal_pair)* ~ "}"
-    | "{" ~ "}"
-}
+    // Fixed-point currency values
+    // Symbols from [polyvalue::CurrencyInner]
+    currency_literal = {
+        currency_symbol ~ (float_literal | dec_literal)
+        | (float_literal | dec_literal) ~ (currency_symbol | currency_suffix)
+    }
+        currency_symbol = @{
+            "$" | "¢" | "£" | "¤" | "¥" | "֏" | "؋" | "߾" | "߿" | "৲" | "৳" | "৻" | "૱" | "௹" | "฿" | "៛" | "₠" | "₡" |
+            "₢" | "₣" | "₤" | "₥" | "₦" | "₧" | "₨" | "₩" | "₪" | "₫" | "€" | "₭" | "₮" | "₯" | "₰" | "₱" | "₲" | "₳" |
+            "₴" | "₵" | "₶" | "₷" | "₸" | "₹" | "₺" | "₻" | "₼" | "₽" | "₾" | "₿" | "꠸" | "﷼" | "﹩" | "＄" | "￠" |
+            "￡" | "￥" | "￦"
+        }
+        currency_suffix = @{
+            ^"USD" | ^"US$" | ^"CAD" | ^"C$" | ^"AUD" | ^"A$" | ^"NZD" | ^"NZ$" | ^"HKD" | ^"HK$" | ^"SGD" | ^"S$" | ^"EUR" |
+            "JPY" | ^"CNY" | ^"CN¥" | ^"GBP" | ^"NOK" | ^"kr" | ^"SEK" | ^"kr" | ^"DKK" | ^"kr" | ^"CHF" | ^"Fr." | ^"ISK" |
+            "kr" | ^"CZK" | ^"Kč" | ^"HUF" | ^"Ft" | ^"PLN" | ^"zł" | ^"HRK" | ^"kn" | ^"RUB" | ^"TRY" | ^"BRL" | ^"R$" | ^"INR" |
+            "IDR" | ^"Rp" | ^"ILS" | ^"ZAR" | ^"SAR" | ^"AED" | ^"KRW" | ^"VND" | ^"PHP" | ^"MXN" | ^"THB" | ^"MYR" | ^"RM" |
+            "TWD" | ^"NT$" | ^"NGN" | ^"CLP" | ^"CL$" | ^"ARS" | ^"AR$" | ^"COP" | ^"CO$" | ^"PEN" | ^"S/." | ^"DOP" | ^"RD$"
+        }
 
-fixed_literal = @{
-    ('0'..'9')+ ~ ("." ~ ('0'..'9')+)? ~ ("D" | "d" | "F" | "f")
-}
+    // Floating-point literals
+    sci_literal = @{(float_literal | dec_literal) ~ ^"e" ~ ("+"|"-")? ~ ASCII_DIGIT+}
+    float_literal = @{dec_literal? ~ "." ~ ASCII_DIGIT+}
 
-// Fixed-point currency values
-// Symbols from [polyvalue::CurrencyInner]
-currency_symbol = @{
-    "$" | "¢" | "£" | "¤" | "¥" | "֏" | "؋" | "߾" | "߿" | "৲" | "৳" | "৻" | "૱" | "௹" | "฿" | "៛" | "₠" | "₡" |
-    "₢" | "₣" | "₤" | "₥" | "₦" | "₧" | "₨" | "₩" | "₪" | "₫" | "€" | "₭" | "₮" | "₯" | "₰" | "₱" | "₲" | "₳" |
-    "₴" | "₵" | "₶" | "₷" | "₸" | "₹" | "₺" | "₻" | "₼" | "₽" | "₾" | "₿" | "꠸" | "﷼" | "﹩" | "＄" | "￠" |
-    "￡" | "￥" | "￦"
-}
-currency_suffix = @{
-    "USD" | "US$" | "CAD" | "C$" | "AUD" | "A$" | "NZD" | "NZ$" | "HKD" | "HK$" | "SGD" | "S$" | "EUR" |
-    "JPY" | "CNY" | "CN¥" | "GBP" | "NOK" | "kr" | "SEK" | "kr" | "DKK" | "kr" | "CHF" | "Fr." | "ISK" |
-    "kr" | "CZK" | "Kč" | "HUF" | "Ft" | "PLN" | "zł" | "HRK" | "kn" | "RUB" | "TRY" | "BRL" | "R$" | "INR" |
-    "IDR" | "Rp" | "ILS" | "ZAR" | "SAR" | "AED" | "KRW" | "VND" | "PHP" | "MXN" | "THB" | "MYR" | "RM" |
-    "TWD" | "NT$" | "NGN" | "CLP" | "CL$" | "ARS" | "AR$" | "COP" | "CO$" | "PEN" | "S/." | "DOP" | "RD$"
-}
-currency_literal = {
-    ((float_literal | dec_literal) ~ currency_symbol) 
-    | (currency_symbol ~ (float_literal | dec_literal))
-    | ((float_literal | dec_literal) ~ currency_suffix)
-}
+    const_literal = @{"pi" | "e" | "tau"}
 
-// Floating-point literals
-sci_literal = @{(float_literal | dec_literal) ~ ^"e" ~ ("+"|"-")? ~ ('0'..'9')+}
-float_literal = @{dec_literal? ~ "." ~ ('0'..'9')+}
+    // Integer literals
+    int_literal = {(hex_literal | bin_literal | oct_literal | dec_literal) ~ sized_literal_suffix?}
+        dec_literal = @{int_sep | ASCII_DIGIT+}
+            int_sep = _{ASCII_DIGIT{1,3} ~ ("_" ~ ASCII_DIGIT{3})+}
 
-const_literal = @{"pi" | "e" | "tau"}
+        hex_literal = @{(^"0x") ~ ('a'..'f' | 'A'..'F' | ASCII_DIGIT | "_")+}
+        bin_literal = @{(^"0b") ~ ('0'..'1' | "_")+}
+        oct_literal = @{(^"0o" | "0") ~ ('0'..'7' | "_")+}   
 
-// Integer literals
-int_sep = _{('0'..'9'){1,3} ~ ("_" ~ ('0'..'9'){3})+}
-dec_literal = @{int_sep | ('0'..'9')+}
-hex_literal = @{(^"0x") ~ ('a'..'f' | 'A'..'F' | '0'..'9')+}
-bin_literal = @{(^"0b") ~ ('0'..'1')+}
-oct_literal = @{(^"0o" | "0") ~ ('0'..'7')+}    
-int_literal = @{hex_literal | bin_literal | oct_literal | dec_literal}
+        sized_literal_suffix = _{intsize_u8 | intsize_i8 | intsize_u16 | intsize_i16 | intsize_u32 | intsize_i32 | intsize_u64 | intsize_i64}
+            intsize_u8 = {"u8"} intsize_i8 = {"i8"}
+            intsize_u16 = {"u16"} intsize_i16 = {"i16"}
+            intsize_u32 = {"u32"} intsize_i32 = {"i32"}
+            intsize_u64 = {"u64"} intsize_i64 = {"i64"}
 
-sized_literal_suffix = {"u8" | "u16" | "u32" | "u64" | "i8" | "i16" | "i32" | "i64"}
-sized_literal = @{int_literal ~ sized_literal_suffix?}
+    // Other literals
+    bool_literal = @{^"true" | ^"false"}
+    string_literal = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
 
-// Other literals
-bool_literal = @{^"true" | ^"false"}
-string_literal = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
+    regex_literal = @{
+        "/" ~ (!"/" ~ ANY | "\\/")* ~ "/" ~ ("i" | "g" | "m" | "s" | "u" | "y")*
+    }
 
-regex_literal = @{
-    "/" ~ (!"/" ~ ANY | "\\/")* ~ "/" ~ ("i" | "g" | "m" | "s" | "u" | "y")*
-}
-
-reserved_words = {
-    "pi" | "e" | "tau" | "true" | "false" |
-    "match" | "if" | "then" | "else" | "for" | "do" | "in" | "as"
-    | RETURN_KEYWORD | SKIP_KEYWORD | BREAK_KEYWORD
-    | DELETE_KEYWORD
-    | MATCHING_OPERATOR
-}
-identifier = @{reserved_words? ~ ('a'..'z' | 'A'..'Z' | "_") ~ ('a'..'z' | 'A'..'Z' | '0'..'9' | "_")*}
-
-//
-// Error Definitions
-//
-
-errors = _{
-    ERROR_UNTERMINATED_LITERAL | ERROR_UNTERMINATED_LINEBREAK | ERROR_UNTERMINATED_COMMENT
-    | ERROR_UNEXPECTED_DECORATOR | ERROR_UNTERMINATED_RETURN
-}
-
-ERROR_UNTERMINATED_LITERAL = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))*) | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))*)}
-ERROR_UNTERMINATED_LINEBREAK = @{"\\" ~ EOI}
-ERROR_UNTERMINATED_COMMENT = @{"/*" ~ ANY*}
-
-ERROR_UNEXPECTED_DECORATOR = @{"@" ~ identifier ~ WHITESPACE* ~ (!WHITESPACE ~ !EOL ~ ANY)+ | SOI ~ "@" ~ ANY*}
-ERROR_UNTERMINATED_RETURN = @{"return" ~ (ANY)*}
+    identifier = @{!reserved_words ~ (ASCII_ALPHA|"_") ~ (ASCII_ALPHANUMERIC|"_")*}
+        reserved_words = {
+            ("pi" | "e" | "tau" | "true" | "false"
+            | "if" | "then" | "else" | "for" | "in" | "do" | "match"
+            | prefix_op | infix_op
+            | SKIP_KEYWORD | BREAK_KEYWORD) ~ !(ASCII_ALPHANUMERIC|"_")
+        }

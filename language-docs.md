@@ -22,7 +22,7 @@ If a type is downcast to a smaller numeric type, it will be truncated to fit (1.
 
 But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
 - Bool: a single-bit truth value [`true`, `false`]
-- Int: A 64bit integer [`1`, `2,000`, `-78`]
+- Int: One of U8/I8 / U16/I16 / U32/I32 / U64/I64
 - Float: A 64bit floating-point number [`1.0`, `.2`, `3e+7`]
 - Fixed: A fixed-point decimal value [`1.22D`, `4D`]
 - Currency: A fixed-point decimal value with a currency symbol [`$1`, `$2.00`, `3￥`]

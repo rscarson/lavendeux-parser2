@@ -30,9 +30,9 @@ fn main() -> Result<(), Error> {
     });
 
     // Load extensions
-    Lavendeux::load_extension("example_extensions/simple_extension.js")?;
-    Lavendeux::load_extension("example_extensions/zarbans_grotto.js")?;
-    Lavendeux::load_extension("example_extensions/lavendeux-colour.js")?;
+    //  Lavendeux::load_extension("example_extensions/simple_extension.js")?;
+    //  Lavendeux::load_extension("example_extensions/zarbans_grotto.js")?;
+    // Lavendeux::load_extension("example_extensions/lavendeux-colour.js")?;
 
     // Preload command stack from arguments
     let mut stack: VecDeque<String> = env::args().skip(1).collect();
@@ -61,7 +61,7 @@ fn main() -> Result<(), Error> {
                         println!("{}", value);
                     }
                 }
-                Err(e) => println!("Error: {}", e),
+                Err(e) => println!("Error:\n{}", e),
             }
         }
     }

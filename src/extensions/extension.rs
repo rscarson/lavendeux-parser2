@@ -3,7 +3,7 @@ use rustyscript::{ModuleHandle, Runtime};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{error::WrapError, Error, Token};
+use crate::{error::WrapExternalError, Error, Token};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FunctionDefinition {
@@ -90,29 +90,29 @@ impl FunctionDefinition {
             .call_function(
                 handle,
                 "saveState",
-                &[serde_json::to_value(variables.clone()).to_error(token)?],
+                &[serde_json::to_value(variables.clone()).with_context(token)?],
             )
-            .to_error(token)?;
+            .with_context(token)?;
 
         let mut args = args
             .iter()
             .map(|v| serde_json::to_value(v.clone()))
             .collect::<Result<Vec<serde_json::Value>, _>>()
-            .to_error(token)?;
+            .with_context(token)?;
         args.insert(0, self.name.clone().into());
         let result: Value = runtime
             .call_function(handle, "callLavendeuxFunction", &args)
-            .to_error(token)?;
+            .with_context(token)?;
 
         // Extract parser state
         let variables_out: HashMap<String, Value> = runtime
             .call_function(handle, "loadState", &[])
-            .to_error(token)?;
+            .with_context(token)?;
         for (key, value) in variables_out {
             variables.insert(key, value);
         }
 
-        result.as_type(self.returns).to_error(token)
+        result.as_type(self.returns).with_context(token)
     }
 }
 

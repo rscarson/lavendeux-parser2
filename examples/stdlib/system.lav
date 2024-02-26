@@ -40,7 +40,7 @@ _assert_eq(a, b) = a == b ? a : ("Assertion failed: " + a + " != " + b).throw()
 
 // typeof(any) -> string : Returns the type of its input
 _typeof(a) = {
-    if a is boolean then "boolean"
+    if a is bool then "bool"
     else if a is float then "float"
     else if a is fixed then "fixed"
     else if a is u8 then "u8"

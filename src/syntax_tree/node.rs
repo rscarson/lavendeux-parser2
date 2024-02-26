@@ -1,13 +1,40 @@
-use crate::{AstNode, Error, ToAstNode};
+use super::pratt::PrattPair;
+use crate::{document_operator, error::Error, AstNode, ToAstNode};
 
 macro_rules! define_node {
-    ($name:ident {$($param:ident : $param_t:ty),+}, rules = [$($rule:ident),+], new = $new_hnd:expr, value = $get_hnd:expr) => {
+    (
+        $name:ident {$($param:ident : $param_t:ty),+},
+        rules = [$($rule:ident),*],
+        new = $new_hnd:expr,
+        value = $get_hnd:expr,
+        docs = {
+            name: $docs_name:literal,
+            symbols = [$($docs_symbols:literal),*],
+            description: $docs_desc:literal,
+            examples: $docs_examples:literal,
+        }
+    ) => {
+        define_node!($name {$($param : $param_t),*}, rules = [$($rule),*], new = $new_hnd, value = $get_hnd);
+        document_operator!(
+            name = $docs_name,
+            rules = [$($rule),*],
+            symbols = [$($docs_symbols),*],
+            description = $docs_desc,
+            examples = $docs_examples,
+        );
+    };
+    (
+        $name:ident {$($param:ident : $param_t:ty),+},
+        rules = [$($rule:ident),*],
+        new = $new_hnd:expr,
+        value = $get_hnd:expr
+    ) => {
         #[derive(Debug)]
         pub struct $name {
             $(pub $param: $param_t),+, token: crate::Token,
         }
         impl $name {
-            pub const RULES: &'static [crate::Rule] = &[$(crate::Rule::$rule),+];
+            pub const RULES: &'static [crate::Rule] = &[$(crate::Rule::$rule),*];
         }
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -48,14 +75,41 @@ macro_rules! define_node {
                 self
             }
         }
+
+        inventory::submit! {
+            crate::syntax_tree::resolver::CollectibleNode::Node($name::RULES, $name::from_pair)
+        }
     };
-    ($name:ident, rules = [$($rule:ident),+], new = $new_hnd:expr, value = $get_hnd:expr) => {
+
+    (
+        $name:ident,
+        rules = [$($rule:ident),*],
+        new = $new_hnd:expr,
+        value = $get_hnd:expr,
+        docs = {
+            name: $docs_name:literal,
+            symbols = [$($docs_symbols:literal),*],
+            description: $docs_desc:literal,
+            examples: $docs_examples:literal,
+        }
+    ) => {
+        define_node!($name, rules = [$($rule),*], new = $new_hnd, value = $get_hnd);
+        document_operator!(
+            name = $docs_name,
+            rules = [$($rule),*],
+            symbols = [$($docs_symbols),*],
+            description = $docs_desc,
+            examples = $docs_examples,
+        );
+    };
+
+    ($name:ident, rules = [$($rule:ident),*], new = $new_hnd:expr, value = $get_hnd:expr) => {
         #[derive(Debug, Clone)]
         pub struct $name {
             token: crate::Token,
         }
         impl $name {
-            pub const RULES: &'static [crate::Rule] = &[$(crate::Rule::$rule),+];
+            pub const RULES: &'static [crate::Rule] = &[$(crate::Rule::$rule),*];
         }
         impl std::fmt::Display for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -95,6 +149,10 @@ macro_rules! define_node {
             fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
                 self
             }
+        }
+
+        inventory::submit! {
+            crate::syntax_tree::resolver::CollectibleNode::Node($name::RULES, $name::from_pair)
         }
     };
 }
@@ -109,118 +167,17 @@ impl TryFrom<&str> for Node {
     }
 }
 
-mod boolean;
-pub use boolean::*;
-
-mod bitwise;
-pub use bitwise::*;
-
-mod arithmetic;
-pub use arithmetic::*;
-
-mod unary;
-use lazy_static::lazy_static;
-pub use unary::*;
-
-mod assignment;
-pub use assignment::*;
-
-mod values;
-pub use values::*;
-
 mod core;
-pub use core::*;
 
-mod control;
-pub use control::*;
+// Pratt nodes
+pub mod arithmetic;
+pub mod assignment;
+pub mod bitwise;
+pub mod boolean;
+pub mod matching;
 
-mod error;
-pub use error::*;
-
-mod function;
-pub use function::*;
-
-macro_rules! include_node {
-    ($map:expr, $node:ident) => {
-        $map.extend($node::RULES.iter().map(|r| (*r, $node::from_pair as _)));
-    };
-}
-
-use std::collections::HashMap;
-type NodeHandlerFn = fn(pest::iterators::Pair<crate::Rule>) -> Result<Node, Error>;
-lazy_static! {
-
-    static ref NODES: HashMap<crate::Rule, NodeHandlerFn> = {
-        let mut map = HashMap::new();
-
-        //
-        // Values
-        include_node!(map, ValueLiteral);
-        include_node!(map, ConstantValue);
-        include_node!(map, Identifier);
-        include_node!(map, ArrayValue);
-        include_node!(map, ObjectValue);
-        include_node!(map, RangeValue);
-        include_node!(map, CastingExpression);
-        include_node!(map, DeleteExpression);
-
-        //
-        // Unary
-        include_node!(map, IndexingExpression);
-
-        //
-        // Functions
-        include_node!(map, FunctionCall);
-
-        //
-        // Errors
-        include_node!(map, UnterminatedLinebreak);
-        include_node!(map, UnterminatedLiteral);
-        include_node!(map, UnterminatedComment);
-        include_node!(map, UnexpectedDecorator);
-        include_node!(map, IncompleteRangeExpression);
-        include_node!(map, UnterminatedReturn);
-
-        //
-        // Core
-        include_node!(map, Script);
-        include_node!(map, Line);
-        include_node!(map, Block);
-        include_node!(map, BreakExpression);
-        include_node!(map, SkipExpression);
-        include_node!(map, ReturnExpression);
-        include_node!(map, TernaryExpression);
-        include_node!(map, ForLoopExpression);
-        include_node!(map, SwitchExpression);
-
-        //
-        // Boolean
-        include_node!(map, BooleanExpression);
-        include_node!(map, BooleanNotExpression);
-        include_node!(map, MatchingExpression);
-
-        //
-        // Bitwise
-        include_node!(map, BitwiseExpression);
-        include_node!(map, BitwiseNotExpression);
-
-        //
-        // Arithmetic
-        include_node!(map, ArithmeticExpression);
-        include_node!(map, ArithmeticNegExpression);
-
-        //
-        // Assignments
-        include_node!(map, FunctionAssignment);
-        include_node!(map, VariableAssignment);
-        include_node!(map, OperativeAssignment);
-        include_node!(map, DestructuringAssignment);
-        include_node!(map, IndexAssignment);
-
-        map
-    };
-}
-
-pub fn node_map() -> &'static HashMap<crate::Rule, NodeHandlerFn> {
-    &NODES
-}
+// Mixed nodes
+pub mod collections;
+pub mod functions;
+pub mod keyword;
+pub mod literals;

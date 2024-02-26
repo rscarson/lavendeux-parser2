@@ -1,167 +1,147 @@
-//! Infix Nodes
-//!
-//! Nodes for infix mathematical operations
-//!
 use super::*;
-use crate::{error::WrapError, Rule, State, ToToken, Value};
-use pest::iterators::Pair;
-use polyvalue::operations::*;
+use crate::{define_prattnode, error::WrapExternalError, oops, pest::Rule, State};
+use polyvalue::{
+    operations::{ArithmeticOperation, ArithmeticOperationExt},
+    Value,
+};
 
-define_node!(
-    ArithmeticExpression {
-        operand_stack: Vec<Node>,
-        operator_stack: Vec<ArithmeticOperation>
+define_prattnode!(
+    InfixArithmetic {
+        left: Node,
+        right: Node,
+        operator: ArithmeticOperation
     },
-    rules = [
-        ARITHMETIC_AS_EXPRESSION,
-        ARITHMETIC_MD_EXPRESSION,
-        ARITHMETIC_EXPONENTIATION_EXPRESSION
-    ],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner().rev().peekable();
+    rules = [OP_ADD, OP_SUB, OP_POW, OP_DIV, OP_MOD, OP_MUL],
+    new = |input: PrattPair| {
+        let token = input.as_token();
+        let mut children = input.into_inner();
+        let left = children.next().unwrap().to_ast_node()?;
+        let operator = children.next().unwrap().as_rule();
+        let right = children.next().unwrap().to_ast_node()?;
 
-        let mut expr = Self {
-            operand_stack: Vec::new(),
-            operator_stack: Vec::new(),
-            token: token.clone(),
+        let operator = match operator {
+            Rule::OP_ADD => ArithmeticOperation::Add,
+            Rule::OP_SUB => ArithmeticOperation::Subtract,
+            Rule::OP_POW => ArithmeticOperation::Exponentiate,
+            Rule::OP_DIV => ArithmeticOperation::Divide,
+            Rule::OP_MOD => ArithmeticOperation::Modulo,
+            Rule::OP_MUL => ArithmeticOperation::Multiply,
+            _ => {
+                return oops!(
+                    Internal {
+                        msg: format!("Unrecognize bitwise operator {operator:?}")
+                    },
+                    token
+                )
+            }
         };
 
-        // We will build up a stack of operands and operators
-        expr.operand_stack.push(children.next().unwrap().to_ast_node()?);
-        while children.peek().is_some() {
-            let operation = children.next().unwrap().as_str();
-            let operation = match operation {
-                "+" => ArithmeticOperation::Add,
-                "-" => ArithmeticOperation::Subtract,
-                "*" => ArithmeticOperation::Multiply,
-                "/" => ArithmeticOperation::Divide,
-                "%" => ArithmeticOperation::Modulo,
-                "**" => ArithmeticOperation::Exponentiate,
-                _ => {
-                    return Err(Error::Internal(format!(
-                        "Invalid arithmetic operation {:?}",
-                        operation
-                    )))
-                }
-            };
-
-            expr.operator_stack.push(operation);
-            let operand = children.next().unwrap().to_ast_node()?;
-            expr.operand_stack.push(operand);
+        Ok(Self {
+            left,
+            right,
+            operator,
+            token,
         }
-
-        Ok(expr.boxed())
+        .boxed())
+    },
+    value = |this: &Self, state: &mut State| {
+        Value::arithmetic_op(
+            &this.left.get_value(state)?,
+            &this.right.get_value(state)?,
+            this.operator,
+        )
+        .with_context(this.token())
     },
 
-    value = |this: &ArithmeticExpression, state: &mut State| {
-        let mut operands = this.operand_stack.iter().rev().peekable();
-        let operators = this.operator_stack.iter().rev().peekable();
-
-        let mut left = operands.next().unwrap().get_value(state)?;
-        for op in operators {
-            let right = operands.next().unwrap().get_value(state)?;
-            left = Value::arithmetic_op(&left, &right, *op).to_error(&this.token)?;
-        }
-
-        Ok(left)
+    docs = {
+        name: "Arithmetic",
+        symbols = ["+", "-", "*", "/", "%", "**"],
+        description: "
+            Performs arithmetic operations on two values.
+            All but exponentiation are left-associative.
+        ",
+        examples: "
+            1 + 2 / 3
+            2 ** 3
+        ",
     }
 );
 
-define_node!(
-    ArithmeticNegExpression { expression: Node },
-    rules = [ARITHMETIC_NEG_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner().rev();
-        let expression = children.next().unwrap().to_ast_node()?;
+define_prattnode!(
+    ArithmeticNeg { base: Node },
+    rules = [PREFIX_NEG],
+    new = |input: PrattPair| {
+        let token = input.as_token();
+        let mut children = input.into_inner();
+        children.next(); // Skip the operator
+        let base = children.next().unwrap().to_ast_node()?;
+        Ok(Self { base, token }.boxed())
+    },
+    value = |this: &Self, state: &mut State| {
+        Value::arithmetic_neg(&this.base.get_value(state)?).with_context(this.token())
+    },
 
-        // If there are an odd number of negations, we need to invert the value
-        let mut do_invert = false;
-        while children.next().is_some() {
-            do_invert = !do_invert;
+    docs = {
+        name: "Unary Negation",
+        symbols = ["-"],
+        description: "Negates a value.",
+        examples: "-1",
+    }
+);
+
+define_prattnode!(
+    ArithmeticIncDec {
+        base: String,
+        is_postfix: bool,
+        is_increment: bool
+    },
+    rules = [PREFIX_INC, PREFIX_DEC, POSTFIX_INC, POSTFIX_DEC],
+    new = |input: PrattPair| {
+        let token = input.as_token();
+        let (base, is_postfix, is_increment) = match input {
+            PrattPair::Prefix(o, v) => (v, false, matches!(o.as_rule(), Rule::PREFIX_INC)),
+            PrattPair::Postfix(v, o) => (v, true, matches!(o.as_rule(), Rule::POSTFIX_INC)),
+            _ => unreachable!(),
+        };
+        if base.as_rule() != Rule::identifier {
+            return oops!(ConstantValue, base.as_token());
         }
+        let base = base.first_pair().as_str().to_string();
 
-        if do_invert {
-            Ok(Self { expression, token }.boxed())
+        Ok(Self {
+            base: base,
+            is_postfix,
+            is_increment,
+            token,
+        }
+        .boxed())
+    },
+    value = |this: &Self, state: &mut State| {
+        let value = state.get_variable(&this.base).unwrap_or(Value::i64(0));
+        let operation = if this.is_increment {
+            ArithmeticOperation::Add
         } else {
-            // If there are an even number of negations, we can just return the inner expression
-            Ok(expression)
+            ArithmeticOperation::Subtract
+        };
+
+        let result = Value::arithmetic_op(&value, &Value::i64(1), operation)?;
+
+        state.set_variable(&this.base, result.clone());
+        if this.is_postfix {
+            Ok(value)
+        } else {
+            Ok(result)
         }
     },
-    value = |this: &ArithmeticNegExpression, state: &mut State| {
-        let value = this.expression.get_value(state)?;
-        let value = Value::arithmetic_op(&value, &value.clone(), ArithmeticOperation::Negate)
-            .to_error(&this.token)?;
-        Ok(value)
+
+    docs = {
+        name: "Unary Increment/Decrement",
+        symbols = ["++", "--"],
+        description: "Increments or decrements a variable by 1.",
+        examples: "
+            a = 0
+            assert_eq(a++, 0)
+            assert_eq(--a, 0)
+        ",
     }
 );
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{assert_tree, assert_tree_value};
-
-    #[test]
-    fn test_arithmetic_expr() {
-        // Test a big ugly nested expression, to rule out stack overflows
-        assert_tree!(
-            "2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(2*(22*(2*(2*(2*(2))))))))))))))))",
-            TOPLEVEL_EXPRESSION,
-            ArithmeticExpression,
-            |_: &mut ArithmeticExpression| {}
-        );
-
-        // Test precedence
-        assert_tree!(
-            "2+2*2",
-            TOPLEVEL_EXPRESSION,
-            ArithmeticExpression,
-            |tree: &mut ArithmeticExpression| {
-                assert_eq!(tree.operand_stack.len(), 2);
-                assert_eq!(tree.operator_stack.len(), 1);
-                assert_eq!(tree.operator_stack[0], ArithmeticOperation::Add);
-
-                assert_tree!(
-                    &mut tree.operand_stack[0],
-                    ArithmeticExpression,
-                    |tree: &mut ArithmeticExpression| {
-                        assert_eq!(tree.operand_stack.len(), 2);
-                        assert_eq!(tree.operator_stack.len(), 1);
-                        assert_eq!(tree.operator_stack[0], ArithmeticOperation::Multiply);
-                    }
-                );
-
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "6");
-            }
-        );
-
-        assert_tree_value!("4/2", 2i64.into());
-        assert_tree_value!("4%2", 0i64.into());
-        assert_tree_value!("2**3", 8i64.into());
-    }
-
-    #[test]
-    fn test_arithmetic_neg_expr() {
-        assert_tree!(
-            "-2",
-            TOPLEVEL_EXPRESSION,
-            ArithmeticNegExpression,
-            |tree: &mut ArithmeticNegExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "-2");
-            }
-        );
-
-        assert_tree!(
-            "--2",
-            TOPLEVEL_EXPRESSION,
-            ValueLiteral,
-            |tree: &mut ValueLiteral| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "2");
-            }
-        );
-    }
-}

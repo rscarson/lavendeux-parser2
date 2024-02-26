@@ -1,7 +1,6 @@
+use crate::functions::ParserFunction;
 use crate::pest::{parse_input, Rule};
-use crate::preprocessor::{Preprocessor, PreprocessorDirectives};
-use crate::std_functions::Function;
-use crate::{Error, State, Value};
+use crate::{oops, Error, State, Value};
 use polyvalue::types::Array;
 use polyvalue::ValueTrait;
 use std::num::NonZeroUsize;
@@ -26,7 +25,7 @@ impl Default for ParserOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Lavendeux {
     state: State,
     options: ParserOptions,
@@ -43,8 +42,8 @@ impl Lavendeux {
         Self { state, options }
     }
 
-    pub fn register_function(&mut self, function: Function) {
-        self.state.register_function(function);
+    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
+        self.state.register_function(function)
     }
 
     pub fn state(&self) -> &State {
@@ -55,16 +54,10 @@ impl Lavendeux {
         &mut self.state
     }
 
-    /// Designed to catch unmatched brackets that can slow down parsing
-    pub fn preprocess_input(input: &str) -> Result<PreprocessorDirectives, Error> {
-        Preprocessor::process(input)
-    }
-
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
     pub fn eval(input: &str, state: &mut State) -> Result<Value, Error> {
-        let directives = Self::preprocess_input(input)?;
-        parse_input(&directives.script, Rule::SCRIPT)?.get_value(state)
+        parse_input(input, Rule::SCRIPT)?.get_value(state)
     }
 
     /// Parses the given input
@@ -80,12 +73,21 @@ impl Lavendeux {
                     self.state.start_timer();
                     Self::eval(input, &mut self.state)
                 })
-                .or(Err(Error::Fatal(
-                    "Failed to spawn parser thread".to_string(),
-                )))?;
+                .or(oops!(Fatal {
+                    msg: "Failed to spawn parser thread".to_string()
+                }))?;
             match handle.join() {
                 Ok(value) => value,
-                Err(e) => Err(Error::Fatal(e.downcast_ref::<&str>().unwrap().to_string())),
+                Err(e) => {
+                    if let Some(s) = e.downcast_ref::<&str>() {
+                        let s = s.to_string();
+                        oops!(Fatal { msg: s })
+                    } else {
+                        oops!(Fatal {
+                            msg: format!("Parser thread panicked: {:?}", e)
+                        })
+                    }
+                }
             }
         })?;
 

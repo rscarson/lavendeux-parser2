@@ -42,7 +42,7 @@ assert_eq(_concat(["Hello", ", ", "World!"]), "Hello, World!")
 // lowercase(string) -> string : Returns a lowercase version of a string
 _lowercase(s) = {
     _concat(for c in s do {
-        if 'A'..'Z' contains c then {
+        if ('A'..'Z') contains c then {
             chr(ord(c) + 32)
         } else {
             c
@@ -79,6 +79,7 @@ _prettyjson(s) = {
             pretty += c + "\n" + _repeat('  ', indent)
         } else if c == ' ' || c == '\t' then {
             // ignore whitespace
+            continue
         } else if c == ':' then {
             pretty += c + " "
         } else {
@@ -93,7 +94,7 @@ assert_eq(_prettyjson('{"a": 1, "b": [1, 2, 3]}'), "{\n  \"a\": 1,\n  \"b\": [\n
 // uppercase(string) -> string : Returns an uppercase version of a string
 _uppercase(s) = {
     _concat(for c in s do {
-        if 'a'..'z' contains c then {
+        if ('a'..'z') contains c then {
             chr(ord(c) - 32)
         } else {
             c

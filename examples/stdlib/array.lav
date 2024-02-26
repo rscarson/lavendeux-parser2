@@ -1,3 +1,26 @@
+_len(a) = {
+    i = 0; for a do i += 1; i
+}
+
+_insert(a, i, b) = {
+    if a is object then {
+        a[i] = b
+        a
+    } else {
+        if i == 0 then {
+            [b] + a
+        } else if i == _len(a) then {
+            a + [b]
+        } else {
+            a[0..(i-1)] + [b] + a[i..(_len(a)-1)]
+        }
+    }
+}
+assert_eq(_insert([1, 2, 3], 1, 4), [1, 4, 2, 3])
+assert_eq(_insert([1], 0, 4), [4, 1])
+assert_eq(_insert([1], 1, 4), [1, 4])
+assert_eq(_insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
+
 /*
  * This file contains implementations of the stdlib's array functions
  * for lavendeux, written in lavendish
@@ -79,7 +102,6 @@ assert_eq(_first([1]), 1)
 
 // insert(compound, int, any) -> any : Inserts the given element at the given index in the given array or object       
 _insert(a, i, b) = {
-    i == _len(a)
     if a is object then {
         a[i] = b
         a
@@ -148,20 +170,17 @@ assert_eq(_values({}), [])
 
 // chunks(array, int) -> array : Splits the given array into chunks of the given size                                  
 _chunks(a, s) = {
-    chunks = []
-    buffer = []
-    i = s
+    chunks = [[]]
     for v in a do {
-        if i == 0 then {
-            chunks += [buffer]
-            buffer = []
-            i = s-1
+        if _len(chunks[]) == s then {
+            chunks[] = [v]
         } else {
-            i -= 1
+            chunks[][] = v
         }
-        
-        buffer += v
     }
-    !_is_empty(buffer) ? chunks + [buffer] : chunks
+    chunks
 }
-assert_eq(_chunks([1, 2, 3, 4, 5, 6, 7, 8, 9], 3), [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+assert_eq(
+    _chunks([1, 2, 3, 4, 5, 6, 7, 8, 9], 3), 
+    [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+)

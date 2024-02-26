@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["extensions", "all-functions"]
+default = ["all-functions"]
 extensions = ["rustyscript"]
 
 all-functions = ["encoding-functions", "network-functions", "crypto-functions"]
@@ -34,6 +34,13 @@ thiserror = "1.0.50"
 #polyvalue = "0.2.2"
 polyvalue = {git = "https://github.com/rscarson/polyvalue.git"}
 
+# For collecting functions and nodes
+paste = "1.0.14"
+inventory = "0.3.15"
+
+# For documentation writeout
+indoc = "2"
+
 #
 # dependencies for functions and decorators
 #
@@ -50,4 +57,4 @@ sha2 = { version = "0.10.6", optional = true }
 rand = { version = "0.8.5", optional = true }
 
 [dev-dependencies]
-mockito = "1.2.0"
+mockito = "1.2.0" # For network tests

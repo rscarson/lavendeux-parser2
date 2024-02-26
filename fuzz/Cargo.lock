@@ -1801,7 +1801,7 @@ dependencies = [
 [[package]]
 name = "polyvalue"
 version = "0.3.0"
-source = "git+https://github.com/rscarson/polyvalue.git#b11b88fe4265ca5ef11741eb3370da619bdebfc3"
+source = "git+https://github.com/rscarson/polyvalue.git#2a88ebf4f9eda98582bb346830b1f57e28a9825d"
 dependencies = [
  "fpdec",
  "lazy_static",

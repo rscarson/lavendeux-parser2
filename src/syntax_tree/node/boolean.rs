@@ -1,317 +1,124 @@
-//! Unary Nodes
-//!
-//! Nodes for unary operations
-//!
 use super::*;
-use crate::{error::WrapError, Rule, State, ToToken, Value};
-use pest::iterators::Pair;
-use polyvalue::types::Bool;
-use polyvalue::{operations::*, ValueTrait};
+use crate::{define_prattnode, error::WrapExternalError, oops, pest::Rule, State};
+use polyvalue::{
+    operations::{BooleanOperation, BooleanOperationExt},
+    Value,
+};
 
-define_node!(
-    BooleanExpression {
-        operand_stack: Vec<Node>,
-        operator_stack: Vec<BooleanOperation>
+define_prattnode!(
+    InfixBoolean {
+        left: Node,
+        right: Node,
+        operator: BooleanOperation
     },
-    rules = [BOOLEAN_AND_EXPRESSION, BOOLEAN_OR_EXPRESSION, BOOLEAN_CMP_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner().rev().peekable();
-
-        let mut expr = Self {
-            operand_stack: Vec::new(),
-            operator_stack: Vec::new(),
-            token,
-        };
-
-        // We will build up a stack of operands and operators
-        expr.operand_stack.push(children.next().unwrap().to_ast_node()?);
-        while children.peek().is_some() {
-            let operation = children.next().unwrap().as_str();
-            let operation = match operation {
-                "==" => BooleanOperation::EQ,
-                "!=" => BooleanOperation::NEQ,
-                "<" => BooleanOperation::LT,
-                "<=" => BooleanOperation::LTE,
-                ">" => BooleanOperation::GT,
-                ">=" => BooleanOperation::GTE,
-                "&&" => BooleanOperation::And,
-                "||" => BooleanOperation::Or,
-                _ => {
-                    return Err(Error::Internal(format!(
-                        "Invalid boolean operation {:?}",
-                        operation
-                    )))
-                }
-            };
-            expr.operator_stack.push(operation);
-
-            let operand = children.next().unwrap().to_ast_node()?;
-            expr.operand_stack.push(operand);
-        }
-
-        Ok(expr.boxed())
-    },
-    value = |this: &BooleanExpression, state: &mut State| {
-        let mut operands = this.operand_stack.iter().rev().peekable();
-        let operators = this.operator_stack.iter().rev().peekable();
-
-        let mut left = operands.next().unwrap().get_value(state)?;
-        for op in operators {
-            let ss_eval_op = *left.clone().as_a::<Bool>().to_error(&this.token)?.inner();
-            if *op == BooleanOperation::And && !ss_eval_op {
-                // Short circuit
-                left = Value::from(false);
-            } else if *op == BooleanOperation::Or && ss_eval_op {
-                // Short circuit
-                left = Value::from(true);
-            } else {
-                let right = operands.next().unwrap().get_value(state)?;
-                left = Value::boolean_op(&left, &right, *op).to_error(&this.token)?;
-            }
-        }
-
-        Ok(left)
-    }
-);
-
-define_node!(
-    BooleanNotExpression { expression: Node },
-    rules = [BOOLEAN_NOT_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner().rev();
-        let expression = children.next().unwrap().to_ast_node()?;
-
-        // If there are an odd number of negations, we need to invert the value
-        let mut do_invert = false;
-        while children.next().is_some() {
-            do_invert = !do_invert;
-        }
-
-        if do_invert {
-            Ok(Self { expression, token }.boxed())
-        } else {
-            // If there are an even number of negations, we can just return the inner expression
-            Ok(expression)
-        }
-    },
-    value = |this: &BooleanNotExpression, state: &mut State| {
-        let value = this.expression.get_value(state)?;
-        let value = Value::boolean_op(&value, &value.clone(), BooleanOperation::Not)
-            .to_error(&this.token)?;
-        Ok(value)
-    }
-);
-
-define_node!(
-    MatchingExpression {
-        value: Node,
-        operation: MatchingOperation,
-        pattern: Node
-    },
-    rules = [MATCHING_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
+    rules = [
+        OP_BOOL_OR,
+        OP_BOOL_AND,
+        OP_BOOL_EQ,
+        OP_BOOL_NE,
+        OP_BOOL_LE,
+        OP_BOOL_GE,
+        OP_BOOL_LT,
+        OP_BOOL_GT
+    ],
+    new = |input: PrattPair| {
+        let token = input.as_token();
         let mut children = input.into_inner();
+        let left = children.next().unwrap().to_ast_node()?;
+        let operator = children.next().unwrap().as_rule();
+        let right = children.next().unwrap().to_ast_node()?;
 
-        let value = children.next().unwrap().to_ast_node()?;
-        let operation = children.next().unwrap().as_str();
-        let operation = match operation {
-            "contains" => MatchingOperation::Contains,
-            "matches" => MatchingOperation::Matches,
-            "is" => MatchingOperation::Is,
-            "startswith" | "starts_with" => MatchingOperation::StartsWith,
-            "endswith" | "ends_with" => MatchingOperation::EndsWith,
+        let operator = match operator {
+            Rule::OP_BOOL_OR => BooleanOperation::Or,
+            Rule::OP_BOOL_AND => BooleanOperation::And,
+            Rule::OP_BOOL_EQ => BooleanOperation::EQ,
+            Rule::OP_BOOL_NE => BooleanOperation::NEQ,
+            Rule::OP_BOOL_LE => BooleanOperation::LTE,
+            Rule::OP_BOOL_GE => BooleanOperation::GTE,
+            Rule::OP_BOOL_LT => BooleanOperation::LT,
+            Rule::OP_BOOL_GT => BooleanOperation::GT,
             _ => {
-                return Err(Error::Internal(format!(
-                    "Invalid matching operation {:?}",
-                    operation
-                )))
+                return oops!(
+                    Internal {
+                        msg: format!("Unrecognize boolean operator {operator:?}")
+                    },
+                    token
+                )
             }
         };
-        let pattern = children.next().ok_or(Error::IncompleteMatchingExpression {
-            token: token.clone(),
-        })?;
-        let pattern = pattern.to_ast_node()?;
 
         Ok(Self {
-            value,
-            operation,
-            pattern,
-            token,
+            left,
+            right,
+            operator,
+            token: token,
         }
         .boxed())
     },
-    value = |this: &MatchingExpression, state: &mut State| {
-        let value = this.value.get_value(state)?;
-
-        // is is a special case because it is the only operation that can accept an identifier
-        // as a pattern - the type name can be a string, but does not need to be
-        let pattern = match this.pattern.get_value(state) {
-            Ok(pattern) => pattern,
-            Err(Error::VariableName { name, .. }) if this.operation == MatchingOperation::Is => {
-                Value::from(name)
+    value = |this: &Self, state: &mut State| {
+        // Short-circuit evaluation
+        if this.operator == BooleanOperation::Or {
+            let left = this.left.get_value(state)?;
+            if left.is_truthy() {
+                return Ok(true.into());
             }
-            Err(e) => return Err(e),
-        };
+        } else if this.operator == BooleanOperation::And {
+            let left = this.left.get_value(state)?;
+            if !left.is_truthy() {
+                return Ok(false.into());
+            }
+        }
 
-        Value::matching_op(&value, &pattern, this.operation).to_error(&this.token)
+        Value::boolean_op(
+            &this.left.get_value(state)?,
+            &this.right.get_value(state)?,
+            this.operator,
+        )
+        .with_context(this.token())
+    },
+
+    docs = {
+        name: "Boolean",
+        symbols = ["or", "and", "==", "!=", "<=", ">=", "<", ">"],
+        description: "
+            Performs an infix boolean comparison between two values.
+            Comparisons are weak, meaning that the types of the values are not checked.
+            Result are always a boolean value.
+            And and Or are short-circuiting.
+            All are left-associative.
+        ",
+        examples: "
+            true || false
+            1 < 2
+        ",
     }
 );
 
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{assert_tree, assert_tree_value, Lavendeux};
+define_prattnode!(
+    BooleanNot { base: Node },
+    rules = [PREFIX_BOOL_NOT],
+    new = |input: PrattPair| {
+        let token = input.as_token();
+        let mut children = input.into_inner();
+        children.next(); // Skip the operator
+        let base = children.next().unwrap().to_ast_node()?;
+        Ok(Self { base, token }.boxed())
+    },
+    value = |this: &Self, state: &mut State| {
+        Value::boolean_not(&this.base.get_value(state)?).with_context(this.token())
+    },
 
-    #[test]
-    fn test_matching_expr() {
-        assert_tree!(
-            "'a' contains 'b'",
-            MATCHING_EXPRESSION,
-            MatchingExpression,
-            |tree: &mut MatchingExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "false");
-            }
-        );
-
-        assert_tree_value!("'a' contains 'a'", true.into());
-        assert_tree_value!("'a' matches 'a'", true.into());
-        assert_tree_value!("'a' is string", true.into());
-        assert_tree_value!("'abc' startswith 'a'", true.into());
-        assert_tree_value!("'abc' ends_with 'c'", true.into());
+    docs = {
+        name: "Unary Boolean Not",
+        symbols = ["not"],
+        description: "
+            Negates a boolean value.
+            If the value is not a boolean, it is cooerced to boolean first.
+        ",
+        examples: "
+            !true == false
+            !'test' == false
+            !0 == true
+        ",
     }
-
-    #[test]
-    fn test_boolean_expr() {
-        assert_tree!(
-            "true && false",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "false");
-            }
-        );
-
-        assert_tree!(
-            "true || false",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "true && false || true",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "3 > 1",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "3 >= 3",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "3 < 1",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "false");
-            }
-        );
-
-        assert_tree!(
-            "3 <= 3",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "3 == 3",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-
-        assert_tree!(
-            "3 != 3",
-            TOPLEVEL_EXPRESSION,
-            BooleanExpression,
-            |tree: &mut BooleanExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "false");
-            }
-        );
-
-        // test short circuiting
-        let mut parser = Lavendeux::new(Default::default());
-        parser.state_mut().set_variable("a", Value::from(true));
-        assert_eq!(
-            parser.parse("false && (del a)").unwrap()[0],
-            Value::from(false)
-        );
-        assert_eq!(parser.state().get_variable("a").unwrap(), Value::from(true));
-
-        assert_eq!(
-            parser.parse("true || (del a)").unwrap()[0],
-            Value::from(true)
-        );
-        assert_eq!(parser.state().get_variable("a").unwrap(), Value::from(true));
-    }
-
-    #[test]
-    fn test_boolean_not_expr() {
-        assert_tree!(
-            "!true",
-            TOPLEVEL_EXPRESSION,
-            BooleanNotExpression,
-            |tree: &mut BooleanNotExpression| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "false");
-            }
-        );
-
-        assert_tree!(
-            "!!true",
-            TOPLEVEL_EXPRESSION,
-            ValueLiteral,
-            |tree: &mut ValueLiteral| {
-                let value = tree.get_value(&mut State::new()).unwrap();
-                assert_eq!(value.to_string(), "true");
-            }
-        );
-    }
-}
+);

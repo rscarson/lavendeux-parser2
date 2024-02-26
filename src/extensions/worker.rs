@@ -157,8 +157,10 @@ impl ExtensionWorker {
                 }
                 result
             }
-            ExtensionWorkerResponse::Error(err) => Err(err.to_error(token)),
-            _ => Err(Error::Internal("JSRuntime worker responded incorrectly".to_string())),
+            ExtensionWorkerResponse::Error(err) => Err(err.with_context(token)),
+            _ => Err(Error::Internal(
+                "JSRuntime worker responded incorrectly".to_string(),
+            )),
         }
     }
 
@@ -168,37 +170,42 @@ impl ExtensionWorker {
     }
 
     pub fn to_std_function(&self, function: &str) -> Option<Function> {
-        self.extension().all_functions().get(function).map(|function| Function::new(
-                function.name(),
-                function.description(),
-                &self.extension().signature(),
-                function
-                    .arguments()
-                    .iter()
-                    .enumerate()
-                    .map(|(i, arg)| Argument {
-                        name: format!("{}", i + 1),
-                        optional: false,
-                        plural: false,
-                        expects: *arg,
-                    })
-                    .collect(),
-                *function.returns(),
-                |state, args, token, name| {
-                    // get a vec of the strings 1 to function.arguments().len()
-                    let arg_order = (1..=args.len())
-                        .map(|i| format!("{}", i))
-                        .collect::<Vec<String>>();
-                    ExtensionController::with(|controller| {
-                        controller.call_function(
-                            name,
-                            &flatten_arguments!(args, arg_order),
-                            state,
-                            token,
-                        )
-                    })
-                },
-                function.name().to_string(),
-            ))
+        self.extension()
+            .all_functions()
+            .get(function)
+            .map(|function| {
+                Function::new(
+                    function.name(),
+                    function.description(),
+                    &self.extension().signature(),
+                    function
+                        .arguments()
+                        .iter()
+                        .enumerate()
+                        .map(|(i, arg)| Argument {
+                            name: format!("{}", i + 1),
+                            optional: false,
+                            plural: false,
+                            expects: *arg,
+                        })
+                        .collect(),
+                    *function.returns(),
+                    |state, args, token, name| {
+                        // get a vec of the strings 1 to function.arguments().len()
+                        let arg_order = (1..=args.len())
+                            .map(|i| format!("{}", i))
+                            .collect::<Vec<String>>();
+                        ExtensionController::with(|controller| {
+                            controller.call_function(
+                                name,
+                                &flatten_arguments!(args, arg_order),
+                                state,
+                                token,
+                            )
+                        })
+                    },
+                    function.name().to_string(),
+                )
+            })
     }
 }

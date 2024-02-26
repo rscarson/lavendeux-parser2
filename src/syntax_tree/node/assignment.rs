@@ -1,526 +1,441 @@
-//! Assignment Nodes
-//!
-//! Nodes for assignment statements.
-//! To variables, functions and compound values
-//!
 use super::*;
-use crate::{error::WrapError, Error, Rule, State, ToToken, Value};
-use pest::iterators::Pair;
+use crate::{
+    define_prattnode,
+    error::{ErrorDetails, WrapExternalError},
+    oops,
+    pest::Rule,
+    State,
+};
 use polyvalue::{
     operations::{
         ArithmeticOperation, ArithmeticOperationExt, BitwiseOperation, BitwiseOperationExt,
         BooleanOperation, BooleanOperationExt, IndexingMutationExt,
     },
-    types::Array,
-    ValueTrait,
+    Value,
 };
 
-// identifier ~ "=" ~ TOPLEVEL_EXPRESSION
-define_node!(
-    VariableAssignment {
-        name: String,
-        value: Node
-    },
-    rules = [VARIABLE_ASSIGNMENT_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner();
+#[derive(Debug)]
+pub enum AssignmentTarget {
+    Identifier(String),
+    Index(String, Vec<Option<Node>>), // None = last-entry index
+    Destructure(Vec<String>),
+}
 
-        let name = children.next().unwrap().as_str().to_string();
-        let value = children.next().unwrap().to_ast_node()?;
-        Ok(Self { name, value, token }.boxed())
+impl std::fmt::Display for AssignmentTarget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Identifier(id) => write!(f, "{}", id),
+            Self::Index(base, indices) => {
+                write!(f, "{}", base)?;
+                for index in indices {
+                    write!(
+                        f,
+                        "[{}]",
+                        if let Some(i) = index {
+                            &i.token().input
+                        } else {
+                            ""
+                        }
+                    )?;
+                }
+                Ok(())
+            }
+            Self::Destructure(ids) => {
+                write!(f, "[{}]", ids.join(","))
+            }
+        }
+    }
+}
+
+impl AssignmentTarget {
+    /// Consumes a pair, returning an `AssignmentTarget` if it's valid
+    pub fn from_pair(input: PrattPair) -> Result<Self, Error> {
+        match input.as_rule() {
+            Rule::identifier => Ok(Self::Identifier(input.first_pair().as_str().to_string())),
+
+            Rule::POSTFIX_INDEX => {
+                let mut children = input.into_inner();
+                let base = children.next().unwrap();
+                if base.as_rule() != Rule::identifier {
+                    return oops!(ConstantValue, base.as_token());
+                }
+                let base = base.first_pair().as_str().to_string();
+
+                let indices = children.next().unwrap();
+                let indices = indices.first_pair().into_inner();
+
+                let indices = indices
+                    .map(|c| {
+                        Ok::<_, Error>(if c.as_rule() == Rule::POSTFIX_EMPTYINDEX {
+                            None
+                        } else {
+                            Some(c.to_ast_node()?)
+                        })
+                    })
+                    .collect::<Result<Vec<Option<_>>, _>>()?;
+                Ok(Self::Index(base, indices))
+            }
+
+            Rule::ARRAY_TERM => {
+                let array = collections::Array::from_pair(input.first_pair())?;
+                let array = array.as_any().downcast_ref::<collections::Array>().unwrap();
+                if array
+                    .elements
+                    .iter()
+                    .any(|e| e.token().rule != Rule::identifier)
+                {
+                    return oops!(ConstantValue, input.as_token());
+                } else if array.elements.is_empty() {
+                    return oops!(ArrayEmpty, input.as_token());
+                }
+                let ids = array
+                    .elements
+                    .iter()
+                    .map(|e| e.token().input.trim().to_string())
+                    .collect::<Vec<_>>();
+                Ok(Self::Destructure(ids))
+            }
+            _ => {
+                return oops!(ConstantValue, input.as_token());
+            }
+        }
+    }
+}
+
+define_prattnode!(
+    DeleteExpression {
+        target: AssignmentTarget
     },
-    value = |assignment: &VariableAssignment, state: &mut State| {
-        let value = (*assignment.value).get_value(state)?;
-        state.set_variable(&assignment.name, value.clone());
-        Ok(value)
+    rules = [PREFIX_DEL],
+    new = |input: PrattPair| {
+        let token = input.as_token();
+        let mut children = input.into_inner();
+        let is_decorator = children
+            .next()
+            .unwrap()
+            .first_pair()
+            .as_str()
+            .ends_with("@");
+
+        let target = children.next().unwrap();
+        let mut target = AssignmentTarget::from_pair(target)?;
+
+        match target {
+            AssignmentTarget::Identifier(ref mut id) => {
+                if is_decorator {
+                    *id = format!("@{id}");
+                }
+            }
+            _ if is_decorator => {
+                return oops!(
+                    DecoratorName {
+                        name: target.to_string()
+                    },
+                    token
+                );
+            }
+            _ => {}
+        }
+
+        Ok(Self { target, token }.boxed())
+    },
+    value = |this: &Self, state: &mut State| {
+        match &this.target {
+            AssignmentTarget::Identifier(id) => {
+                if let Some(function) = state.unregister_function(id)? {
+                    Ok(function.signature().into())
+                } else if let Some(value) = state.delete_variable(id) {
+                    Ok(value)
+                } else {
+                    oops!(VariableName { name: id.clone() }, this.token.clone())
+                }
+            }
+
+            AssignmentTarget::Index(id, idx) => {
+                let mut value = state
+                    .get_variable(id)
+                    .ok_or(ErrorDetails::VariableName { name: id.clone() })
+                    .with_context(this.token())?;
+                let len = value.len();
+                let mut pos = &mut value;
+                let mut indices = idx
+                    .iter()
+                    .map(|i| {
+                        Ok::<_, Error>(if let Some(v) = i {
+                            Some(v.get_value(state)?)
+                        } else {
+                            None
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                if len == 0 {
+                    return oops!(ArrayEmpty, this.token.clone());
+                }
+                let final_idx = indices.pop().unwrap().unwrap_or((len - 1).into());
+
+                for index in &mut indices {
+                    let len = pos.len();
+                    if len == 0 {
+                        return oops!(ArrayEmpty, this.token.clone());
+                    }
+                    let index = index.clone().unwrap_or((len - 1).into());
+                    pos = pos.get_index_mut(&index).with_context(this.token())?;
+                }
+
+                let removed = pos.delete_index(&final_idx).with_context(this.token())?;
+                state.set_variable(id, value);
+                Ok(removed)
+            }
+
+            AssignmentTarget::Destructure(ids) => {
+                for id in ids {
+                    if state.get_variable(id).is_none() {
+                        return oops!(
+                            VariableName {
+                                name: id.to_string()
+                            },
+                            this.token.clone()
+                        );
+                    }
+                }
+                Ok(Value::from(
+                    ids.iter()
+                        .map(|id| state.delete_variable(id).unwrap())
+                        .collect::<Vec<_>>(),
+                ))
+            }
+        }
+    },
+
+    docs = {
+        name: "Deletion Keyword",
+        symbols = ["del", "delete", "unset"],
+        description: "
+            Deletes a value, function, @decorator, or index
+            Will return the value deleted (or the function signature if a function was deleted)
+            Index can be blank to delete the last value in an array, or negative to count from the end
+            Indices can also be a collection to delete multiple values at once
+        ",
+        examples: "
+            a = 2; del a
+            a = [1]; del a[]
+            a = {'test': 1}; del a['test']
+
+            @dec(x) = 2
+            del @dec
+        ",
     }
 );
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum OperativeAssignmentOperation {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
-    Exponent,
-    BitAnd,
-    BitOr,
-    BitXor,
-    BitShiftLeft,
-    BitShiftRight,
-    And,
-    Or,
+#[derive(Debug, Clone, Copy)]
+#[rustfmt::skip]
+pub enum AssignmentOperation {
+    Add, Sub, Mul, Div, Mod, Pow,
+    BitAnd, BitOr, BitXor, BitSl, BitSr,
+    And, Or, None
 }
-define_node!(
-    OperativeAssignment {
-        name: String,
-        operation: OperativeAssignmentOperation,
+impl AssignmentOperation {
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+
+    pub fn is_some(&self) -> bool {
+        !self.is_none()
+    }
+}
+impl From<Rule> for AssignmentOperation {
+    fn from(value: Rule) -> Self {
+        match value {
+            Rule::OP_ASSIGN_ADD => Self::Add,
+            Rule::OP_ASSIGN_SUB => Self::Sub,
+            Rule::OP_ASSIGN_POW => Self::Pow,
+            Rule::OP_ASSIGN_MUL => Self::Mul,
+            Rule::OP_ASSIGN_DIV => Self::Div,
+            Rule::OP_ASSIGN_MOD => Self::Mod,
+            Rule::OP_BASSIGN_AND => Self::And,
+            Rule::OP_BASSIGN_OR => Self::Or,
+            Rule::OP_ASSIGN_AND => Self::BitAnd,
+            Rule::OP_ASSIGN_XOR => Self::BitXor,
+            Rule::OP_ASSIGN_OR => Self::BitOr,
+            Rule::OP_ASSIGN_SL => Self::BitSl,
+            Rule::OP_ASSIGN_SR => Self::BitSr,
+            Rule::OP_ASSIGN => Self::None,
+            _ => panic!("Unrecognized assignment operator rule: {:?}", value),
+        }
+    }
+}
+
+define_prattnode!(
+    InfixAssignment {
+        target: AssignmentTarget,
+        op: AssignmentOperation,
         value: Node
     },
-    rules = [OPERATIVE_ASSIGNMENT_EXPRESSION],
-    new = |input: Pair<Rule>| {
-        let token = input.to_token();
+    rules = [
+        OP_ASSIGN_ADD,
+        OP_ASSIGN_SUB,
+        OP_ASSIGN_POW,
+        OP_ASSIGN_MUL,
+        OP_ASSIGN_DIV,
+        OP_ASSIGN_MOD,
+        OP_ASSIGN_AND,
+        OP_ASSIGN_XOR,
+        OP_ASSIGN_OR,
+        OP_ASSIGN_SL,
+        OP_ASSIGN_SR,
+        OP_BASSIGN_AND,
+        OP_BASSIGN_OR,
+        OP_ASSIGN
+    ],
+    new = |input: PrattPair| {
+        let token = input.as_token();
         let mut children = input.into_inner();
 
-        let name = children.next().unwrap().as_str().to_string();
-        let operation = match children.next().unwrap().as_str() {
-            "+=" => OperativeAssignmentOperation::Add,
-            "-=" => OperativeAssignmentOperation::Subtract,
-            "*=" => OperativeAssignmentOperation::Multiply,
-            "/=" => OperativeAssignmentOperation::Divide,
-            "%=" => OperativeAssignmentOperation::Modulo,
-            "**=" => OperativeAssignmentOperation::Exponent,
-
-            "&=" => OperativeAssignmentOperation::BitAnd,
-            "|=" => OperativeAssignmentOperation::BitOr,
-            "^=" => OperativeAssignmentOperation::BitXor,
-            "<<=" => OperativeAssignmentOperation::BitShiftLeft,
-            ">>=" => OperativeAssignmentOperation::BitShiftRight,
-
-            "&&=" => OperativeAssignmentOperation::And,
-            "||=" => OperativeAssignmentOperation::Or,
-
-            _ => unreachable!(),
-        };
+        let lhs = children.next().unwrap();
+        let op: AssignmentOperation = children.next().unwrap().as_rule().into();
         let value = children.next().unwrap().to_ast_node()?;
 
+        let target = AssignmentTarget::from_pair(lhs)?;
+
         Ok(Self {
-            name,
-            operation,
+            target,
+            op,
             value,
             token,
         }
         .boxed())
     },
-    value = |assignment: &OperativeAssignment, state: &mut State| {
-        let left = state
-            .get_variable(&assignment.name)
-            .ok_or(Error::VariableName {
-                name: assignment.name.clone(),
-                token: assignment.token().clone(),
-            })?;
-        let right = (*assignment.value).get_value(state)?;
+    value = |this: &Self, state: &mut State| {
+        let rhs = this.value.get_value(state)?;
+        match &this.target {
+            AssignmentTarget::Identifier(ref id) => {
+                let current_value = state.get_variable(id);
+                let current_value = if this.op.is_some() {
+                    if current_value.is_none() {
+                        return oops!(
+                            VariableName {
+                                name: id.to_string()
+                            },
+                            this.token.clone()
+                        );
+                    }
+                    apply_assignment_transform(&current_value.unwrap(), &rhs, this.op)?
+                } else {
+                    rhs
+                };
 
-        let result = match assignment.operation {
-            OperativeAssignmentOperation::Add => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Add)
-            }
-            OperativeAssignmentOperation::Subtract => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Subtract)
-            }
-            OperativeAssignmentOperation::Multiply => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Multiply)
-            }
-            OperativeAssignmentOperation::Divide => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Divide)
-            }
-            OperativeAssignmentOperation::Modulo => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Modulo)
-            }
-            OperativeAssignmentOperation::Exponent => {
-                Value::arithmetic_op(&left, &right, ArithmeticOperation::Exponentiate)
+                state.set_variable(id, current_value.clone());
+                Ok(current_value)
             }
 
-            OperativeAssignmentOperation::BitAnd => {
-                Value::bitwise_op(&left, &right, BitwiseOperation::And)
-            }
-            OperativeAssignmentOperation::BitOr => {
-                Value::bitwise_op(&left, &right, BitwiseOperation::Or)
-            }
-            OperativeAssignmentOperation::BitXor => {
-                Value::bitwise_op(&left, &right, BitwiseOperation::Xor)
-            }
-            OperativeAssignmentOperation::BitShiftLeft => {
-                Value::bitwise_op(&left, &right, BitwiseOperation::LeftShift)
-            }
-            OperativeAssignmentOperation::BitShiftRight => {
-                Value::bitwise_op(&left, &right, BitwiseOperation::RightShift)
+            AssignmentTarget::Destructure(ref ids) => {
+                if this.op.is_some() {
+                    return oops!(DestructuringAssignmentWithOperator, this.token.clone());
+                }
+
+                let values = rhs.as_a::<Vec<Value>>()?;
+                if values.len() != ids.len() {
+                    return oops!(
+                        DestructuringAssignment {
+                            expected_length: ids.len(),
+                            actual_length: values.len()
+                        },
+                        this.token.clone()
+                    );
+                }
+                for (id, value) in ids.iter().zip(values.clone().drain(..)) {
+                    state.set_variable(id, value);
+                }
+                Ok(values.into())
             }
 
-            OperativeAssignmentOperation::And => {
-                Value::boolean_op(&left, &right, BooleanOperation::And)
-            }
-            OperativeAssignmentOperation::Or => {
-                Value::boolean_op(&left, &right, BooleanOperation::Or)
+            AssignmentTarget::Index(ref base, indices) => {
+                // The last index is the one that will be used to set the value
+                let mut indices = indices.iter().map(|i| i.clone()).collect::<Vec<_>>();
+
+                // Move through the indices to get the final pointer
+                let mut dst = state
+                    .get_variable(&base)
+                    .ok_or(ErrorDetails::VariableName { name: base.clone() })
+                    .with_context(this.token())?;
+
+                let final_index = indices.pop().unwrap();
+
+                let mut ptr = &mut dst;
+                for index in indices {
+                    let index = if let Some(v) = index {
+                        v.get_value(state)?
+                    } else {
+                        (ptr.len() - 1).into()
+                    };
+                    ptr = ptr.get_index_mut(&index).with_context(this.token())?;
+                }
+
+                // Get final index
+                let final_index = if let Some(v) = final_index {
+                    v.get_value(state)?
+                } else {
+                    (ptr.len()).into()
+                };
+
+                // Set the value
+                ptr.set_index(&final_index, rhs.clone())
+                    .with_context(this.token())?;
+
+                // Transform
+                if this.op.is_some() {
+                    dst = apply_assignment_transform(&dst, &rhs, this.op)?
+                }
+
+                // Set state and return
+                state.set_variable(&base, dst.clone());
+                Ok(dst)
             }
         }
-        .to_error(&assignment.token)?;
+    },
 
-        state.set_variable(&assignment.name, result.clone());
-        Ok(result)
+    docs = {
+        name: "Assignment Operator",
+        symbols = ["=", "+=", "-=", "*=", "/=", "%=", "**=", "&=", "|=", "^=", "<<=", ">>="],
+        description: "
+            Assigns a value to a variable, index, or destructuring assignment
+            Target is either a literal with optional indices, or a destructuring assignment
+            If an index is empty, a new value will be appended to the array
+            If the target is a destructuring assignment, the value must be a collection of the same length
+            If the operator is present, the value will be transformed before assignment
+        ",
+        examples: "
+            [a, b] = [1, 2]
+            a = 1; a += 1
+            a = [1]; a[] = 2
+        ",
     }
 );
 
-// identifier ~ ("[" ~ TOPLEVEL_EXPRESSION ~ "]")+ ~ "=" ~ TOPLEVEL_EXPRESSION
-define_node!(
-    IndexAssignment {
-        name: String,
-        indices: Vec<Node>,
-        value: Node
-    },
-    rules = [INDEX_ASSIGNMENT_EXPRESSION],
-
-    new = |input:Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner();
-
-        let name = children.next().unwrap().as_str().to_string();
-        let mut indices = Vec::new();
-        while children.peek().is_some() {
-            let index = children.next().unwrap();
-            indices.push(index.to_ast_node()?);
+fn apply_assignment_transform(
+    lhs: &Value,
+    rhs: &Value,
+    op: AssignmentOperation,
+) -> Result<Value, Error> {
+    Ok(match op {
+        AssignmentOperation::Add => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Add)?,
+        AssignmentOperation::Sub => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Subtract)?,
+        AssignmentOperation::Mul => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Multiply)?,
+        AssignmentOperation::Div => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Divide)?,
+        AssignmentOperation::Mod => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Modulo)?,
+        AssignmentOperation::Pow => {
+            Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Exponentiate)?
         }
 
-        let value = indices.pop().unwrap();
+        AssignmentOperation::BitAnd => Value::bitwise_op(lhs, rhs, BitwiseOperation::And)?,
+        AssignmentOperation::BitOr => Value::bitwise_op(lhs, rhs, BitwiseOperation::Or)?,
+        AssignmentOperation::BitXor => Value::bitwise_op(lhs, rhs, BitwiseOperation::Xor)?,
+        AssignmentOperation::BitSl => Value::bitwise_op(lhs, rhs, BitwiseOperation::LeftShift)?,
+        AssignmentOperation::BitSr => Value::bitwise_op(lhs, rhs, BitwiseOperation::RightShift)?,
 
-        Ok(Self {
-            name,
-            indices,
-            value,
-            token,
-        }.boxed())
-    },
+        AssignmentOperation::And => Value::boolean_op(lhs, rhs, BooleanOperation::And)?,
+        AssignmentOperation::Or => Value::boolean_op(lhs, rhs, BooleanOperation::Or)?,
 
-    value = |assignment: &IndexAssignment, state: &mut State| {
-        let value = (*assignment.value).get_value(state)?;
-
-        // The last index is the one that will be used to set the value
-        let mut indices = assignment.indices.iter().map(|node| node.get_value(state)).collect::<Result<Vec<_>, _>>()?;
-        let final_index = indices.pop().unwrap();
-
-        // Move through the indices to get the final pointer
-        let mut dst = state.get_variable(&assignment.name).ok_or(Error::VariableName {
-            name: assignment.name.clone(),
-            token: assignment.token().clone(),
-        })?;
-        let mut ptr = &mut dst;
-        for index in &indices {
-            ptr = ptr.get_index_mut(index).to_error(&assignment.token)?;
-        }
-
-        // Set the value
-        ptr.set_index(&final_index, value.clone()).to_error(&assignment.token)?;
-
-        // Set state and return
-        state.set_variable(&assignment.name, dst);
-        Ok(value)
-    }
-);
-
-define_node!(
-    DestructuringAssignment {
-        names: Vec<String>,
-        value: Node
-    },
-    rules = [DESTRUCTURING_ASSIGNMENT_EXPRESSION],
-
-    new = |input:Pair<Rule>| {
-        let token = input.to_token();
-        let mut children = input.into_inner().rev();
-
-        let value = children.next().unwrap().to_ast_node()?; // last child is the value
-
-        let children = children.rev();
-
-        let mut names = Vec::new();
-        for next in children {
-            let name = next.as_str().to_string();
-            names.push(name);
-        }
-
-        Ok(Self {
-            names,
-            value,
-            token,
-        }.boxed())
-    },
-
-    value = |assignment: &DestructuringAssignment, state: &mut State| {
-        let value = (*assignment.value).get_value(state)?;
-        let values = value.clone().as_a::<Array>().to_error(&assignment.token)?.inner().clone();
-        if values.len() != assignment.names.len() {
-            return Err(Error::DestructuringAssignment {
-                expected_length: assignment.names.len(),
-                actual_length: values.len(),
-                token: assignment.token().clone(),
-            });
-        }
-
-        for (name, value) in assignment.names.iter().zip(values) {
-            state.set_variable(name, value);
-        }
-
-        Ok(value)
-    }
-);
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::{assert_tree, assert_tree_error};
-
-    #[test]
-    fn test_operative_assignment() {
-        assert_tree!(
-            "a += 1",
-            OPERATIVE_ASSIGNMENT_EXPRESSION,
-            OperativeAssignment,
-            |tree: &mut OperativeAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.operation, OperativeAssignmentOperation::Add);
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(1));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "2");
-            }
-        );
-
-        assert_tree!(
-            "a -= 1",
-            OPERATIVE_ASSIGNMENT_EXPRESSION,
-            OperativeAssignment,
-            |tree: &mut OperativeAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.operation, OperativeAssignmentOperation::Subtract);
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(1));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "0");
-            }
-        );
-
-        assert_tree!(
-            "a *= 2",
-            OPERATIVE_ASSIGNMENT_EXPRESSION,
-            OperativeAssignment,
-            |tree: &mut OperativeAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.operation, OperativeAssignmentOperation::Multiply);
-                assert_eq!(tree.value.to_string(), "2");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(2));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "4");
-            }
-        );
-
-        assert_tree!(
-            "a /= 2",
-            OPERATIVE_ASSIGNMENT_EXPRESSION,
-            OperativeAssignment,
-            |tree: &mut OperativeAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.operation, OperativeAssignmentOperation::Divide);
-                assert_eq!(tree.value.to_string(), "2");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(2));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "1");
-            }
-        );
-
-        let mut parser = crate::Lavendeux::new(Default::default());
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a %= 2").unwrap(), vec![0i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a **= 2").unwrap(), vec![4i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a &= 2").unwrap(), vec![2i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a |= 2").unwrap(), vec![2i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a ^= 2").unwrap(), vec![0i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a <<= 2").unwrap(), vec![8i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a >>= 2").unwrap(), vec![0i64.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a &&= 0").unwrap(), vec![false.into()]);
-
-        parser.state_mut().set_variable("a", Value::from(2));
-        assert_eq!(parser.parse("a ||= 0").unwrap(), vec![true.into()]);
-    }
-
-    #[test]
-    fn test_destructuring_assignment() {
-        assert_tree!(
-            "(a, b, c) = a",
-            DESTRUCTURING_ASSIGNMENT_EXPRESSION,
-            DestructuringAssignment,
-            |tree: &mut DestructuringAssignment| {
-                assert_eq!(tree.names.len(), 3);
-                assert_eq!(tree.names[0], "a");
-                assert_eq!(tree.names[1], "b");
-                assert_eq!(tree.names[2], "c");
-                assert_eq!(tree.value.to_string(), "a");
-
-                let mut state = State::new();
-                state.set_variable(
-                    "a",
-                    Value::from(vec![Value::from(1), Value::from(2), Value::from(3)]),
-                );
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "1");
-                assert_eq!(state.get_variable("b").unwrap().to_string(), "2");
-                assert_eq!(state.get_variable("c").unwrap().to_string(), "3");
-            }
-        );
-
-        let mut parser = crate::Lavendeux::new(Default::default());
-        assert!(parser.parse("(a, b) = [1]").is_err());
-        assert!(parser.parse("(a, b) = [1, 2, 3]").is_err());
-    }
-
-    #[test]
-    fn test_function_assignment() {
-        assert_tree!(
-            "test() = 1",
-            FUNCTION_ASSIGNMENT_STATEMENT,
-            FunctionAssignment,
-            |tree: &mut FunctionAssignment| {
-                assert_eq!(tree.name, "test");
-                assert_eq!(0, tree.arguments.len());
-                assert_eq!(tree.expressions, vec!["1"]);
-            }
-        );
-
-        assert_tree!(
-            "test(a) = 2*a",
-            FUNCTION_ASSIGNMENT_STATEMENT,
-            FunctionAssignment,
-            |tree: &mut FunctionAssignment| {
-                assert_eq!(tree.name, "test");
-                assert_eq!(tree.arguments[0], "a");
-                assert_eq!(tree.expressions, vec!["2*a"]);
-            }
-        );
-    }
-
-    #[test]
-    fn test_variable_assignment() {
-        assert_tree!(
-            "a = 1",
-            VARIABLE_ASSIGNMENT_EXPRESSION,
-            VariableAssignment,
-            |tree: &mut VariableAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "1");
-            }
-        );
-
-        assert_tree_error!("pi = 2", Syntax);
-    }
-
-    #[test]
-    fn test_index_assignment() {
-        assert_tree!(
-            "a[-1] = 1",
-            INDEX_ASSIGNMENT_EXPRESSION,
-            IndexAssignment,
-            |tree: &mut IndexAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.indices.len(), 1);
-                assert_eq!(tree.indices[0].to_string(), "-1");
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(vec![Value::from(0), Value::from(1)]));
-                let value = tree.get_value(&mut state).unwrap();
-                assert_eq!(value.to_string(), "1");
-            }
-        );
-
-        assert_tree!(
-            "a[2] = 1",
-            INDEX_ASSIGNMENT_EXPRESSION,
-            IndexAssignment,
-            |tree: &mut IndexAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.indices.len(), 1);
-                assert_eq!(tree.indices[0].to_string(), "2");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(vec![Value::from(0)]));
-                tree.get_value(&mut state)
-                    .expect_err("Should not be able to assign to out-of-bounds index");
-            }
-        );
-
-        assert_tree!(
-            "a[0] = 1",
-            INDEX_ASSIGNMENT_EXPRESSION,
-            IndexAssignment,
-            |tree: &mut IndexAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.indices.len(), 1);
-                assert_eq!(tree.indices[0].to_string(), "0");
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(vec![Value::from(0)]));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "[1]");
-            }
-        );
-
-        assert_tree!(
-            "a[0][1] = 1",
-            INDEX_ASSIGNMENT_EXPRESSION,
-            IndexAssignment,
-            |tree: &mut IndexAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.indices.len(), 2);
-                assert_eq!(tree.indices[0].to_string(), "0");
-                assert_eq!(tree.indices[1].to_string(), "1");
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable("a", Value::from(vec![Value::from(vec![Value::from(0)])]));
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "[[0, 1]]");
-            }
-        );
-
-        assert_tree!(
-            "a[0][0][1] = 1",
-            INDEX_ASSIGNMENT_EXPRESSION,
-            IndexAssignment,
-            |tree: &mut IndexAssignment| {
-                assert_eq!(tree.name, "a");
-                assert_eq!(tree.indices.len(), 3);
-                assert_eq!(tree.indices[0].to_string(), "0");
-                assert_eq!(tree.indices[1].to_string(), "0");
-                assert_eq!(tree.indices[2].to_string(), "1");
-                assert_eq!(tree.value.to_string(), "1");
-
-                let mut state = State::new();
-                state.set_variable(
-                    "a",
-                    Value::from(vec![Value::from(vec![Value::from(vec![Value::from(0)])])]),
-                );
-                tree.get_value(&mut state).unwrap();
-                assert_eq!(state.get_variable("a").unwrap().to_string(), "[[[0, 1]]]");
-            }
-        );
-    }
+        AssignmentOperation::None => rhs.clone(),
+    })
 }
