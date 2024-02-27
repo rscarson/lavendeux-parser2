@@ -7,7 +7,7 @@ This document will provide information on lavendish, a language focused on short
 It was created for use in Lavendeux (<https://rscarson.github.io/lavendeux/>).
 
 Inputs are a series of expressions separated by a newline, or a `;`.
-Lines can optionally end with an @decorator to format the output as a string (see `section 3.2`)
+Expressions can optionally end with an @decorator to format the output as a string (see `section 3.2`)
 
 Comments are either `//`, which turns the rest of the line into a comment
 Or a block comment bounded by /* and */
@@ -92,7 +92,7 @@ lazy_static! {
                     
                     But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
                     - Bool: a single-bit truth value [`true`, `false`]
-                    - Int: One of U8/I8 / U16/I16 / U32/I32 / U64/I64
+                    - Int: One of `U8/I8 / U16/I16 / U32/I32 / U64/I64`
                     - Float: A 64bit floating-point number [`1.0`, `.2`, `3e+7`]
                     - Fixed: A fixed-point decimal value [`1.22D`, `4D`]
                     - Currency: A fixed-point decimal value with a currency symbol [`$1`, `$2.00`, `3￥`]
@@ -106,11 +106,14 @@ lazy_static! {
                     - `0o77i16`
                     - `077`
                     - `0b1010_1010_1010_1010i32`
-                    Supported Currency symbols:
+
+                    Supported currency symbols:
+                    ```
                     $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
                     ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
                     ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
                     ￡ | ￥ | ￦
+                    ```
                 "
             },
 

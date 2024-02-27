@@ -7,9 +7,15 @@
         width: 20%;
         height: 100%;
         overflow: auto;
-        padding: 10px;
         background-color: #f8f8f8;
         border-right: 1px solid #ddd;
+        margin-left: -20px;
+        text-decoration: none;
+    }
+    #TOC>ul>li {        
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
     }
     #TOC ul {
         list-style-type: none;
@@ -19,33 +25,81 @@
         margin-left: 20%;
         padding: 20px;
         padding-left: 40px;
+
+        font-family: sans-serif;
     }
     </style>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script type="text/javascript">
-        hljs.register('lavendeux', () => ({
-            case_insensitive: true, // language is case-insensitive
-            keywords: 'for if while',
-            contains: [
-            {
-                className: 'string',
-                begin: '"',
-                end: '"'
-            },
-            hljs.COMMENT(
-                '/\\*', // begin
-                '\\*/', // end
-                {
-                contains: [{
-                    className: 'doc',
-                    begin: '@\\w+'
-                }]
-                }
-            )
-            ]
-        }))
+        hljs.registerLanguage('lavendeux', function(hljs) {
+  var COMMENT = hljs.COMMENT('//', '$');
+  var KEYWORDS = {
+    keyword: 'if then else for in do match skip continue break return as true false',
+    built_in: 'pi e tau',
+    literal: 'null undefined',
+    type: 'u8 i8 u16 i16 u32 i32 u64 i64 f32 f64 string bool array object',
+    meta: 'include',
+    _: 'matches contains starts_with ends_with'
+  };
+  var IDENTIFIER = {
+    begin: /[a-zA-Z_]\w*/,
+    illegal: /\W/,
+    keywords: KEYWORDS,
+    relevance: 0
+  };
+  var NUMBER = {
+    className: 'number',
+    variants: [
+      { begin: /0b[01][01_]*/, relevance: 0 },
+      { begin: /0o[0-7][0-7_]*/, relevance: 0 },
+      { begin: /0x[0-9a-fA-F][0-9a-fA-F_]*/, relevance: 0 },
+      { begin: /(?:\d[\d_]*)(?:\.(?!\d)|(?:(?:\.(?:\d[\d_]*)?)?(?:[eE][-+]?\d[\d_]*)))?/, relevance: 0 }
+    ],
+    relevance: 0
+  };
+  var STRING = {
+    className: 'string',
+    variants: [
+      { begin: /"/, end: /"/ },
+      { begin: /'/, end: /'/ }
+    ],
+    contains: [hljs.BACKSLASH_ESCAPE],
+    relevance: 0
+  };
+  var REGEX = {
+    className: 'regexp',
+    begin: /\//, end: /\/[gismuy]*/,
+    contains: [hljs.BACKSLASH_ESCAPE],
+    relevance: 0
+  };
+  var PREFIX_OP = {
+    className: 'keyword',
+    begin: /\@?[a-zA-Z_]\w*/,
+    relevance: 0
+  };
+  var INFIX_OP = {
+    className: 'operator',
+    begin: /[-+*/%^&|!<>=]=?|\.\.?|\?\:?|contains|matches|starts_with|ends_with/,
+    relevance: 0
+  };
+
+  return {
+    name: 'Lavendeux',
+    aliases: ['ld', 'lavendeux'],
+    keywords: KEYWORDS,
+    contains: [
+      COMMENT,
+      NUMBER,
+      STRING,
+      REGEX,
+      PREFIX_OP,
+      INFIX_OP,
+      IDENTIFIER
+    ]
+  };
+});
 
 
         hljs.highlightAll();

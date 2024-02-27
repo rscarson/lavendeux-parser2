@@ -1,11 +1,11 @@
 use super::{operator_documentation, DocumentationFormatter, FunctionsByCategory};
 
+#[allow(dead_code)]
 enum MarkdownSnippet {
     H1(String),
     H2(String),
     H3(String),
     H4(String),
-    H5(String),
 
     CodeBlock(String),
     CodeInline(String),
@@ -19,7 +19,6 @@ impl std::fmt::Display for MarkdownSnippet {
             MarkdownSnippet::H2(s) => write!(f, "## {}", s.trim()),
             MarkdownSnippet::H3(s) => write!(f, "### {}", s.trim()),
             MarkdownSnippet::H4(s) => write!(f, "#### {}", s.trim()),
-            MarkdownSnippet::H5(s) => write!(f, "##### {}", s.trim()),
             MarkdownSnippet::CodeBlock(s) => write!(f, "```lavendeux\n{}\n```", s.trim()),
             MarkdownSnippet::CodeInline(s) => write!(f, "`{}`", s.trim()),
             MarkdownSnippet::Text(s) => write!(f, "{}", s),
@@ -38,9 +37,9 @@ impl DocumentationFormatter for MarkdownFormatter {
         let function = state.get_function(name)?;
         let mut pieces = Vec::new();
 
-        pieces.push(MarkdownSnippet::H3(
-            MarkdownSnippet::CodeInline(function.signature().to_string()).to_string(),
-        ));
+        pieces.push(MarkdownSnippet::H3(function.name().to_string()));
+        pieces.push(MarkdownSnippet::CodeBlock(function.signature().to_string()));
+
         if let Some(desc) = function.documentation().description {
             pieces.push(MarkdownSnippet::Text(desc.to_string()));
         }
@@ -52,7 +51,7 @@ impl DocumentationFormatter for MarkdownFormatter {
         if let Some(examples) = function.documentation().examples {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
-                pieces.push(MarkdownSnippet::H4("Examples".to_string()));
+                pieces.push(MarkdownSnippet::Text(format!("**Examples:**  ",)));
                 pieces.push(MarkdownSnippet::CodeBlock(examples.to_string()));
             }
         }

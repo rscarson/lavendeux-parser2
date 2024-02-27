@@ -4,7 +4,7 @@ This document will provide information on lavendish, a language focused on short
 It was created for use in Lavendeux (<https://rscarson.github.io/lavendeux/>).
 
 Inputs are a series of expressions separated by a newline, or a `;`.
-Lines can optionally end with an @decorator to format the output as a string (see `section 3.2`)
+Expressions can optionally end with an @decorator to format the output as a string (see `section 3.2`)
 
 Comments are either `//`, which turns the rest of the line into a comment
 Or a block comment bounded by /* and */
@@ -23,7 +23,7 @@ Truth is determined by equivalence to 0, or by emptiness, depending on the type.
 
 But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
 - Bool: a single-bit truth value [`true`, `false`]
-- Int: One of U8/I8 / U16/I16 / U32/I32 / U64/I64
+- Int: One of `U8/I8 / U16/I16 / U32/I32 / U64/I64`
 - Float: A 64bit floating-point number [`1.0`, `.2`, `3e+7`]
 - Fixed: A fixed-point decimal value [`1.22D`, `4D`]
 - Currency: A fixed-point decimal value with a currency symbol [`$1`, `$2.00`, `3￥`]
@@ -37,11 +37,14 @@ Examples:
 - `0o77i16`
 - `077`
 - `0b1010_1010_1010_1010i32`
-Supported Currency symbols:
+
+Supported currency symbols:
+```
 $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
 ￡ | ￥ | ￦
+```
 
 ## Collection Types
 
@@ -403,113 +406,143 @@ match a {
 ```
 # Functions
 ## API Functions
-### `api_add(name:string, endpoint) -> string`
+### api_add
+```lavendeux
+api_add(name:string, endpoint) -> string
+```
 Registers an API
 This function registers an API with the system. The API can then be used to make requests to the specified endpoint.  
 The endpoint can be a string, or an object with the properties [ base_url, headers, description, examples, auth_key]  
 Use the 'api_get' and 'api_post' functions to make requests to the registered API  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_add('ipify', 'https://api.ipify.org')
 assert( api_list() contains 'ipify' )
 ```
 
 ------------
-### `api_all() -> object`
+### api_all
+```lavendeux
+api_all() -> object
+```
 Details all registered APIs
 This function returns an object containing the names and endpoints of all registered APIs  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_all()['chatgpt']['base_url']
 ```
 
 ------------
-### `api_get(name:string, [path:string]) -> string`
+### api_get
+```lavendeux
+api_get(name:string, [path:string]) -> string
+```
 Performs a GET request to a registered API
 This function performs a GET request to the specified path of a registered API.  
 The path is appended to the base URL of the API.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_get('ipify')
 api_get('ipify', '/?format=json')
 ```
 
 ------------
-### `api_key(name:string, auth_key:string) -> string`
+### api_key
+```lavendeux
+api_key(name:string, auth_key:string) -> string
+```
 Sets an authentication key for a registered API
 This function sets an authentication key for a registered API.  
 The key will be used in the 'Authorization' header of requests to the API.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_key('chatgpt', 'my_super_secret_api_key')
 assert_eq( api_all()['chatgpt']['auth_key'], 'my_super_secret_api_key' )
 ```
 
 ------------
-### `api_list() -> object`
+### api_list
+```lavendeux
+api_list() -> object
+```
 Lists all registered APIs
 This function returns an array containing the names of all registered APIs  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert( api_list() contains 'chatgpt' )
 ```
 
 ------------
-### `api_post(name:string, body:string, [path:string]) -> string`
+### api_post
+```lavendeux
+api_post(name:string, body:string, [path:string]) -> string
+```
 Performs a POST request to a registered API
 This function performs a POST request to the specified path of a registered API.  
 The path is appended to the base URL of the API.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_post('ipify', '{"name"="john"}', 'format=json')
 ```
 
 ------------
-### `api_rem(name:string) -> string`
+### api_rem
+```lavendeux
+api_rem(name:string) -> string
+```
 Unregisters an API
 This function unregisters an API with the system, and returns its name  
 The API can no longer be used to make requests  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_rem('ipify')
 assert( !(api_list() contains 'ipify') )
 ```
 
 ------------
-### `chatgpt(prompt:string) -> string`
+### chatgpt
+```lavendeux
+chatgpt(prompt:string) -> string
+```
 Performs a request to the ChatGPT API
 This function performs a request to the ChatGPT 3.5 API, using the specified prompt.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 api_key('chatgpt', 'my_super_secret_api_key')
 chatgpt('What is the meaning of life?')
 ```
 
 ## Bitwise Functions
-### `and(left:int, right:int) -> int`
+### and
+```lavendeux
+and(left:int, right:int) -> int
+```
 Performs a bitwise and operation on two integers
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(0b0100, and(0b1100, 0b0110))
 ```
 
 ------------
-### `llshift(value:int, shift:int) -> int`
+### llshift
+```lavendeux
+llshift(value:int, shift:int) -> int
+```
 Performs a logical bitwise left shift operation on an integer
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
 Will always ignore the sign bit.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     0b1000_0010i8,
@@ -518,12 +551,15 @@ assert_eq(
 ```
 
 ------------
-### `lrshift(value:int, shift:int) -> int`
+### lrshift
+```lavendeux
+lrshift(value:int, shift:int) -> int
+```
 Performs a logical bitwise right shift operation on an integer
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
 Will always ignore the sign bit.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     0b0100_0000i8,
@@ -532,42 +568,54 @@ assert_eq(
 ```
 
 ------------
-### `not(value:int) -> int`
+### not
+```lavendeux
+not(value:int) -> int
+```
 Performs a bitwise NOT operation on an integer
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(0b1111_1111u8, not(0b0000_0000u8))
 ```
 
 ------------
-### `or(left:int, right:int) -> int`
+### or
+```lavendeux
+or(left:int, right:int) -> int
+```
 Performs a bitwise or operation on two integers
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(0b1110, or(0b1100, 0b0110))
 ```
 
 ------------
-### `xor(left:int, right:int) -> int`
+### xor
+```lavendeux
+xor(left:int, right:int) -> int
+```
 Performs a bitwise xor operation on two integers
 Floats and Fixed-point numbers will be truncated to integers before the operation is performed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(0b1010, xor(0b1100, 0b0110))
 ```
 
 ## Collections Functions
-### `all(input:array) -> bool`
+### all
+```lavendeux
+all(input:array) -> bool
+```
 Returns true if all elements of the given array are truthy
 Returns true if all elements of the given array evaluate to true.  
 If the array is empty, true is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(all([true, true, true]), true);
 assert_eq(all([0, 1, 2]), false);
@@ -575,12 +623,15 @@ assert_eq(all([]), true);
 ```
 
 ------------
-### `any(input:array) -> bool`
+### any
+```lavendeux
+any(input:array) -> bool
+```
 Returns true if any element of the given array is truthy
 Returns true if any element of the given array evaluates to true.  
 If the array is empty, false is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(any([true, true, true]), true);
 assert_eq(any([0, 1, 2]), true);
@@ -588,12 +639,15 @@ assert_eq(any([]), false);
 ```
 
 ------------
-### `chunks(input:array, size:int) -> array`
+### chunks
+```lavendeux
+chunks(input:array, size:int) -> array
+```
 Splits the given array into chunks of the given size, and returns the resulting array of arrays
 Splits the given array into chunks of the given size.  
 The last chunk may be smaller than the given size.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(chunks([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
 assert_eq(chunks([1, 2, 3, 4, 5], 3), [[1, 2, 3], [4, 5]]);
@@ -601,14 +655,17 @@ assert_eq(chunks([1, 2, 3, 4, 5], 5), [[1, 2, 3, 4, 5]]);
 ```
 
 ------------
-### `dequeue(input:array) -> array`
+### dequeue
+```lavendeux
+dequeue(input:array) -> array
+```
 Removes and returns the first element of the given array
 Removes the first element from the given array and returns it.  
 If the array is empty, an error is returned.  
 If the input is a reference to an array in a variable, the variable is updated.  
 This function is less performant than `pop` for large arrays, as it requires shifting all elements by one position.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(dequeue([1, 2, 3]), 1);
 would_err('dequeue([]') // Array is empty, so an error is returned
@@ -619,13 +676,16 @@ assert_eq(a, [2]);
 ```
 
 ------------
-### `enqueue(input:array, value) -> array`
+### enqueue
+```lavendeux
+enqueue(input:array, value) -> array
+```
 Appends the given value to the start of the given array, and returns the result
 Appends the given value to the start of the given array.  
 If the input is a reference to an array in a variable, the variable is updated.  
 This function is less performant than `push` for large arrays, as it requires shifting all elements by one position.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(enqueue([1, 2], 3), [3, 1, 2])
 assert_eq(enqueue([], 3), [3])
@@ -636,12 +696,15 @@ assert_eq(a, [2, 1])
 ```
 
 ------------
-### `extend(left:array, right:array) -> array`
+### extend
+```lavendeux
+extend(left:array, right:array) -> array
+```
 Appends the elements of the second array to the first array, and returns the result
 The elements of the second array are appended to the first array.  
 The first array is updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(extend([1, 2], [3, 4]), [1, 2, 3, 4]);
 assert_eq(extend([], [3, 4]), [3, 4]);
@@ -653,12 +716,15 @@ assert_eq(a, [1, 2, 3, 4]);
 ```
 
 ------------
-### `first(input:array) -> any`
+### first
+```lavendeux
+first(input:array) -> any
+```
 Returns the first element of the given array
 Coerces its argument to an array and returns the first element.  
 If the resulting array is empty, an error is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(first([1, 2, 3]), 1);
 assert_eq(first(3),         3); // equivalent to first([3])
@@ -667,12 +733,15 @@ would_err('first([])'); // Array is empty, so an error is returned
 ```
 
 ------------
-### `flatten(input:array) -> array`
+### flatten
+```lavendeux
+flatten(input:array) -> array
+```
 Flattens the given array of arrays into a single array, and returns the result
 Flattens the given array of arrays into a single array.  
 The input array is not updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(flatten([[1, 2], [3, 4]]), [1, 2, 3, 4]);
 assert_eq(flatten([[1, 2], []]), [1, 2]);
@@ -680,13 +749,16 @@ assert_eq(flatten([[], []]), []);
 ```
 
 ------------
-### `insert(input:array, index:int, value) -> array`
+### insert
+```lavendeux
+insert(input:array, index:int, value) -> array
+```
 Inserts the given value at the given index in the given array, and returns the result
 Inserts the given value at the given index in the given array.  
 If the input is a reference to an array in a variable, the variable is updated.  
 If the index is out of bounds, an error is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(insert([1, 2, 3], 1, 4), [1, 4, 2, 3]);
 assert_eq(insert([1, 2, 3], 3, 4), [1, 2, 3, 4]);
@@ -700,13 +772,16 @@ assert_eq(a, [1, 4, 2, 3]);
 ```
 
 ------------
-### `is_empty(input) -> bool`
+### is_empty
+```lavendeux
+is_empty(input) -> bool
+```
 Returns true if the given array or object is empty
 For arrays and objects, this function returns true if the array or object has no elements.  
 For strings, it returns true if the string is empty.  
 For all other types it will return false  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(is_empty([]),     true);
 assert_eq(is_empty({}),     true);
@@ -715,24 +790,30 @@ assert_eq(is_empty(38),     false);
 ```
 
 ------------
-### `keys(input:object) -> array`
+### keys
+```lavendeux
+keys(input:object) -> array
+```
 Returns an array of the keys of the given object
 Returns an array of the keys of the given object.  
 The order of the keys is not guaranteed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(keys({'a': 1, 'b': 2}), ['a', 'b']);
 assert_eq(keys({}), []);
 ```
 
 ------------
-### `last(input:array) -> any`
+### last
+```lavendeux
+last(input:array) -> any
+```
 Returns the last element of the given array
 Coerces its argument to an array and returns the last element.  
 If the resulting array is empty, an error is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(last([1, 2, 3]), 3);
 assert_eq(last(3),         3); // equivalent to last([3])
@@ -741,13 +822,16 @@ would_err('last([])'); // Array is empty, so an error is returned
 ```
 
 ------------
-### `len(input) -> int`
+### len
+```lavendeux
+len(input) -> int
+```
 Returns the length of the given array or object
 For arrays and objects, this function returns the number of elements in the array or object.  
 For strings, it returns the number of characters.  
 For all other types it will return 1  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(len('test'),       4);
 assert_eq(len([1, 2, 3]),    3);
@@ -756,12 +840,15 @@ assert_eq(len(38),           1);
 ```
 
 ------------
-### `merge(left:array, right:array) -> array`
+### merge
+```lavendeux
+merge(left:array, right:array) -> array
+```
 Merges the two given arrays into a single array, and returns the result
 The two input arrays are concatenated into a single new array.  
 The input arrays are not updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(merge([1, 2], [3, 4]), [1, 2, 3, 4]);
 assert_eq(merge([], [3, 4]), [3, 4]);
@@ -769,13 +856,16 @@ assert_eq(merge([1, 2], []), [1, 2]);
 ```
 
 ------------
-### `pop(input:array) -> any`
+### pop
+```lavendeux
+pop(input:array) -> any
+```
 Removes and returns the last element of the given array
 Removes the last element from the given array and returns it.  
 If the array is empty, an error is returned.  
 If the input is a reference to an array in a variable, the variable is updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(pop([1, 2, 3]), 3);
 would_err('pop([]') // Array is empty, so an error is returned
@@ -786,12 +876,15 @@ assert_eq(a, []);
 ```
 
 ------------
-### `push(input:array, value) -> array`
+### push
+```lavendeux
+push(input:array, value) -> array
+```
 Appends the given value to the end of the given array, and returns the result
 Appends the given value to the end of the given array.  
 If the input is a reference to an array in a variable, the variable is updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(push([1, 2], 3), [1, 2, 3]);
 assert_eq(push([], 3), [3]);
@@ -802,13 +895,16 @@ assert_eq(a, [1, 2]);
 ```
 
 ------------
-### `remove(input:array, index:int) -> array`
+### remove
+```lavendeux
+remove(input:array, index:int) -> array
+```
 Removes the element at the given index in the given array, and returns value
 Removes the element at the given index in the given array.  
 If the input is a reference to an array in a variable, the variable is updated.  
 If the index is out of bounds, an error is returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(remove([1, 2, 3], 1), 2);
 assert_eq(remove([1, 2, 3], 2), 3);
@@ -822,36 +918,45 @@ assert_eq(a, [1, 3]);
 ```
 
 ------------
-### `reverse(input:array) -> array`
+### reverse
+```lavendeux
+reverse(input:array) -> array
+```
 Reverses the given array, and returns the result
 The resulting array is the reverse of the input array.  
 The original array is not updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(reverse([1, 2, 3]), [3, 2, 1]);
 assert_eq(reverse(['a', 'b', 'c']), ['c', 'b', 'a']);
 ```
 
 ------------
-### `sort(input:array) -> array`
+### sort
+```lavendeux
+sort(input:array) -> array
+```
 Sorts the given array, and returns the result
 The resulting array is sorted in ascending order by value.  
 The original array is not updated.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(sort([3, 1, 2]), [1, 2, 3]);
 assert_eq(sort(['c', 'a', 'b']), ['a', 'b', 'c']);
 ```
 
 ------------
-### `split(input:array, index:int) -> array`
+### split
+```lavendeux
+split(input:array, index:int) -> array
+```
 Splits the given array at the given index, and returns the two resulting arrays
 If the index is out of bounds, an error is returned.  
 Returns start-to-index (excluding index) and index-to-end (including index) arrays.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(split([1, 2, 3, 4], 2), [[1, 2], [3, 4]]);
 assert_eq(split([1, 2, 3, 4], 0), [[], [1, 2, 3, 4]]);
@@ -861,24 +966,30 @@ would_err('split([1, 2, 3, 4], 5)') // Index out of bounds
 ```
 
 ------------
-### `values(input:object) -> array`
+### values
+```lavendeux
+values(input:object) -> array
+```
 Returns an array of the values of the given object
 Returns an array of the values of the given object.  
 The order of the values is not guaranteed.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(values({'a': 1, 'b': 2}), [1, 2]);
 assert_eq(values({}), []);
 ```
 
 ------------
-### `zip(left:array, right:array) -> array`
+### zip
+```lavendeux
+zip(left:array, right:array) -> array
+```
 Zips the two given arrays into an array of pairs, and returns the result
 Zips the two given arrays into an array of pairs.  
 If the input arrays are of different lengths, the resulting array will have the length of the shortest input array.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(zip([1, 2, 3], [4, 5, 6]), [[1, 4], [2, 5], [3, 6]]);
 assert_eq(zip([1, 2], [4, 5, 6]), [[1, 4], [2, 5]]);
@@ -886,22 +997,28 @@ assert_eq(zip([1, 2, 3], [4, 5]), [[1, 4], [2, 5]]);
 ```
 
 ------------
-### `zop(left:array, right:array) -> array`
+### zop
+```lavendeux
+zop(left:array, right:array) -> array
+```
 Zips the two given arrays into an array of pairs, and converts in to an object
 Zips the two given arrays into an array of pairs, then converts the result to object  
 If the input arrays are of different lengths, the result will have the length of the shortest input array.  
 Will fail if any resulting keys would be invalid (collections cannot be used as object keys)  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(zop(['a', 'b', 'c'], [1, 2, 3]), {'a': 1, 'b': 2, 'c': 3});
 ```
 
 ## Cryptographic Functions
-### `md5(input:string) -> string`
+### md5
+```lavendeux
+md5(input:string) -> string
+```
 Returns the md5 hash of a given string
 Will return an unsalted md5 hash of the input string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     md5('hello'),
@@ -910,10 +1027,13 @@ assert_eq(
 ```
 
 ------------
-### `sha256(input:string) -> string`
+### sha256
+```lavendeux
+sha256(input:string) -> string
+```
 Returns the sha256 hash of a given string
 Will return an unsalted sha256 hash of the input string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     sha256('hello'),
@@ -922,10 +1042,13 @@ assert_eq(
 ```
 
 ------------
-### `sha512(input:string) -> string`
+### sha512
+```lavendeux
+sha512(input:string) -> string
+```
 Returns the sha512 hash of a given string
 Will return an unsalted sha512 hash of the input string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     sha512('hello'),
@@ -934,10 +1057,13 @@ assert_eq(
 ```
 
 ## Decorators Functions
-### `@aud(input:numeric) -> string`
+### @aud
+```lavendeux
+@aud(input:numeric) -> string
+```
 Interprets a number as a AUD amount
 Includes a dollar sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @aud,
@@ -946,10 +1072,13 @@ assert_eq(
 ```
 
 ------------
-### `@bin(input:numeric) -> string`
+### @bin
+```lavendeux
+@bin(input:numeric) -> string
+```
 Base 2 number formatting, such as 0b101
 Converts a number to a binary string. The output will be prefixed with '0b' with a length based on the input type.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     255 @bin,
@@ -958,10 +1087,13 @@ assert_eq(
 ```
 
 ------------
-### `@bool(input) -> string`
+### @bool
+```lavendeux
+@bool(input) -> string
+```
 Boolean formatting
 Converts a number to a boolean string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     1 @bool,
@@ -971,10 +1103,13 @@ assert_eq(
 ```
 
 ------------
-### `@cad(input:numeric) -> string`
+### @cad
+```lavendeux
+@cad(input:numeric) -> string
+```
 Interprets a number as a CAD amount
 Includes a dollar sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @cad,
@@ -983,10 +1118,13 @@ assert_eq(
 ```
 
 ------------
-### `@cny(input:numeric) -> string`
+### @cny
+```lavendeux
+@cny(input:numeric) -> string
+```
 Interprets a number as a CNY amount
 Includes a yuan sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @cny,
@@ -995,10 +1133,13 @@ assert_eq(
 ```
 
 ------------
-### `@eur(input:numeric) -> string`
+### @eur
+```lavendeux
+@eur(input:numeric) -> string
+```
 Interprets a number as a Euro amount
 Includes a euro sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @eur,
@@ -1007,10 +1148,13 @@ assert_eq(
 ```
 
 ------------
-### `@float(input:numeric) -> string`
+### @float
+```lavendeux
+@float(input:numeric) -> string
+```
 Floating point number formatting
 Converts a number to a floating point string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     1.0 @float,
@@ -1019,10 +1163,13 @@ assert_eq(
 ```
 
 ------------
-### `@gbp(input:numeric) -> string`
+### @gbp
+```lavendeux
+@gbp(input:numeric) -> string
+```
 Interprets a number as a GBP amount
 Includes a pound sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @gbp,
@@ -1031,10 +1178,13 @@ assert_eq(
 ```
 
 ------------
-### `@hex(input:numeric) -> string`
+### @hex
+```lavendeux
+@hex(input:numeric) -> string
+```
 Base 16 number formatting, such as 0xFF
 Converts a number to a hexadecimal string. The output will be prefixed with '0x' with a length based on the input type.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     255 @hex,
@@ -1043,10 +1193,13 @@ assert_eq(
 ```
 
 ------------
-### `@inr(input:numeric) -> string`
+### @inr
+```lavendeux
+@inr(input:numeric) -> string
+```
 Interprets a number as a INR amount
 Includes a rupee sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @inr,
@@ -1055,10 +1208,13 @@ assert_eq(
 ```
 
 ------------
-### `@int(input:numeric) -> string`
+### @int
+```lavendeux
+@int(input:numeric) -> string
+```
 Integer number formatting
 Converts a number to an integer string.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     1000000 @int,
@@ -1067,10 +1223,13 @@ assert_eq(
 ```
 
 ------------
-### `@jpy(input:numeric) -> string`
+### @jpy
+```lavendeux
+@jpy(input:numeric) -> string
+```
 Interprets a number as a JPY amount
 Includes a yen sign and no decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @jpy,
@@ -1079,10 +1238,13 @@ assert_eq(
 ```
 
 ------------
-### `@oct(input:numeric) -> string`
+### @oct
+```lavendeux
+@oct(input:numeric) -> string
+```
 Base 8 number formatting, such as 0o77
 Converts a number to an octal string. The output will be prefixed with '0o' with a length based on the input type.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     255 @oct,
@@ -1091,10 +1253,13 @@ assert_eq(
 ```
 
 ------------
-### `@ord(input:numeric) -> string`
+### @ord
+```lavendeux
+@ord(input:numeric) -> string
+```
 Interprets an integer as an ordinal number
 This function will append the appropriate suffix to the input number.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     123 @ord,
@@ -1103,10 +1268,13 @@ assert_eq(
 ```
 
 ------------
-### `@percent(input:numeric) -> string`
+### @percent
+```lavendeux
+@percent(input:numeric) -> string
+```
 Interprets a number as a percentage
 This function will append a percentage sign to the input number times 100  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     0.123 @percent,
@@ -1116,10 +1284,13 @@ assert_eq(
 ```
 
 ------------
-### `@roman(input:numeric) -> string`
+### @roman
+```lavendeux
+@roman(input:numeric) -> string
+```
 Interprets an integer as a roman numeral
 Like the roman system before it; this function only supports numbers up to 3999.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     123 @roman,
@@ -1128,10 +1299,13 @@ assert_eq(
 ```
 
 ------------
-### `@rub(input:numeric) -> string`
+### @rub
+```lavendeux
+@rub(input:numeric) -> string
+```
 Interprets a number as a RUB amount
 Includes a ruble sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @rub,
@@ -1140,10 +1314,13 @@ assert_eq(
 ```
 
 ------------
-### `@sci(input:numeric) -> string`
+### @sci
+```lavendeux
+@sci(input:numeric) -> string
+```
 Scientific notation
 Converts a floating point number to sci notation.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     1000000.0 @sci,
@@ -1152,10 +1329,13 @@ assert_eq(
 ```
 
 ------------
-### `@usd(input:numeric) -> string`
+### @usd
+```lavendeux
+@usd(input:numeric) -> string
+```
 Interprets a number as a USD amount
 Includes a dollar sign and two decimal places.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     100 @usd,
@@ -1164,10 +1344,13 @@ assert_eq(
 ```
 
 ------------
-### `@utc(input:numeric) -> string`
+### @utc
+```lavendeux
+@utc(input:numeric) -> string
+```
 Interprets an integer as a timestamp, and formats it in UTC standard
 This function will convert the input number to a UTC timestamp.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     123 @utc,
@@ -1176,10 +1359,13 @@ assert_eq(
 ```
 
 ## Development Functions
-### `tail(file:string, [lines:int]) -> array`
+### tail
+```lavendeux
+tail(file:string, [lines:int]) -> array
+```
 Returns the last <lines> lines from a given file
 If <lines> is not specified, the function will return the last line of the file.  
-#### Examples
+**Examples:**  
 ```lavendeux
 lines = tail('.gitignore')
 assert_eq(
@@ -1189,11 +1375,14 @@ assert_eq(
 ```
 
 ------------
-### `time() -> float`
+### time
+```lavendeux
+time() -> float
+```
 Returns a unix timestamp for the current system time
 Returns a unix timestamp for the current system time.  
 The timestamp is a floating point number representing the number of seconds since the Unix epoch.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert(
     time() > 0
@@ -1201,11 +1390,14 @@ assert(
 ```
 
 ## Math Functions
-### `abs(value:numeric) -> numeric`
+### abs
+```lavendeux
+abs(value:numeric) -> numeric
+```
 Returns the absolute value of a number
 The function will return the absolute value of the input number.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     abs(-5),
@@ -1214,12 +1406,15 @@ assert_eq(
 ```
 
 ------------
-### `ceil(value:numeric) -> numeric`
+### ceil
+```lavendeux
+ceil(value:numeric) -> numeric
+```
 Rounds a number up to the nearest whole number
 The function will round the input number up to the nearest whole number.  
 If the input number is already a whole number, the function will return the input number.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     ceil(1.5),
@@ -1228,12 +1423,15 @@ assert_eq(
 ```
 
 ------------
-### `floor(value:numeric) -> numeric`
+### floor
+```lavendeux
+floor(value:numeric) -> numeric
+```
 Rounds a number down to the nearest whole number
 The function will round the input number down to the nearest whole number.  
 If the input number is already a whole number, the function will return the input number.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     floor(1.5),
@@ -1242,10 +1440,13 @@ assert_eq(
 ```
 
 ------------
-### `ilog2(value:int) -> numeric`
+### ilog2
+```lavendeux
+ilog2(value:int) -> numeric
+```
 Returns the base-2 logarithm of a number, rounded down to the nearest whole number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     ilog2(8),
@@ -1254,10 +1455,13 @@ assert_eq(
 ```
 
 ------------
-### `ln(value:numeric) -> numeric`
+### ln
+```lavendeux
+ln(value:numeric) -> numeric
+```
 Returns the natural logarithm of a number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     ln(2.718281828459045),
@@ -1266,10 +1470,13 @@ assert_eq(
 ```
 
 ------------
-### `log(value:numeric, [base:numeric]) -> numeric`
+### log
+```lavendeux
+log(value:numeric, [base:numeric]) -> numeric
+```
 Returns the logarithm of a number to a given base
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     log(8, 2),
@@ -1278,10 +1485,13 @@ assert_eq(
 ```
 
 ------------
-### `log10(value:numeric) -> numeric`
+### log10
+```lavendeux
+log10(value:numeric) -> numeric
+```
 Returns the base-10 logarithm of a number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     log10(100),
@@ -1290,10 +1500,13 @@ assert_eq(
 ```
 
 ------------
-### `log2(value:numeric) -> numeric`
+### log2
+```lavendeux
+log2(value:numeric) -> numeric
+```
 Returns the base-2 logarithm of a number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     log2(8),
@@ -1302,12 +1515,15 @@ assert_eq(
 ```
 
 ------------
-### `max(options:array) -> numeric`
+### max
+```lavendeux
+max(options:array) -> numeric
+```
 Returns the largest value in the given array
 The array can contain any number of elements, and they can be of any type.  
 Since all values in lavendeux are comparable, the function will work with any type of array.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     max([1, 2, 3, 4, 5]),
@@ -1316,12 +1532,15 @@ assert_eq(
 ```
 
 ------------
-### `min(options:array) -> numeric`
+### min
+```lavendeux
+min(options:array) -> numeric
+```
 Returns the smallest value in the given array
 The array can contain any number of elements, and they can be of any type.  
 Since all values in lavendeux are comparable, the function will work with any type of array.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     min([1, 2, 3, 4, 5]),
@@ -1330,10 +1549,13 @@ assert_eq(
 ```
 
 ------------
-### `root(value:numeric, root:numeric) -> numeric`
+### root
+```lavendeux
+root(value:numeric, root:numeric) -> numeric
+```
 Returns the nth root of a number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     root(8, 3),
@@ -1342,12 +1564,15 @@ assert_eq(
 ```
 
 ------------
-### `round(value:numeric, [precision:int]) -> numeric`
+### round
+```lavendeux
+round(value:numeric, [precision:int]) -> numeric
+```
 Rounds a number to the nearest whole number
 The function will round the input number to the nearest whole number.  
 If the input number is already a whole number, the function will return the input number.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     round(1.5),
@@ -1356,10 +1581,13 @@ assert_eq(
 ```
 
 ------------
-### `sqrt(value:numeric) -> numeric`
+### sqrt
+```lavendeux
+sqrt(value:numeric) -> numeric
+```
 Returns the square root of a number
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     sqrt(9),
@@ -1368,12 +1596,15 @@ assert_eq(
 ```
 
 ## Network Functions
-### `get(url:string, [headers:object]) -> string`
+### get
+```lavendeux
+get(url:string, [headers:object]) -> string
+```
 Performs an HTTP GET request
 This function performs an HTTP GET request to the specified URL.  
 If the request fails, this function will return an error or time out  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 str_out = get('https://jsonplaceholder.typicode.com/users')
 obj_out = get('https://jsonplaceholder.typicode.com/users', {
@@ -1384,12 +1615,15 @@ assert(obj_out is array)
 ```
 
 ------------
-### `post(url:string, body:string, [headers:object]) -> string`
+### post
+```lavendeux
+post(url:string, body:string, [headers:object]) -> string
+```
 Performs an HTTP POST request
 This function performs an HTTP POST request to the specified URL.  
 If the request fails, this function will return an error or time out  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 obj_out = post(
     'https://jsonplaceholder.typicode.com/users', 
@@ -1399,21 +1633,27 @@ obj_out = post(
 ```
 
 ------------
-### `resolve(hostname:string) -> string`
+### resolve
+```lavendeux
+resolve(hostname:string) -> string
+```
 Resolves a hostname to an IP address
 This function uses the system's DNS resolver to resolve a hostname to an IP address.  
 If the hostname cannot be resolved, this function will return an error, or time out  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 resolve('example.com')
 ```
 
 ## Random Functions
-### `choose(options:array) -> string`
+### choose
+```lavendeux
+choose(options:array) -> string
+```
 Returns a random element from a given array
 Uses a uniform distribution to select a random element from the input array.  
-#### Examples
+**Examples:**  
 ```lavendeux
 s = ['a', 'b', 'c']
 assert(
@@ -1422,12 +1662,15 @@ assert(
 ```
 
 ------------
-### `rand([range:range]) -> numeric`
+### rand
+```lavendeux
+rand([range:range]) -> numeric
+```
 Returns a random number within a given range, or between 0 and 1 if no range is specified.
 If no range is specified, the function will return a random number between 0 and 1.  
 If a range is specified, the function will return a random number within that range.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 r = rand(0..10)
 assert(
@@ -1436,78 +1679,102 @@ assert(
 ```
 
 ## String Functions
-### `base64_decode(s:string) -> string`
+### base64_decode
+```lavendeux
+base64_decode(s:string) -> string
+```
 Decodes a base64 string into a string.
 This function will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello world', base64_decode('aGVsbG8gd29ybGQ='))
 ```
 
 ------------
-### `base64_encode(s:string) -> string`
+### base64_encode
+```lavendeux
+base64_encode(s:string) -> string
+```
 Encodes a string into base64
 This function will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('aGVsbG8gd29ybGQ=', base64_encode('hello world'))
 ```
 
 ------------
-### `chr(i:i64) -> string`
+### chr
+```lavendeux
+chr(i:i64) -> string
+```
 Returns a string containing the character represented by the Unicode code point.
 This is the complement of ord(); Output from one is valid input for the other.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('a', chr(97))
 ```
 
 ------------
-### `concat(parts:array, [joiner:string]) -> string`
+### concat
+```lavendeux
+concat(parts:array, [joiner:string]) -> string
+```
 Concatenates an array of values into a single string.
 Converts all its arguments to strings and then concatenates them.  
 If a joiner is provided, it will be used to separate the parts.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello world', concat(['hello', ' ', 'world']))
 ```
 
 ------------
-### `format(s:string, args:array) -> string`
+### format
+```lavendeux
+format(s:string, args:array) -> string
+```
 Formats a string using positional arguments.
 The 2nd argument is an array of values to be consumed in order  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello world', format('hello {}', ['world']))
 ```
 
 ------------
-### `lowercase(s:string) -> string`
+### lowercase
+```lavendeux
+lowercase(s:string) -> string
+```
 Converts a string to lowercase.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello', lowercase('HELLO'))
 ```
 
 ------------
-### `ord(c:string) -> i64`
+### ord
+```lavendeux
+ord(c:string) -> i64
+```
 Returns the Unicode code point of the character at the specified index.
 Will always return a 32bit value, regardless of the width of the character.  
 This is the complement of chr(); Output from one is valid input for the other.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(97u32, ord('a'))
 ```
 
 ------------
-### `prettyjson(s:object) -> string`
+### prettyjson
+```lavendeux
+prettyjson(s:object) -> string
+```
 Formats a JSON string for human readability.
 This function will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     '{
@@ -1518,107 +1785,140 @@ assert_eq(
 ```
 
 ------------
-### `repeat(s:string, n:i64) -> string`
+### repeat
+```lavendeux
+repeat(s:string, n:i64) -> string
+```
 Repeats a string a specified number of times.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hellohellohello', repeat('hello', 3))
 ```
 
 ------------
-### `replace(s:string, from:string, to:string) -> string`
+### replace
+```lavendeux
+replace(s:string, from:string, to:string) -> string
+```
 Replaces all occurrences of a substring within a string with another string.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello world', replace('hello there', 'there', 'world'))
 ```
 
 ------------
-### `trim(s:string) -> string`
+### trim
+```lavendeux
+trim(s:string) -> string
+```
 Removes leading and trailing whitespace from a string.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello', trim('  hello  '))
 ```
 
 ------------
-### `trim_end(s:string) -> string`
+### trim_end
+```lavendeux
+trim_end(s:string) -> string
+```
 Removes trailing whitespace from a string.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('  hello', trim_end('  hello  '))
 ```
 
 ------------
-### `trim_start(s:string) -> string`
+### trim_start
+```lavendeux
+trim_start(s:string) -> string
+```
 Removes leading whitespace from a string.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello  ', trim_start('  hello  '))
 ```
 
 ------------
-### `uppercase(s:string) -> string`
+### uppercase
+```lavendeux
+uppercase(s:string) -> string
+```
 Converts a string to uppercase.
 This function is locale-insensitive and will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('HELLO', uppercase('hello'))
 ```
 
 ------------
-### `url_decode(s:string) -> string`
+### url_decode
+```lavendeux
+url_decode(s:string) -> string
+```
 Decodes a URL-safe string into a normal string.
 This function will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello world', url_decode('hello%20world'))
 ```
 
 ------------
-### `url_encode(s:string) -> string`
+### url_encode
+```lavendeux
+url_encode(s:string) -> string
+```
 Encodes a string as a URL-safe string.
 This function will handle all Unicode characters.  
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('hello%20world', url_encode('hello world'))
 ```
 
 ## System Functions
-### `assert(condition) -> any`
+### assert
+```lavendeux
+assert(condition) -> any
+```
 Throws an error if the condition is false
 Does a weak-comparison to boolean, so 0, '', [], etc. are all considered false.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert(true)
 assert( would_err('assert(false)') )
 ```
 
 ------------
-### `assert_eq(condition, expected) -> any`
+### assert_eq
+```lavendeux
+assert_eq(condition, expected) -> any
+```
 Asserts that 2 values are equal
 Raises an error if the condition is not equal to the expected value.  
 Also verifies type, as opposed to the `==` operator, which uses weak typing.  
 use assert(a == b) if you want to compare values without checking their types.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(true, true)
 assert_eq( true, would_err('assert_eq(1, true)') )
 ```
 
 ------------
-### `assign(name:string, value) -> any`
+### assign
+```lavendeux
+assign(name:string, value) -> any
+```
 Assigns a variable in the current scope
 Writes a value to the current scope, leaving other scopes unchanged.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 x = 5
 if true then {
@@ -1629,11 +1929,14 @@ assert_eq(5, x)
 ```
 
 ------------
-### `assign_global(name:string, value) -> any`
+### assign_global
+```lavendeux
+assign_global(name:string, value) -> any
+```
 Assigns a variable in the top-level scope
 Writes a value to the top-level scope, leaving other scopes unchanged.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 x = 5
 if true then {
@@ -1644,46 +1947,58 @@ assert_eq(6, x)
 ```
 
 ------------
-### `call_function(name:string, args:array) -> any`
+### call_function
+```lavendeux
+call_function(name:string, args:array) -> any
+```
 Calls a function or @decorator by name with the given arguments
 If the name begins with '@', it will be treated as a decorator.  
 Maps the given object to the function's arguments and calls the function.  
 Important note: Functions that take in a reference, such as pop/push etc, will act by-value and not modify the original object.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 @test(x) = x
 assert_eq('5', call_function('@test', {'x': 5}))
 ```
 
 ------------
-### `debug(msg:string) -> any`
+### debug
+```lavendeux
+debug(msg:string) -> any
+```
 Prints a debug message to the console
 The message will be both written to stdout, and returned as a string.  
 If the parser is not attached to a console, it will not be visible.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 debug("This is a debug message")
 ```
 
 ------------
-### `error(msg:string) -> any`
+### error
+```lavendeux
+error(msg:string) -> any
+```
 Throws an error with the given message
 Throws an exception with a custom message. The error's source will be the line where the error was thrown.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 would_err('error("This is an error")')
 ```
 
 ------------
-### `eval(expression:string) -> any`
+### eval
+```lavendeux
+eval(expression:string) -> any
+```
 Evaluates a string as a Lavendeux expression and returns the result
 The string will be interpreted as a script and evaluated in it's own scope.  
 If there are multiple lines, an array of values will be returned.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(5, eval('2 + 3'))
 assert_eq([6, 6], eval('x = 6; x'))
@@ -1691,32 +2006,41 @@ assert_eq([1, 2, 3], eval('1\n2\n3'))
 ```
 
 ------------
-### `generate_documentation() -> string`
+### generate_documentation
+```lavendeux
+generate_documentation() -> string
+```
 Generates documentation for all standard library functions
 Returns a markdown-formatted string containing documentation for all standard library functions.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 generate_documentation()
 ```
 
 ------------
-### `include(filename:string) -> any`
+### include
+```lavendeux
+include(filename:string) -> any
+```
 Evaluates a file as a Lavendeux expression and returns the result
 The file will be interpreted as a script and evaluated in it's own scope.  
 Returns an empty string in all cases.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 include('examples/stdlib_example.lav')
 ```
 
 ------------
-### `typeof(value) -> string`
+### typeof
+```lavendeux
+typeof(value) -> string
+```
 Returns the type of its input
 Returns the type of the given value as a string.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq('string', typeof('hello'))
 assert_eq('i64', typeof(5))
@@ -1724,11 +2048,14 @@ assert_eq('object', typeof({}))
 ```
 
 ------------
-### `variables() -> object`
+### variables
+```lavendeux
+variables() -> object
+```
 Returns the currently defined variables
 Returns a map of all the variables currently defined in the current scope.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 x = 5; y = 6
 state = variables()
@@ -1737,145 +2064,184 @@ assert_eq(6, state['y'])
 ```
 
 ------------
-### `would_err(expression:string) -> bool`
+### would_err
+```lavendeux
+would_err(expression:string) -> bool
+```
 Returns true if the given expression would raise an error
 Returns true if expression given by the string would raise an error, false otherwise.  
 This is useful for testing error messages.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( false, would_err('1 + 1') )
 assert_eq( true, would_err('1 + asparagus') )
 ```
 
 ## Trigonometry Functions
-### `acos(n:numeric) -> float`
+### acos
+```lavendeux
+acos(n:numeric) -> float
+```
 Calculate the acos of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, acos(1) )
 ```
 
 ------------
-### `acosh(n:numeric) -> float`
+### acosh
+```lavendeux
+acosh(n:numeric) -> float
+```
 Calculate the acosh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, acosh(1) )
 ```
 
 ------------
-### `asin(n:numeric) -> float`
+### asin
+```lavendeux
+asin(n:numeric) -> float
+```
 Calculate the asin of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, asin(0) )
 ```
 
 ------------
-### `asinh(n:numeric) -> float`
+### asinh
+```lavendeux
+asinh(n:numeric) -> float
+```
 Calculate the asinh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, asinh(0) )
 ```
 
 ------------
-### `atan(n:numeric) -> float`
+### atan
+```lavendeux
+atan(n:numeric) -> float
+```
 Calculate the atan of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, atan(0) )
 ```
 
 ------------
-### `atanh(n:numeric) -> float`
+### atanh
+```lavendeux
+atanh(n:numeric) -> float
+```
 Calculate the atanh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, atanh(0) )
 ```
 
 ------------
-### `cos(n:numeric) -> float`
+### cos
+```lavendeux
+cos(n:numeric) -> float
+```
 Calculate the cos of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 1.0, cos(0) )
 ```
 
 ------------
-### `cosh(n:numeric) -> float`
+### cosh
+```lavendeux
+cosh(n:numeric) -> float
+```
 Calculate the cosh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 1.0, cosh(0) )
 ```
 
 ------------
-### `sin(n:numeric) -> float`
+### sin
+```lavendeux
+sin(n:numeric) -> float
+```
 Calculate the sin of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, sin(0) )
 ```
 
 ------------
-### `sinh(n:numeric) -> float`
+### sinh
+```lavendeux
+sinh(n:numeric) -> float
+```
 Calculate the sinh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, sinh(0) )
 ```
 
 ------------
-### `tan(n:numeric) -> float`
+### tan
+```lavendeux
+tan(n:numeric) -> float
+```
 Calculate the tan of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, tan(0) )
 ```
 
 ------------
-### `tanh(n:numeric) -> float`
+### tanh
+```lavendeux
+tanh(n:numeric) -> float
+```
 Calculate the tanh of n
 Returns a result for the angle n (in radians).  
 You can use the `to_degrees` and `to_radians` functions to convert between degrees and radians.  
   
-#### Examples
+**Examples:**  
 ```lavendeux
 assert_eq( 0.0, tanh(0) )
 ```
