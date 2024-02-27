@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! define_prattnode {
     (
         $name:ident {$($param:ident : $param_t:ty),+},

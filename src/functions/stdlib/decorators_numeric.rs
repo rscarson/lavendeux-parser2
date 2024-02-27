@@ -1,4 +1,4 @@
-use crate::{define_stddecorator, functions::std_function::ParserFunction, oops, Error, State};
+use crate::{define_stddecorator, functions::std_function::ParserFunction, Error, State};
 use polyvalue::{operations::ArithmeticOperationExt, types::I64, Value, ValueTrait};
 
 define_stddecorator!(

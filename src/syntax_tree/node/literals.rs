@@ -6,9 +6,8 @@ use std::str::FromStr;
 
 use super::*;
 use crate::{
-    define_prattnode,
     error::{ErrorDetails, WrapExternalError},
-    oops, Rule, State, ToToken,
+    Rule, State, ToToken,
 };
 use pest::iterators::Pair;
 use polyvalue::{types::*, Value, ValueTrait, ValueType};

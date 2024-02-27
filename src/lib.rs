@@ -1,40 +1,56 @@
+//! test
 #![warn(missing_docs)]
 
+// Language documentation
+// Regenerate this using:
+// `cargo run --bin generate_docs`
 pub mod language_docs;
 
-pub mod error;
-pub use error::Error;
-
-mod functions;
-mod lavendeux;
-mod pest;
-mod state;
-mod syntax_tree;
-mod token;
-
+// Utitlity functions for the network related functions in stdlib
 #[cfg(feature = "network-functions")]
 mod network;
 
-#[cfg(feature = "extensions")]
-pub use rustyscript;
+// Docgen utilities
+#[macro_use]
+mod documentation;
 
-#[cfg(feature = "extensions")]
-mod extensions;
+// Errors and error-adjacent gubbins
+#[macro_use]
+pub mod error;
+pub use error::Error;
 
-use pest::{AstNode, Rule, ToAstNode};
+// The core parser. Builds the AST and evaluates it.
+#[macro_use]
+mod syntax_tree;
+mod pest;
+pub use pest::Rule; // exported for Token
+
+// StdLib lives here
+mod functions;
+
+// The main parser state
+mod state;
+pub use state::State;
+
+// A token parsed from the input
+// Comes up in error handling
+mod token;
+pub use token::Token;
+
+// Main entrypoint for the parser
+mod lavendeux;
+pub use lavendeux::{Lavendeux, ParserOptions};
+
+// Public re-export of the polyvalue crate
+pub use polyvalue;
+pub use polyvalue::Value;
+
+// A few things to re-export internally
+use pest::{AstNode, ToAstNode};
 use syntax_tree::Node;
 use token::ToToken;
 
-#[cfg(feature = "extensions")]
-pub use extensions::ExtensionDetails;
-
-pub use lavendeux::{Lavendeux, ParserOptions};
-pub use polyvalue::Value;
-pub use state::State;
-pub use token::Token;
-
-mod documentation;
-
+/// A few critical tests for common grammar issues post-update
 #[cfg(test)]
 mod test {
     use crate::Lavendeux;

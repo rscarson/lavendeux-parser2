@@ -8,7 +8,16 @@ pub struct OperatorDocumentation {
     pub examples: &'static str,
 }
 
-#[macro_export]
+inventory::collect!(OperatorDocumentation);
+pub fn all() -> Vec<&'static OperatorDocumentation> {
+    let mut all: Vec<_> = inventory::iter::<OperatorDocumentation>
+        .into_iter()
+        .collect();
+    all.sort_by(|a, b| a.name.cmp(b.name));
+    all
+}
+
+/// Generates a documentation entry for an operator
 macro_rules! document_operator {
     (
         name = $name:literal,
@@ -27,15 +36,6 @@ macro_rules! document_operator {
             }
         }
     };
-}
-
-inventory::collect!(OperatorDocumentation);
-pub fn all() -> Vec<&'static OperatorDocumentation> {
-    let mut all: Vec<_> = inventory::iter::<OperatorDocumentation>
-        .into_iter()
-        .collect();
-    all.sort_by(|a, b| a.name.cmp(b.name));
-    all
 }
 
 #[cfg(test)]
@@ -67,6 +67,14 @@ mod test {
             Rule::BREAK_KEYWORD,
             Rule::SKIP_KEYWORD,
             Rule::RETURN_EXPRESSION,
+            //
+            // Errors
+            Rule::UNTERMINATED_BLOCK_COMMENT,
+            Rule::UNTERMINATED_STRING_LITERAL,
+            Rule::UNCLOSED_BRACKET,
+            Rule::UNCLOSED_BRACE,
+            Rule::UNCLOSED_PAREN,
+            Rule::MISSING_LINEBREAK,
         ];
 
         let docs = all();
@@ -76,7 +84,7 @@ mod test {
             if !found && !meta_rules.contains(rule) {
                 errors.push(Error {
                     details: ErrorDetails::Custom {
-                        message: format!("Rule {:?} is not documented", rule),
+                        msg: format!("Rule {:?} is not documented", rule),
                     },
                     source: None,
                     context: None,
@@ -89,7 +97,7 @@ mod test {
             if let Err(e) = result {
                 errors.push(Error {
                     details: ErrorDetails::Custom {
-                        message: format!("{} Example Error", operator.name),
+                        msg: format!("{} Example Error", operator.name),
                     },
                     source: Some(Box::new(e)),
                     context: None,

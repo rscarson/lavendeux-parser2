@@ -38,7 +38,7 @@ impl DocumentationFormatter for MarkdownFormatter {
         let function = state.get_function(name)?;
         let mut pieces = Vec::new();
 
-        pieces.push(MarkdownSnippet::H4(
+        pieces.push(MarkdownSnippet::H3(
             MarkdownSnippet::CodeInline(function.signature().to_string()).to_string(),
         ));
         if let Some(desc) = function.documentation().description {
@@ -52,7 +52,7 @@ impl DocumentationFormatter for MarkdownFormatter {
         if let Some(examples) = function.documentation().examples {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
-                pieces.push(MarkdownSnippet::H5("Examples".to_string()));
+                pieces.push(MarkdownSnippet::H4("Examples".to_string()));
                 pieces.push(MarkdownSnippet::CodeBlock(examples.to_string()));
             }
         }
@@ -90,7 +90,7 @@ impl DocumentationFormatter for MarkdownFormatter {
         sorted_categories.sort();
 
         for category in sorted_categories {
-            output.push(MarkdownSnippet::H3(category.to_string() + " Functions"));
+            output.push(MarkdownSnippet::H2(category.to_string() + " Functions"));
             output.push(MarkdownSnippet::Text(
                 self.format_function_category(state, category)
                     .unwrap_or_default(),
@@ -114,14 +114,14 @@ impl DocumentationFormatter for MarkdownFormatter {
         operators.sort_by(|a, b| a.name.cmp(&b.name));
 
         for operator in operators {
-            output.push(MarkdownSnippet::H3(operator.name.to_string()));
+            output.push(MarkdownSnippet::H2(operator.name.to_string()));
 
             let symbols = operator.symbols.join(", ");
-            output.push(MarkdownSnippet::H4(format!("\\[{symbols}\\]")));
+            output.push(MarkdownSnippet::Text(format!("**[{}]**  ", symbols)));
 
             output.push(MarkdownSnippet::Text(operator.description.to_string()));
 
-            output.push(MarkdownSnippet::H5("Examples".to_string()));
+            output.push(MarkdownSnippet::H3("Examples".to_string()));
             output.push(MarkdownSnippet::CodeBlock(operator.examples.to_string()));
         }
 

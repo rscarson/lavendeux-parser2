@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, oops, State};
+use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
 use polyvalue::{Value, ValueType};
 
 /**********************************************
@@ -25,7 +25,7 @@ define_stdfunction!(
         let input = state.get_variable("c").unwrap().to_string();
         if input.len() != 1 {
             return oops!(Custom {
-                message: "ord() expected a single character".to_string()
+                msg: "ord() expected a single character".to_string()
             });
         }
         let c = input.chars().next().unwrap();
@@ -51,7 +51,7 @@ define_stdfunction!(
         match std::char::from_u32(input) {
             Some(c) => Ok(Value::from(c.to_string())),
             None => oops!(Custom {
-                message: "chr() expected a valid Unicode code point".to_string()
+                msg: "chr() expected a valid Unicode code point".to_string()
             }),
         }
     },

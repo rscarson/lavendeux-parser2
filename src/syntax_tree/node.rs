@@ -1,5 +1,5 @@
 use super::pratt::PrattPair;
-use crate::{document_operator, error::Error, AstNode, ToAstNode};
+use crate::{error::Error, AstNode, ToAstNode};
 
 macro_rules! define_node {
     (
@@ -168,6 +168,7 @@ impl TryFrom<&str> for Node {
 }
 
 mod core;
+mod errors;
 
 // Pratt nodes
 pub mod arithmetic;

@@ -52,7 +52,9 @@ BLOCK = {
 // Expressions tree
 //
 
-EXPR = {prefix_op? ~ EOL* ~ TERM ~ postfix_operation* ~ ( EOL* ~ infix_op ~ prefix_op? ~ EOL* ~ TERM ~ postfix_operation*)*}
+EXPR = {
+    prefix_op? ~ EOL* ~ TERM ~ postfix_operation* ~ ( EOL* ~ infix_op ~ prefix_op? ~ EOL* ~ TERM ~ postfix_operation*)*
+}
     //
     // Postfix
     postfix_operation = _{POSTFIX_DECORATE | POSTFIX_INDEX | POSTFIX_CALL | postfix_arith}
@@ -164,6 +166,9 @@ TERM = _{
 
     // Value primitives
     | ATOMIC_VALUE
+
+    // Error catcher
+    | ERROR
 }
 
 // 1 + 2 [2] ? 3 : 4
@@ -268,6 +273,28 @@ ATOMIC_VALUE = _{
         reserved_words = {
             ("pi" | "e" | "tau" | "true" | "false"
             | "if" | "then" | "else" | "for" | "in" | "do" | "match"
+            | "return"
             | prefix_op | infix_op
             | SKIP_KEYWORD | BREAK_KEYWORD) ~ !(ASCII_ALPHANUMERIC|"_")
         }
+
+//
+// Errors
+//
+
+ERROR = _{
+    | UNTERMINATED_BLOCK_COMMENT
+    | UNTERMINATED_STRING_LITERAL
+
+    | UNCLOSED_BRACKET
+    | UNCLOSED_BRACE
+    | UNCLOSED_PAREN
+    | MISSING_LINEBREAK
+}
+
+UNTERMINATED_BLOCK_COMMENT = @{"/*" ~ (!"*/" ~ ANY)*}
+UNTERMINATED_STRING_LITERAL = @{"\"" ~ (!EOL ~ ANY)*}
+UNCLOSED_BRACKET = @{"[" ~ (!"]" ~ ANY)*}
+UNCLOSED_BRACE = @{"{" ~ (!"}" ~ ANY)*}
+UNCLOSED_PAREN = @{"(" ~ (!")" ~ ANY)*}
+MISSING_LINEBREAK = @{"\\" ~ !EOL}

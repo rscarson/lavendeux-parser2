@@ -7,6 +7,7 @@ pub use plain::PlaintextFormatter;
 mod markdown;
 pub use markdown::MarkdownFormatter;
 
+#[macro_use]
 mod operator_documentation;
 pub use operator_documentation::OperatorDocumentation;
 

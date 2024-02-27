@@ -1,3 +1,21 @@
+/// Matches the error details of an error against a pattern.
+/// # Arguments
+/// * `err` - The error to match
+/// * `pat` - The pattern to match against
+///
+/// # Example
+/// ```rust
+/// # use lavendeux::error::Error;
+/// # use lavendeux::error::ErrorDetails;
+/// # use lavendeux::error_matches;
+///
+/// let err = Error {
+///     details: ErrorDetails::Syntax,
+///     context: None,
+///     source: None,
+/// };
+/// assert!(error_matches!(err, Syntax));
+/// ```
 #[macro_export]
 macro_rules! error_matches {
     ($err:expr, $pat:ident) => {

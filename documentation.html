@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Lavendeux Documentation</title>
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    <style>
+    /* Move TOC to a sidebar */
+    #TOC {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 20%;
+        height: 100%;
+        overflow: auto;
+        padding: 10px;
+        background-color: #f8f8f8;
+        border-right: 1px solid #ddd;
+    }
+    #TOC ul {
+        list-style-type: none;
+        margin-top: 5px;
+    }
+    body {
+        margin-left: 20%;
+        padding: 20px;
+        padding-left: 40px;
+    }
+    </style>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script type="text/javascript">
+// Lavendeux highlight.js definition
+// Copyright Richard Carson, 2023
+
+hljs.registerLanguage('lavendeux', function(hljs) {
+  var COMMENT = hljs.COMMENT('//', '$');
+  var KEYWORDS = {
+    keyword: 'if then else for in do match skip continue break return as true false',
+    built_in: 'pi e tau',
+    literal: 'null undefined',
+    type: 'u8 i8 u16 i16 u32 i32 u64 i64 f32 f64 string bool array object',
+    meta: 'include',
+    _: 'matches contains starts_with ends_with'
+  };
+  var IDENTIFIER = {
+    begin: /[a-zA-Z_]\w*/,
+    illegal: /\W/,
+    keywords: KEYWORDS,
+    relevance: 0
+  };
+  var NUMBER = {
+    className: 'number',
+    variants: [
+      { begin: /0b[01][01_]*/, relevance: 0 },
+      { begin: /0o[0-7][0-7_]*/, relevance: 0 },
+      { begin: /0x[0-9a-fA-F][0-9a-fA-F_]*/, relevance: 0 },
+      { begin: /(?:\d[\d_]*)(?:\.(?!\d)|(?:(?:\.(?:\d[\d_]*)?)?(?:[eE][-+]?\d[\d_]*)))?/, relevance: 0 }
+    ],
+    relevance: 0
+  };
+  var STRING = {
+    className: 'string',
+    variants: [
+      { begin: /"/, end: /"/ },
+      { begin: /'/, end: /'/ }
+    ],
+    contains: [hljs.BACKSLASH_ESCAPE],
+    relevance: 0
+  };
+  var REGEX = {
+    className: 'regexp',
+    begin: /\//, end: /\/[gismuy]*/,
+    contains: [hljs.BACKSLASH_ESCAPE],
+    relevance: 0
+  };
+  var PREFIX_OP = {
+    className: 'keyword',
+    begin: /\@?[a-zA-Z_]\w*/,
+    relevance: 0
+  };
+  var INFIX_OP = {
+    className: 'operator',
+    begin: /[-+*/%^&|!<>=]=?|\.\.?|\?\:?|contains|matches|starts_with|ends_with/,
+    relevance: 0
+  };
+
+  return {
+    name: 'Lavendeux',
+    aliases: ['ld', 'lavendeux'],
+    keywords: KEYWORDS,
+    contains: [
+      COMMENT,
+      NUMBER,
+      STRING,
+      REGEX,
+      PREFIX_OP,
+      INFIX_OP,
+      IDENTIFIER
+    ]
+  };
+});
+
+
+
+        hljs.highlightAll();
+    </script>
+
+    <h1 class="title">Lavendeux Documentation</h1>
+    <nav id="TOC"><ul>
+<li><a href="#values-and-literals">1 Values and Literals</a><ul>
+<li><a href="#numeric-types">1.1 Numeric Types</a><ul></ul></li>
+<li><a href="#collection-types">1.2 Collection Types</a><ul></ul></li>
+<li><a href="#strings">1.3 Strings</a><ul></ul></li>
+<li><a href="#type-conversion">1.4 Type Conversion</a><ul></ul></li></ul></li>
+<li><a href="#operators-and-syntax">2 Operators and Syntax</a><ul>
+<li><a href="#arithmetic">2.1 Arithmetic</a><ul>
+<li><a href="#examples">2.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#array-literals">2.2 Array Literals</a><ul>
+<li><a href="#examples-1">2.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#assignment-operator">2.3 Assignment Operator</a><ul>
+<li><a href="#examples-2">2.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#bitwise">2.4 Bitwise</a><ul>
+<li><a href="#examples-3">2.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#boolean">2.5 Boolean</a><ul>
+<li><a href="#examples-4">2.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#cast">2.6 Cast</a><ul>
+<li><a href="#examples-5">2.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#constant">2.7 Constant</a><ul>
+<li><a href="#examples-6">2.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#decorator">2.8 Decorator</a><ul>
+<li><a href="#examples-7">2.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#deletion-keyword">2.9 Deletion Keyword</a><ul>
+<li><a href="#examples-8">2.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#for">2.10 For</a><ul>
+<li><a href="#examples-9">2.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#function-assignment">2.11 Function Assignment</a><ul>
+<li><a href="#examples-10">2.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#function-call">2.12 Function Call</a><ul>
+<li><a href="#examples-11">2.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#identifier">2.13 Identifier</a><ul>
+<li><a href="#examples-12">2.13.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#if">2.14 If</a><ul>
+<li><a href="#examples-13">2.14.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#indexing">2.15 Indexing</a><ul>
+<li><a href="#examples-14">2.15.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#matching">2.16 Matching</a><ul>
+<li><a href="#examples-15">2.16.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#object-literals">2.17 Object Literals</a><ul>
+<li><a href="#examples-16">2.17.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#range-literals">2.18 Range Literals</a><ul>
+<li><a href="#examples-17">2.18.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#ternary">2.19 Ternary</a><ul>
+<li><a href="#examples-18">2.19.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#unary-bitwise-not">2.20 Unary Bitwise Not</a><ul>
+<li><a href="#examples-19">2.20.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#unary-boolean-not">2.21 Unary Boolean Not</a><ul>
+<li><a href="#examples-20">2.21.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#unary-incrementdecrement">2.22 Unary Increment/Decrement</a><ul>
+<li><a href="#examples-21">2.22.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#unary-negation">2.23 Unary Negation</a><ul>
+<li><a href="#examples-22">2.23.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#match">2.24 match</a><ul>
+<li><a href="#examples-23">2.24.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#functions">3 Functions</a><ul>
+<li><a href="#api-functions">3.1 API Functions</a><ul>
+<li><a href="#api_addnamestring-endpoint---string">3.1.1 <code>api_add(name:string, endpoint) -&gt; string</code></a><ul>
+<li><a href="#examples-24">3.1.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_all---object">3.1.2 <code>api_all() -&gt; object</code></a><ul>
+<li><a href="#examples-25">3.1.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_getnamestring-pathstring---string">3.1.3 <code>api_get(name:string, [path:string]) -&gt; string</code></a><ul>
+<li><a href="#examples-26">3.1.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_keynamestring-auth_keystring---string">3.1.4 <code>api_key(name:string, auth_key:string) -&gt; string</code></a><ul>
+<li><a href="#examples-27">3.1.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_list---object">3.1.5 <code>api_list() -&gt; object</code></a><ul>
+<li><a href="#examples-28">3.1.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_postnamestring-bodystring-pathstring---string">3.1.6 <code>api_post(name:string, body:string, [path:string]) -&gt; string</code></a><ul>
+<li><a href="#examples-29">3.1.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#api_remnamestring---string">3.1.7 <code>api_rem(name:string) -&gt; string</code></a><ul>
+<li><a href="#examples-30">3.1.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#chatgptpromptstring---string">3.1.8 <code>chatgpt(prompt:string) -&gt; string</code></a><ul>
+<li><a href="#examples-31">3.1.8.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#bitwise-functions">3.2 Bitwise Functions</a><ul>
+<li><a href="#andleftint-rightint---int">3.2.1 <code>and(left:int, right:int) -&gt; int</code></a><ul>
+<li><a href="#examples-32">3.2.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#llshiftvalueint-shiftint---int">3.2.2 <code>llshift(value:int, shift:int) -&gt; int</code></a><ul>
+<li><a href="#examples-33">3.2.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#lrshiftvalueint-shiftint---int">3.2.3 <code>lrshift(value:int, shift:int) -&gt; int</code></a><ul>
+<li><a href="#examples-34">3.2.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#notvalueint---int">3.2.4 <code>not(value:int) -&gt; int</code></a><ul>
+<li><a href="#examples-35">3.2.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#orleftint-rightint---int">3.2.5 <code>or(left:int, right:int) -&gt; int</code></a><ul>
+<li><a href="#examples-36">3.2.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#xorleftint-rightint---int">3.2.6 <code>xor(left:int, right:int) -&gt; int</code></a><ul>
+<li><a href="#examples-37">3.2.6.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#collections-functions">3.3 Collections Functions</a><ul>
+<li><a href="#allinputarray---bool">3.3.1 <code>all(input:array) -&gt; bool</code></a><ul>
+<li><a href="#examples-38">3.3.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#anyinputarray---bool">3.3.2 <code>any(input:array) -&gt; bool</code></a><ul>
+<li><a href="#examples-39">3.3.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#chunksinputarray-sizeint---array">3.3.3 <code>chunks(input:array, size:int) -&gt; array</code></a><ul>
+<li><a href="#examples-40">3.3.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#dequeueinputarray---array">3.3.4 <code>dequeue(input:array) -&gt; array</code></a><ul>
+<li><a href="#examples-41">3.3.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#enqueueinputarray-value---array">3.3.5 <code>enqueue(input:array, value) -&gt; array</code></a><ul>
+<li><a href="#examples-42">3.3.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#extendleftarray-rightarray---array">3.3.6 <code>extend(left:array, right:array) -&gt; array</code></a><ul>
+<li><a href="#examples-43">3.3.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#firstinputarray---any">3.3.7 <code>first(input:array) -&gt; any</code></a><ul>
+<li><a href="#examples-44">3.3.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#flatteninputarray---array">3.3.8 <code>flatten(input:array) -&gt; array</code></a><ul>
+<li><a href="#examples-45">3.3.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#insertinputarray-indexint-value---array">3.3.9 <code>insert(input:array, index:int, value) -&gt; array</code></a><ul>
+<li><a href="#examples-46">3.3.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#is_emptyinput---bool">3.3.10 <code>is_empty(input) -&gt; bool</code></a><ul>
+<li><a href="#examples-47">3.3.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#keysinputobject---array">3.3.11 <code>keys(input:object) -&gt; array</code></a><ul>
+<li><a href="#examples-48">3.3.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#lastinputarray---any">3.3.12 <code>last(input:array) -&gt; any</code></a><ul>
+<li><a href="#examples-49">3.3.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#leninput---int">3.3.13 <code>len(input) -&gt; int</code></a><ul>
+<li><a href="#examples-50">3.3.13.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#mergeleftarray-rightarray---array">3.3.14 <code>merge(left:array, right:array) -&gt; array</code></a><ul>
+<li><a href="#examples-51">3.3.14.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#popinputarray---any">3.3.15 <code>pop(input:array) -&gt; any</code></a><ul>
+<li><a href="#examples-52">3.3.15.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#pushinputarray-value---array">3.3.16 <code>push(input:array, value) -&gt; array</code></a><ul>
+<li><a href="#examples-53">3.3.16.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#removeinputarray-indexint---array">3.3.17 <code>remove(input:array, index:int) -&gt; array</code></a><ul>
+<li><a href="#examples-54">3.3.17.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#reverseinputarray---array">3.3.18 <code>reverse(input:array) -&gt; array</code></a><ul>
+<li><a href="#examples-55">3.3.18.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sortinputarray---array">3.3.19 <code>sort(input:array) -&gt; array</code></a><ul>
+<li><a href="#examples-56">3.3.19.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#splitinputarray-indexint---array">3.3.20 <code>split(input:array, index:int) -&gt; array</code></a><ul>
+<li><a href="#examples-57">3.3.20.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#valuesinputobject---array">3.3.21 <code>values(input:object) -&gt; array</code></a><ul>
+<li><a href="#examples-58">3.3.21.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#zipleftarray-rightarray---array">3.3.22 <code>zip(left:array, right:array) -&gt; array</code></a><ul>
+<li><a href="#examples-59">3.3.22.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#zopleftarray-rightarray---array">3.3.23 <code>zop(left:array, right:array) -&gt; array</code></a><ul>
+<li><a href="#examples-60">3.3.23.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#cryptographic-functions">3.4 Cryptographic Functions</a><ul>
+<li><a href="#md5inputstring---string">3.4.1 <code>md5(input:string) -&gt; string</code></a><ul>
+<li><a href="#examples-61">3.4.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sha256inputstring---string">3.4.2 <code>sha256(input:string) -&gt; string</code></a><ul>
+<li><a href="#examples-62">3.4.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sha512inputstring---string">3.4.3 <code>sha512(input:string) -&gt; string</code></a><ul>
+<li><a href="#examples-63">3.4.3.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#decorators-functions">3.5 Decorators Functions</a><ul>
+<li><a href="#audinputnumeric---string">3.5.1 <code>@aud(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-64">3.5.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#bininputnumeric---string">3.5.2 <code>@bin(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-65">3.5.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#boolinput---string">3.5.3 <code>@bool(input) -&gt; string</code></a><ul>
+<li><a href="#examples-66">3.5.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#cadinputnumeric---string">3.5.4 <code>@cad(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-67">3.5.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#cnyinputnumeric---string">3.5.5 <code>@cny(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-68">3.5.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#eurinputnumeric---string">3.5.6 <code>@eur(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-69">3.5.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#floatinputnumeric---string">3.5.7 <code>@float(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-70">3.5.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#gbpinputnumeric---string">3.5.8 <code>@gbp(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-71">3.5.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#hexinputnumeric---string">3.5.9 <code>@hex(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-72">3.5.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#inrinputnumeric---string">3.5.10 <code>@inr(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-73">3.5.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#intinputnumeric---string">3.5.11 <code>@int(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-74">3.5.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#jpyinputnumeric---string">3.5.12 <code>@jpy(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-75">3.5.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#octinputnumeric---string">3.5.13 <code>@oct(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-76">3.5.13.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#ordinputnumeric---string">3.5.14 <code>@ord(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-77">3.5.14.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#percentinputnumeric---string">3.5.15 <code>@percent(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-78">3.5.15.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#romaninputnumeric---string">3.5.16 <code>@roman(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-79">3.5.16.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#rubinputnumeric---string">3.5.17 <code>@rub(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-80">3.5.17.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sciinputnumeric---string">3.5.18 <code>@sci(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-81">3.5.18.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#usdinputnumeric---string">3.5.19 <code>@usd(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-82">3.5.19.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#utcinputnumeric---string">3.5.20 <code>@utc(input:numeric) -&gt; string</code></a><ul>
+<li><a href="#examples-83">3.5.20.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#development-functions">3.6 Development Functions</a><ul>
+<li><a href="#tailfilestring-linesint---array">3.6.1 <code>tail(file:string, [lines:int]) -&gt; array</code></a><ul>
+<li><a href="#examples-84">3.6.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#time---float">3.6.2 <code>time() -&gt; float</code></a><ul>
+<li><a href="#examples-85">3.6.2.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#math-functions">3.7 Math Functions</a><ul>
+<li><a href="#absvaluenumeric---numeric">3.7.1 <code>abs(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-86">3.7.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#ceilvaluenumeric---numeric">3.7.2 <code>ceil(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-87">3.7.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#floorvaluenumeric---numeric">3.7.3 <code>floor(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-88">3.7.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#ilog2valueint---numeric">3.7.4 <code>ilog2(value:int) -&gt; numeric</code></a><ul>
+<li><a href="#examples-89">3.7.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#lnvaluenumeric---numeric">3.7.5 <code>ln(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-90">3.7.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#logvaluenumeric-basenumeric---numeric">3.7.6 <code>log(value:numeric, [base:numeric]) -&gt; numeric</code></a><ul>
+<li><a href="#examples-91">3.7.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#log10valuenumeric---numeric">3.7.7 <code>log10(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-92">3.7.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#log2valuenumeric---numeric">3.7.8 <code>log2(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-93">3.7.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#maxoptionsarray---numeric">3.7.9 <code>max(options:array) -&gt; numeric</code></a><ul>
+<li><a href="#examples-94">3.7.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#minoptionsarray---numeric">3.7.10 <code>min(options:array) -&gt; numeric</code></a><ul>
+<li><a href="#examples-95">3.7.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#rootvaluenumeric-rootnumeric---numeric">3.7.11 <code>root(value:numeric, root:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-96">3.7.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#roundvaluenumeric-precisionint---numeric">3.7.12 <code>round(value:numeric, [precision:int]) -&gt; numeric</code></a><ul>
+<li><a href="#examples-97">3.7.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sqrtvaluenumeric---numeric">3.7.13 <code>sqrt(value:numeric) -&gt; numeric</code></a><ul>
+<li><a href="#examples-98">3.7.13.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#network-functions">3.8 Network Functions</a><ul>
+<li><a href="#geturlstring-headersobject---string">3.8.1 <code>get(url:string, [headers:object]) -&gt; string</code></a><ul>
+<li><a href="#examples-99">3.8.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#posturlstring-bodystring-headersobject---string">3.8.2 <code>post(url:string, body:string, [headers:object]) -&gt; string</code></a><ul>
+<li><a href="#examples-100">3.8.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#resolvehostnamestring---string">3.8.3 <code>resolve(hostname:string) -&gt; string</code></a><ul>
+<li><a href="#examples-101">3.8.3.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#random-functions">3.9 Random Functions</a><ul>
+<li><a href="#chooseoptionsarray---string">3.9.1 <code>choose(options:array) -&gt; string</code></a><ul>
+<li><a href="#examples-102">3.9.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#randrangerange---numeric">3.9.2 <code>rand([range:range]) -&gt; numeric</code></a><ul>
+<li><a href="#examples-103">3.9.2.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#string-functions">3.10 String Functions</a><ul>
+<li><a href="#base64_decodesstring---string">3.10.1 <code>base64_decode(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-104">3.10.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#base64_encodesstring---string">3.10.2 <code>base64_encode(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-105">3.10.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#chrii64---string">3.10.3 <code>chr(i:i64) -&gt; string</code></a><ul>
+<li><a href="#examples-106">3.10.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#concatpartsarray-joinerstring---string">3.10.4 <code>concat(parts:array, [joiner:string]) -&gt; string</code></a><ul>
+<li><a href="#examples-107">3.10.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#formatsstring-argsarray---string">3.10.5 <code>format(s:string, args:array) -&gt; string</code></a><ul>
+<li><a href="#examples-108">3.10.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#lowercasesstring---string">3.10.6 <code>lowercase(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-109">3.10.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#ordcstring---i64">3.10.7 <code>ord(c:string) -&gt; i64</code></a><ul>
+<li><a href="#examples-110">3.10.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#prettyjsonsobject---string">3.10.8 <code>prettyjson(s:object) -&gt; string</code></a><ul>
+<li><a href="#examples-111">3.10.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#repeatsstring-ni64---string">3.10.9 <code>repeat(s:string, n:i64) -&gt; string</code></a><ul>
+<li><a href="#examples-112">3.10.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#replacesstring-fromstring-tostring---string">3.10.10 <code>replace(s:string, from:string, to:string) -&gt; string</code></a><ul>
+<li><a href="#examples-113">3.10.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#trimsstring---string">3.10.11 <code>trim(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-114">3.10.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#trim_endsstring---string">3.10.12 <code>trim_end(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-115">3.10.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#trim_startsstring---string">3.10.13 <code>trim_start(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-116">3.10.13.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#uppercasesstring---string">3.10.14 <code>uppercase(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-117">3.10.14.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#url_decodesstring---string">3.10.15 <code>url_decode(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-118">3.10.15.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#url_encodesstring---string">3.10.16 <code>url_encode(s:string) -&gt; string</code></a><ul>
+<li><a href="#examples-119">3.10.16.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#system-functions">3.11 System Functions</a><ul>
+<li><a href="#assertcondition---any">3.11.1 <code>assert(condition) -&gt; any</code></a><ul>
+<li><a href="#examples-120">3.11.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#assert_eqcondition-expected---any">3.11.2 <code>assert_eq(condition, expected) -&gt; any</code></a><ul>
+<li><a href="#examples-121">3.11.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#assignnamestring-value---any">3.11.3 <code>assign(name:string, value) -&gt; any</code></a><ul>
+<li><a href="#examples-122">3.11.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#assign_globalnamestring-value---any">3.11.4 <code>assign_global(name:string, value) -&gt; any</code></a><ul>
+<li><a href="#examples-123">3.11.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#call_functionnamestring-argsarray---any">3.11.5 <code>call_function(name:string, args:array) -&gt; any</code></a><ul>
+<li><a href="#examples-124">3.11.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#debugmsgstring---any">3.11.6 <code>debug(msg:string) -&gt; any</code></a><ul>
+<li><a href="#examples-125">3.11.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#errormsgstring---any">3.11.7 <code>error(msg:string) -&gt; any</code></a><ul>
+<li><a href="#examples-126">3.11.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#evalexpressionstring---any">3.11.8 <code>eval(expression:string) -&gt; any</code></a><ul>
+<li><a href="#examples-127">3.11.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#generate_documentation---string">3.11.9 <code>generate_documentation() -&gt; string</code></a><ul>
+<li><a href="#examples-128">3.11.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#includefilenamestring---any">3.11.10 <code>include(filename:string) -&gt; any</code></a><ul>
+<li><a href="#examples-129">3.11.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#typeofvalue---string">3.11.11 <code>typeof(value) -&gt; string</code></a><ul>
+<li><a href="#examples-130">3.11.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#variables---object">3.11.12 <code>variables() -&gt; object</code></a><ul>
+<li><a href="#examples-131">3.11.12.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#would_errexpressionstring---bool">3.11.13 <code>would_err(expression:string) -&gt; bool</code></a><ul>
+<li><a href="#examples-132">3.11.13.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#trigonometry-functions">3.12 Trigonometry Functions</a><ul>
+<li><a href="#acosnnumeric---float">3.12.1 <code>acos(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-133">3.12.1.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#acoshnnumeric---float">3.12.2 <code>acosh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-134">3.12.2.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#asinnnumeric---float">3.12.3 <code>asin(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-135">3.12.3.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#asinhnnumeric---float">3.12.4 <code>asinh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-136">3.12.4.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#atannnumeric---float">3.12.5 <code>atan(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-137">3.12.5.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#atanhnnumeric---float">3.12.6 <code>atanh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-138">3.12.6.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#cosnnumeric---float">3.12.7 <code>cos(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-139">3.12.7.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#coshnnumeric---float">3.12.8 <code>cosh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-140">3.12.8.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sinnnumeric---float">3.12.9 <code>sin(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-141">3.12.9.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#sinhnnumeric---float">3.12.10 <code>sinh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-142">3.12.10.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#tannnumeric---float">3.12.11 <code>tan(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-143">3.12.11.1 Examples</a><ul></ul></li></ul></li>
+<li><a href="#tanhnnumeric---float">3.12.12 <code>tanh(n:numeric) -&gt; float</code></a><ul>
+<li><a href="#examples-144">3.12.12.1 Examples</a><ul></ul></li></ul></li></ul></li></ul></li></ul></nav><p>This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
+It was created for use in Lavendeux (<a href="https://rscarson.github.io/lavendeux/">https://rscarson.github.io/lavendeux/</a>).</p>
+<p>Inputs are a series of expressions separated by a newline, or a <code>;</code>.
+Lines can optionally end with an @decorator to format the output as a string (see <code>section 3.2</code>)</p>
+<p>Comments are either <code>//</code>, which turns the rest of the line into a comment
+Or a block comment bounded by /* and */</p>
+<h1 id="values-and-literals"><a href="#values-and-literals">1 Values and Literals</a></h1>
+<p>All expressions in Lavendeux will return a value of a specific type.
+These types can be broadly categorized as <code>numeric</code>, <code>collection</code>, or <code>string</code>.</p>
+<h2 id="numeric-types"><a href="#numeric-types">1.1 Numeric Types</a></h2>
+<p>The first group of types are classified as numeric; they can all freely be cast to each other.
+If a type is downcast to a smaller numeric type, it will be truncated to fit (1.6 becomes 1 for example)</p>
+<p>Note; Bool is an outlier here, since any type can be cast to bool:
+Truth is determined by equivalence to 0, or by emptiness, depending on the type.</p>
+<p>But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):</p>
+<ul>
+<li>Bool: a single-bit truth value [<code>true</code>, <code>false</code>]</li>
+<li>Int: One of U8/I8 / U16/I16 / U32/I32 / U64/I64</li>
+<li>Float: A 64bit floating-point number [<code>1.0</code>, <code>.2</code>, <code>3e+7</code>]</li>
+<li>Fixed: A fixed-point decimal value [<code>1.22D</code>, <code>4D</code>]</li>
+<li>Currency: A fixed-point decimal value with a currency symbol [<code>$1</code>, <code>$2.00</code>, <code>3￥</code>]</li>
+</ul>
+<p>Integers can be written in decimal, binary, octal, or hexadecimal, with an optional suffix to specify the type.
+If no suffix is provided, the type defaults to i64.</p>
+<p>Examples:</p>
+<ul>
+<li><code>38_000i32</code></li>
+<li><code>0xFFu8</code></li>
+<li><code>0o77i16</code></li>
+<li><code>077</code></li>
+<li><code>0b1010_1010_1010_1010i32</code>
+Supported Currency symbols:
+$ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
+₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
+₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
+￡ | ￥ | ￦</li>
+</ul>
+<h2 id="collection-types"><a href="#collection-types">1.2 Collection Types</a></h2>
+<p>The second group are collections, which encapsulate a set of values:</p>
+<ul>
+<li>Array: An ordered collection of values, indexed by integers. Values can be a mix of types.</li>
+<li>Object: An unordered collection of key-value pairs, where keys are any non-collection type and values can be a mix of types.</li>
+<li>Range: An inclusive range of integers, with a start and end value. Start and end can be single characters, or any numeric type.</li>
+</ul>
+<p>Attempting to convert non-compound types into one of these will result in a single-value array or object.
+Range is the exception - no type can be converted into range, and range can only be converted into an array.</p>
+<p>For example, <code>1 as array</code> would result in <code>[1]</code>,
+and <code>1 as object</code> would be the equivalent to <code>[1] as object</code>, which is <code>{0: 1}</code>
+(Non-compound types are first cast to array before being transformed into objects)</p>
+<p>Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1, and will simply extract that value:</p>
+<ul>
+<li>For example, <code>['a'] as string</code> would result in <code>'a'</code></li>
+</ul>
+<h2 id="strings"><a href="#strings">1.3 Strings</a></h2>
+<p>The last value is string, which any value can be cast to in order to get a string representation.</p>
+<p>They are Single or double quote enclosed
+With the following supported escape sequences:</p>
+<ul>
+<li><code>\'</code> Single-quote</li>
+<li><code>\&quot;</code> Double-quote</li>
+<li><code>\n</code> Newline</li>
+<li><code>\r</code> Carriage-return</li>
+<li><code>\t</code> Tab</li>
+<li><code>\\</code> Literal backslash</li>
+</ul>
+<h2 id="type-conversion"><a href="#type-conversion">1.4 Type Conversion</a></h2>
+<p>You can manually convert between types using <code>&lt;value&gt; as &lt;type&gt;</code>, so long as that conversion is allowed:</p>
+<ul>
+<li>Numeric values can always convert to other numeric values [<code>1 as float</code>, <code>true as fixed</code> or <code>$1.00 as int</code> are all valid]</li>
+<li>Non-compound non-numeric values cannot convert into numeric values [<code>'test' as int</code> would be an error]</li>
+<li>Any type <code>T</code> can be converted to an array as <code>[T]</code>, or an object as <code>{0: T}</code></li>
+<li>Conversely, single-element compound values such as <code>[T]</code> or <code>{0: T}</code> can be freely converted to any type valid for <code>T</code></li>
+<li>All types can be converted to string or bool</li>
+<li>Range can become string, bool or array, but no type can become range</li>
+</ul>
+<p>Comparisons and expressions will always try and cooerce both values to the same type, using these rules, in this order:</p>
+<ul>
+<li>If either value is a range, compare the values as arrays</li>
+<li>If either value is an object, compare the values as objects</li>
+<li>If either value is an array, compare the values as arrays</li>
+<li>If either value is an string, compare the values as strings</li>
+<li>If either value is an currency, compare the values as currencies</li>
+<li>If either value is a fixed-point, compare the values as fixed-points</li>
+<li>If either value is an float, compare the values as floats</li>
+<li>If either value is an int, compare the values as ints</li>
+<li>If either value is a bool, compare the values as bools</li>
+</ul>
+<h1 id="operators-and-syntax"><a href="#operators-and-syntax">2 Operators and Syntax</a></h1><h2 id="arithmetic"><a href="#arithmetic">2.1 Arithmetic</a></h2>
+<p>**[+, -, *, /, %, <strong>]</strong><br />
+Performs arithmetic operations on two values.
+All but exponentiation are left-associative.</p>
+<h3 id="examples"><a href="#examples">2.1.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 / 3
+2 ** 3
+</code></pre></div><h2 id="array-literals"><a href="#array-literals">2.2 Array Literals</a></h2>
+<p><strong>[[ a, b, … ]]</strong><br />
+A collection of values.
+Arrays can contain any type of value, including other arrays.
+Arrays are 0-indexed, meaning the first element is at index 0.
+The indexing operator (a[b]) can be used to access elements of an array.</p>
+<h3 id="examples-1"><a href="#examples-1">2.2.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3, 4, 5]
+[&quot;Hello&quot;, &quot;World&quot;]
+[1, [2, 3], 4]
+</code></pre></div><h2 id="assignment-operator"><a href="#assignment-operator">2.3 Assignment Operator</a></h2>
+<p>**[=, +=, -=, *=, /=, %=, <strong>=, &amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;=]</strong><br />
+Assigns a value to a variable, index, or destructuring assignment
+Target is either a literal with optional indices, or a destructuring assignment
+If an index is empty, a new value will be appended to the array
+If the target is a destructuring assignment, the value must be a collection of the same length
+If the operator is present, the value will be transformed before assignment</p>
+<h3 id="examples-2"><a href="#examples-2">2.3.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[a, b] = [1, 2]
+a = 1; a += 1
+a = [1]; a[] = 2
+</code></pre></div><h2 id="bitwise"><a href="#bitwise">2.4 Bitwise</a></h2>
+<p><strong>[|, ^, &amp;, &lt;&lt;, &gt;&gt;]</strong><br />
+A left-associative infix operator that performs bitwise operations on two values.
+Values are first converted to integers.
+Shifts are arithmetic for signed integers and logical for unsigned integers.
+A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
+<h3 id="examples-3"><a href="#examples-3">2.4.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>5 | 3 &amp; 3
+5 ^ 3
+5 &lt;&lt; 3 &gt;&gt; 3
+</code></pre></div><h2 id="boolean"><a href="#boolean">2.5 Boolean</a></h2>
+<p><strong>[or, and, ==, !=, &lt;=, &gt;=, &lt;, &gt;]</strong><br />
+Performs an infix boolean comparison between two values.
+Comparisons are weak, meaning that the types of the values are not checked.
+Result are always a boolean value.
+And and Or are short-circuiting.
+All are left-associative.</p>
+<h3 id="examples-4"><a href="#examples-4">2.5.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>true || false
+1 &lt; 2
+</code></pre></div><h2 id="cast"><a href="#cast">2.6 Cast</a></h2>
+<p><strong>[as]</strong><br />
+Casts a value to a different type.
+The type can be a string or an identifier.
+The operator is right-associative</p>
+<h3 id="examples-5"><a href="#examples-5">2.6.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>5 as float
+5 as &#39;float&#39;
+5 as i8
+</code></pre></div><h2 id="constant"><a href="#constant">2.7 Constant</a></h2>
+<p><strong>[pi, e, tau]</strong><br />
+A constant value.
+A predefined set of values that are always available.</p>
+<h3 id="examples-6"><a href="#examples-6">2.7.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>pi; e; tau
+</code></pre></div><h2 id="decorator"><a href="#decorator">2.8 Decorator</a></h2>
+<p><strong>[@name]</strong><br />
+Converts a value to a formatted string.
+It calls a function named ‘@name’ with the value as an argument.</p>
+<h3 id="examples-7"><a href="#examples-7">2.8.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    5 @float,
+    &#39;5.0&#39;
+)
+</code></pre></div><h2 id="deletion-keyword"><a href="#deletion-keyword">2.9 Deletion Keyword</a></h2>
+<p><strong>[del, delete, unset]</strong><br />
+Deletes a value, function, @decorator, or index
+Will return the value deleted (or the function signature if a function was deleted)
+Index can be blank to delete the last value in an array, or negative to count from the end
+Indices can also be a collection to delete multiple values at once</p>
+<h3 id="examples-8"><a href="#examples-8">2.9.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 2; del a
+a = [1]; del a[]
+a = {&#39;test&#39;: 1}; del a[&#39;test&#39;]
+
+@dec(x) = 2
+del @dec
+</code></pre></div><h2 id="for"><a href="#for">2.10 For</a></h2>
+<p><strong>[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block>]</strong><br />
+A loop that iterates over a range, array, or object.
+The variable is optional, and if not provided, the loop will not bind a variable.
+The expression will return an array of the results of the block.
+Break and skip/continue can be used to exit the loop or skip the current iteration.</p>
+<h3 id="examples-9"><a href="#examples-9">2.10.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>for i in 0..10 { i }
+for i in [1, 2, 3] { i }
+for i in {&#39;a&#39;: 1, &#39;b&#39;: 2} { i }
+
+for 0..10 do &#39;!&#39;
+</code></pre></div><h2 id="function-assignment"><a href="#function-assignment">2.11 Function Assignment</a></h2>
+<p><strong>[name([arg1:type, arg2, …]) = { … }]</strong><br />
+Assigns a block of code to a function name.
+The function can be called later in the code.
+If the function name begins with <code>@</code>, it is a decorator and must take in one argument and return a string</p>
+<p>Function body can be a block of code or a single expression. The last expression is returned, unless a return statement is used.
+Return type or argued types can be specified with <code>: type</code>, but are optional.</p>
+<p>Arguments will be cooerced to the specified type if provided, as will the return value.
+Valid type names are: <code>u[8-64]</code>, <code>i[8-64]</code>, <code>float</code>, <code>int</code>, <code>numeric</code>, <code>string</code>, <code>array</code>, <code>object</code>, <code>bool</code>, <code>any</code>.</p>
+<h3 id="examples-10"><a href="#examples-10">2.11.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>// Decorator taking in a number and returning a string
+@double(x:numeric) = 2*x
+5 @double
+
+// Takes in any 2 numeric values, and returns an integer (i64 by default)
+add(a:numeric, b:numeric): int = {
+    a + b
+}
+add(3, 4.5)
+</code></pre></div><h2 id="function-call"><a href="#function-call">2.12 Function Call</a></h2>
+<p><strong>[name(arg1, arg2, …), arg1.func(arg2, arg3, …)]</strong><br />
+Calls a function with the given arguments.
+The help() will list all available functions, and can filter by category or function name.</p>
+<h3 id="examples-11"><a href="#examples-11">2.12.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>arr = []
+push(arr, 3)
+arr.push(3)
+help(push)
+help(collections)
+</code></pre></div><h2 id="identifier"><a href="#identifier">2.13 Identifier</a></h2>
+<p><strong>[a, b, c]</strong><br />
+A variable name.
+The value of the variable is looked up in the state.</p>
+<h3 id="examples-12"><a href="#examples-12">2.13.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[a, b, c] = [1, 2, 3]
+a; b; c
+</code></pre></div><h2 id="if"><a href="#if">2.14 If</a></h2>
+<p><strong>[if <condition> then <block> else <block>, if <condition> {block} else {block}]</strong><br />
+A conditional expression that evaluates a condition and then one of two branches.
+body can be either a block or a single expression. The last expression is returned from a block.
+Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
+As such, all if expressions must have both a then and an else branch.</p>
+<h3 id="examples-13"><a href="#examples-13">2.14.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
+if a &gt; 5 { a } else { 5 }
+if a == 4 {
+    a
+} else if a == 5 {
+    5
+} else {
+    6
+}
+</code></pre></div><h2 id="indexing"><a href="#indexing">2.15 Indexing</a></h2>
+<p><strong>[a[b], a[]]</strong><br />
+Accessing elements of a collection.
+The indexing operator can be used to access elements of a collection or string.
+If the index is a collection, it is used to access multiple elements.
+If the index is a string, it is used to access a character.
+If the index is blank, it is used to access the last element of the collection.
+Negative indices can be used to access elements from the end of the collection.</p>
+<h3 id="examples-14"><a href="#examples-14">2.15.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3][0]
+[1, 2, 3][0..1]
+{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }[&quot;name&quot;]
+</code></pre></div><h2 id="matching"><a href="#matching">2.16 Matching</a></h2>
+<p><strong>[contains, matches, is, starts_with, ends_with]</strong><br />
+A set of left-associative boolean operators comparing a collection with a pattern
+‘is’ is a special case that compares type (<code>value is string</code> is equivalent <code>typeof(value) == 'string'</code>)
+starts/ends with are not applicable to objects, which are not ordered</p>
+<h3 id="examples-15"><a href="#examples-15">2.16.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>{&#39;name&#39;: &#39;test&#39;} contains &#39;name&#39;
+&#39;hello&#39; matches &#39;ell&#39;
+&#39;hello&#39; is string
+&#39;hello&#39; starts_with &#39;hel&#39;
+[1, 2] endswith 2
+</code></pre></div><h2 id="object-literals"><a href="#object-literals">2.17 Object Literals</a></h2>
+<p><strong>[{ key: value, … }]</strong><br />
+A collection of key-value pairs.
+Values can contain any type, including other objects.
+Keys can be any non-collection type
+The indexing operator (a[b]) can be used to access elements of an object.</p>
+<h3 id="examples-16"><a href="#examples-16">2.17.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }
+{ &quot;name&quot;: &quot;John&quot;, &quot;address&quot;: { &quot;city&quot;: &quot;New York&quot;, &quot;state&quot;: &quot;NY&quot; } }
+</code></pre></div><h2 id="range-literals"><a href="#range-literals">2.18 Range Literals</a></h2>
+<p><strong>[first..last]</strong><br />
+A range of values.
+Ranges can be used to create arrays of numbers or characters.
+Ranges are inclusive, meaning the start and end values are included in the array.
+Start and end values must be of the same type, and start must be &lt;= end.
+Character ranges are inclusive and can only be used with single-character strings.</p>
+<h3 id="examples-17"><a href="#examples-17">2.18.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>1..5
+&#39;a&#39;..&#39;z&#39;
+</code></pre></div><h2 id="ternary"><a href="#ternary">2.19 Ternary</a></h2>
+<p><strong>[condition ? then : else]</strong><br />
+A right-associative ternary operator.
+The condition is evaluated first, then either the then or else branch is evaluated.</p>
+<h3 id="examples-18"><a href="#examples-18">2.19.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>true ? 1 : 2
+</code></pre></div><h2 id="unary-bitwise-not"><a href="#unary-bitwise-not">2.20 Unary Bitwise Not</a></h2>
+<p><strong>[~]</strong><br />
+A prefix operator that performs bitwise NOT on a value.
+The value is first converted to an integer.
+A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
+<h3 id="examples-19"><a href="#examples-19">2.20.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>~5
+</code></pre></div><h2 id="unary-boolean-not"><a href="#unary-boolean-not">2.21 Unary Boolean Not</a></h2>
+<p><strong>[not]</strong><br />
+Negates a boolean value.
+If the value is not a boolean, it is cooerced to boolean first.</p>
+<h3 id="examples-20"><a href="#examples-20">2.21.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>!true == false
+!&#39;test&#39; == false
+!0 == true
+</code></pre></div><h2 id="unary-incrementdecrement"><a href="#unary-incrementdecrement">2.22 Unary Increment/Decrement</a></h2>
+<p><strong>[++, –]</strong><br />
+Increments or decrements a variable by 1.</p>
+<h3 id="examples-21"><a href="#examples-21">2.22.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 0
+assert_eq(a++, 0)
+assert_eq(--a, 0)
+</code></pre></div><h2 id="unary-negation"><a href="#unary-negation">2.23 Unary Negation</a></h2>
+<p><strong>[-]</strong><br />
+Negates a value.</p>
+<h3 id="examples-22"><a href="#examples-22">2.23.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>-1
+</code></pre></div><h2 id="match"><a href="#match">2.24 match</a></h2>
+<p><strong>[match <value> { <condition> =&gt; <block>, _ =&gt; <block> }]</strong><br />
+A conditional expression that evaluates a value and then one of several cases.
+match blocks must be exhaustive, and therefore must end in a default case</p>
+<h3 id="examples-23"><a href="#examples-23">2.24.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
+match a {
+    5 =&gt; { &#39;five&#39; },
+    6 =&gt; { &#39;six&#39; },
+    _ =&gt; { &#39;other&#39; }
+}
+</code></pre></div><h1 id="functions"><a href="#functions">3 Functions</a></h1><h2 id="api-functions"><a href="#api-functions">3.1 API Functions</a></h2><h3 id="api_addnamestring-endpoint---string"><a href="#api_addnamestring-endpoint---string">3.1.1 <code>api_add(name:string, endpoint) -&gt; string</code></a></h3>
+<p>Registers an API
+This function registers an API with the system. The API can then be used to make requests to the specified endpoint.<br />
+The endpoint can be a string, or an object with the properties [ base_url, headers, description, examples, auth_key]<br />
+Use the ‘api_get’ and ‘api_post’ functions to make requests to the registered API</p>
+<h4 id="examples-24"><a href="#examples-24">3.1.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_add(&#39;ipify&#39;, &#39;https://api.ipify.org&#39;)
+assert( api_list() contains &#39;ipify&#39; )
+</code></pre></div>
+<hr />
+<h3 id="api_all---object"><a href="#api_all---object">3.1.2 <code>api_all() -&gt; object</code></a></h3>
+<p>Details all registered APIs
+This function returns an object containing the names and endpoints of all registered APIs</p>
+<h4 id="examples-25"><a href="#examples-25">3.1.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_all()[&#39;chatgpt&#39;][&#39;base_url&#39;]
+</code></pre></div>
+<hr />
+<h3 id="api_getnamestring-pathstring---string"><a href="#api_getnamestring-pathstring---string">3.1.3 <code>api_get(name:string, [path:string]) -&gt; string</code></a></h3>
+<p>Performs a GET request to a registered API
+This function performs a GET request to the specified path of a registered API.<br />
+The path is appended to the base URL of the API.</p>
+<h4 id="examples-26"><a href="#examples-26">3.1.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_get(&#39;ipify&#39;)
+api_get(&#39;ipify&#39;, &#39;/?format=json&#39;)
+</code></pre></div>
+<hr />
+<h3 id="api_keynamestring-auth_keystring---string"><a href="#api_keynamestring-auth_keystring---string">3.1.4 <code>api_key(name:string, auth_key:string) -&gt; string</code></a></h3>
+<p>Sets an authentication key for a registered API
+This function sets an authentication key for a registered API.<br />
+The key will be used in the ‘Authorization’ header of requests to the API.</p>
+<h4 id="examples-27"><a href="#examples-27">3.1.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_key(&#39;chatgpt&#39;, &#39;my_super_secret_api_key&#39;)
+assert_eq( api_all()[&#39;chatgpt&#39;][&#39;auth_key&#39;], &#39;my_super_secret_api_key&#39; )
+</code></pre></div>
+<hr />
+<h3 id="api_list---object"><a href="#api_list---object">3.1.5 <code>api_list() -&gt; object</code></a></h3>
+<p>Lists all registered APIs
+This function returns an array containing the names of all registered APIs</p>
+<h4 id="examples-28"><a href="#examples-28">3.1.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert( api_list() contains &#39;chatgpt&#39; )
+</code></pre></div>
+<hr />
+<h3 id="api_postnamestring-bodystring-pathstring---string"><a href="#api_postnamestring-bodystring-pathstring---string">3.1.6 <code>api_post(name:string, body:string, [path:string]) -&gt; string</code></a></h3>
+<p>Performs a POST request to a registered API
+This function performs a POST request to the specified path of a registered API.<br />
+The path is appended to the base URL of the API.</p>
+<h4 id="examples-29"><a href="#examples-29">3.1.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_post(&#39;ipify&#39;, &#39;{&quot;name&quot;=&quot;john&quot;}&#39;, &#39;format=json&#39;)
+</code></pre></div>
+<hr />
+<h3 id="api_remnamestring---string"><a href="#api_remnamestring---string">3.1.7 <code>api_rem(name:string) -&gt; string</code></a></h3>
+<p>Unregisters an API
+This function unregisters an API with the system, and returns its name<br />
+The API can no longer be used to make requests</p>
+<h4 id="examples-30"><a href="#examples-30">3.1.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_rem(&#39;ipify&#39;)
+assert( !(api_list() contains &#39;ipify&#39;) )
+</code></pre></div>
+<hr />
+<h3 id="chatgptpromptstring---string"><a href="#chatgptpromptstring---string">3.1.8 <code>chatgpt(prompt:string) -&gt; string</code></a></h3>
+<p>Performs a request to the ChatGPT API
+This function performs a request to the ChatGPT 3.5 API, using the specified prompt.</p>
+<h4 id="examples-31"><a href="#examples-31">3.1.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>api_key(&#39;chatgpt&#39;, &#39;my_super_secret_api_key&#39;)
+chatgpt(&#39;What is the meaning of life?&#39;)
+</code></pre></div><h2 id="bitwise-functions"><a href="#bitwise-functions">3.2 Bitwise Functions</a></h2><h3 id="andleftint-rightint---int"><a href="#andleftint-rightint---int">3.2.1 <code>and(left:int, right:int) -&gt; int</code></a></h3>
+<p>Performs a bitwise and operation on two integers
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.</p>
+<h4 id="examples-32"><a href="#examples-32">3.2.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(0b0100, and(0b1100, 0b0110))
+</code></pre></div>
+<hr />
+<h3 id="llshiftvalueint-shiftint---int"><a href="#llshiftvalueint-shiftint---int">3.2.2 <code>llshift(value:int, shift:int) -&gt; int</code></a></h3>
+<p>Performs a logical bitwise left shift operation on an integer
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.<br />
+Will always ignore the sign bit.</p>
+<h4 id="examples-33"><a href="#examples-33">3.2.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    0b1000_0010i8,
+    llshift(0b0100_0001i8, 1)
+)
+</code></pre></div>
+<hr />
+<h3 id="lrshiftvalueint-shiftint---int"><a href="#lrshiftvalueint-shiftint---int">3.2.3 <code>lrshift(value:int, shift:int) -&gt; int</code></a></h3>
+<p>Performs a logical bitwise right shift operation on an integer
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.<br />
+Will always ignore the sign bit.</p>
+<h4 id="examples-34"><a href="#examples-34">3.2.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    0b0100_0000i8,
+    lrshift(0b1000_0001i8, 1)
+)
+</code></pre></div>
+<hr />
+<h3 id="notvalueint---int"><a href="#notvalueint---int">3.2.4 <code>not(value:int) -&gt; int</code></a></h3>
+<p>Performs a bitwise NOT operation on an integer
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.</p>
+<h4 id="examples-35"><a href="#examples-35">3.2.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(0b1111_1111u8, not(0b0000_0000u8))
+</code></pre></div>
+<hr />
+<h3 id="orleftint-rightint---int"><a href="#orleftint-rightint---int">3.2.5 <code>or(left:int, right:int) -&gt; int</code></a></h3>
+<p>Performs a bitwise or operation on two integers
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.</p>
+<h4 id="examples-36"><a href="#examples-36">3.2.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(0b1110, or(0b1100, 0b0110))
+</code></pre></div>
+<hr />
+<h3 id="xorleftint-rightint---int"><a href="#xorleftint-rightint---int">3.2.6 <code>xor(left:int, right:int) -&gt; int</code></a></h3>
+<p>Performs a bitwise xor operation on two integers
+Floats and Fixed-point numbers will be truncated to integers before the operation is performed.</p>
+<h4 id="examples-37"><a href="#examples-37">3.2.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(0b1010, xor(0b1100, 0b0110))
+</code></pre></div><h2 id="collections-functions"><a href="#collections-functions">3.3 Collections Functions</a></h2><h3 id="allinputarray---bool"><a href="#allinputarray---bool">3.3.1 <code>all(input:array) -&gt; bool</code></a></h3>
+<p>Returns true if all elements of the given array are truthy
+Returns true if all elements of the given array evaluate to true.<br />
+If the array is empty, true is returned.</p>
+<h4 id="examples-38"><a href="#examples-38">3.3.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(all([true, true, true]), true);
+assert_eq(all([0, 1, 2]), false);
+assert_eq(all([]), true);
+</code></pre></div>
+<hr />
+<h3 id="anyinputarray---bool"><a href="#anyinputarray---bool">3.3.2 <code>any(input:array) -&gt; bool</code></a></h3>
+<p>Returns true if any element of the given array is truthy
+Returns true if any element of the given array evaluates to true.<br />
+If the array is empty, false is returned.</p>
+<h4 id="examples-39"><a href="#examples-39">3.3.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(any([true, true, true]), true);
+assert_eq(any([0, 1, 2]), true);
+assert_eq(any([]), false);
+</code></pre></div>
+<hr />
+<h3 id="chunksinputarray-sizeint---array"><a href="#chunksinputarray-sizeint---array">3.3.3 <code>chunks(input:array, size:int) -&gt; array</code></a></h3>
+<p>Splits the given array into chunks of the given size, and returns the resulting array of arrays
+Splits the given array into chunks of the given size.<br />
+The last chunk may be smaller than the given size.</p>
+<h4 id="examples-40"><a href="#examples-40">3.3.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(chunks([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+assert_eq(chunks([1, 2, 3, 4, 5], 3), [[1, 2, 3], [4, 5]]);
+assert_eq(chunks([1, 2, 3, 4, 5], 5), [[1, 2, 3, 4, 5]]);
+</code></pre></div>
+<hr />
+<h3 id="dequeueinputarray---array"><a href="#dequeueinputarray---array">3.3.4 <code>dequeue(input:array) -&gt; array</code></a></h3>
+<p>Removes and returns the first element of the given array
+Removes the first element from the given array and returns it.<br />
+If the array is empty, an error is returned.<br />
+If the input is a reference to an array in a variable, the variable is updated.<br />
+This function is less performant than <code>pop</code> for large arrays, as it requires shifting all elements by one position.</p>
+<h4 id="examples-41"><a href="#examples-41">3.3.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(dequeue([1, 2, 3]), 1);
+would_err(&#39;dequeue([]&#39;) // Array is empty, so an error is returned
+
+a = [1, 2];
+assert_eq(dequeue(a), 1);
+assert_eq(a, [2]);
+</code></pre></div>
+<hr />
+<h3 id="enqueueinputarray-value---array"><a href="#enqueueinputarray-value---array">3.3.5 <code>enqueue(input:array, value) -&gt; array</code></a></h3>
+<p>Appends the given value to the start of the given array, and returns the result
+Appends the given value to the start of the given array.<br />
+If the input is a reference to an array in a variable, the variable is updated.<br />
+This function is less performant than <code>push</code> for large arrays, as it requires shifting all elements by one position.</p>
+<h4 id="examples-42"><a href="#examples-42">3.3.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(enqueue([1, 2], 3), [3, 1, 2])
+assert_eq(enqueue([], 3), [3])
+
+a = [1]
+assert_eq(enqueue(a, 2), [2, 1])
+assert_eq(a, [2, 1])
+</code></pre></div>
+<hr />
+<h3 id="extendleftarray-rightarray---array"><a href="#extendleftarray-rightarray---array">3.3.6 <code>extend(left:array, right:array) -&gt; array</code></a></h3>
+<p>Appends the elements of the second array to the first array, and returns the result
+The elements of the second array are appended to the first array.<br />
+The first array is updated.</p>
+<h4 id="examples-43"><a href="#examples-43">3.3.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(extend([1, 2], [3, 4]), [1, 2, 3, 4]);
+assert_eq(extend([], [3, 4]), [3, 4]);
+assert_eq(extend([1, 2], []), [1, 2]);
+
+a = [1, 2];
+extend(a, [3, 4])
+assert_eq(a, [1, 2, 3, 4]);
+</code></pre></div>
+<hr />
+<h3 id="firstinputarray---any"><a href="#firstinputarray---any">3.3.7 <code>first(input:array) -&gt; any</code></a></h3>
+<p>Returns the first element of the given array
+Coerces its argument to an array and returns the first element.<br />
+If the resulting array is empty, an error is returned.</p>
+<h4 id="examples-44"><a href="#examples-44">3.3.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(first([1, 2, 3]), 1);
+assert_eq(first(3),         3); // equivalent to first([3])
+
+would_err(&#39;first([])&#39;); // Array is empty, so an error is returned
+</code></pre></div>
+<hr />
+<h3 id="flatteninputarray---array"><a href="#flatteninputarray---array">3.3.8 <code>flatten(input:array) -&gt; array</code></a></h3>
+<p>Flattens the given array of arrays into a single array, and returns the result
+Flattens the given array of arrays into a single array.<br />
+The input array is not updated.</p>
+<h4 id="examples-45"><a href="#examples-45">3.3.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(flatten([[1, 2], [3, 4]]), [1, 2, 3, 4]);
+assert_eq(flatten([[1, 2], []]), [1, 2]);
+assert_eq(flatten([[], []]), []);
+</code></pre></div>
+<hr />
+<h3 id="insertinputarray-indexint-value---array"><a href="#insertinputarray-indexint-value---array">3.3.9 <code>insert(input:array, index:int, value) -&gt; array</code></a></h3>
+<p>Inserts the given value at the given index in the given array, and returns the result
+Inserts the given value at the given index in the given array.<br />
+If the input is a reference to an array in a variable, the variable is updated.<br />
+If the index is out of bounds, an error is returned.</p>
+<h4 id="examples-46"><a href="#examples-46">3.3.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(insert([1, 2, 3], 1, 4), [1, 4, 2, 3]);
+assert_eq(insert([1, 2, 3], 3, 4), [1, 2, 3, 4]);
+assert_eq(insert([1, 2, 3], 0, 4), [4, 1, 2, 3]);
+
+would_err(&#39;insert([1, 2, 3], 4, 4)&#39;) // Index out of bounds
+
+a = [1, 2, 3];
+assert_eq(insert(a, 1, 4), [1, 4, 2, 3]);
+assert_eq(a, [1, 4, 2, 3]);
+</code></pre></div>
+<hr />
+<h3 id="is_emptyinput---bool"><a href="#is_emptyinput---bool">3.3.10 <code>is_empty(input) -&gt; bool</code></a></h3>
+<p>Returns true if the given array or object is empty
+For arrays and objects, this function returns true if the array or object has no elements.<br />
+For strings, it returns true if the string is empty.<br />
+For all other types it will return false</p>
+<h4 id="examples-47"><a href="#examples-47">3.3.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(is_empty([]),     true);
+assert_eq(is_empty({}),     true);
+assert_eq(is_empty(&#39;test&#39;), false);
+assert_eq(is_empty(38),     false);
+</code></pre></div>
+<hr />
+<h3 id="keysinputobject---array"><a href="#keysinputobject---array">3.3.11 <code>keys(input:object) -&gt; array</code></a></h3>
+<p>Returns an array of the keys of the given object
+Returns an array of the keys of the given object.<br />
+The order of the keys is not guaranteed.</p>
+<h4 id="examples-48"><a href="#examples-48">3.3.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(keys({&#39;a&#39;: 1, &#39;b&#39;: 2}), [&#39;a&#39;, &#39;b&#39;]);
+assert_eq(keys({}), []);
+</code></pre></div>
+<hr />
+<h3 id="lastinputarray---any"><a href="#lastinputarray---any">3.3.12 <code>last(input:array) -&gt; any</code></a></h3>
+<p>Returns the last element of the given array
+Coerces its argument to an array and returns the last element.<br />
+If the resulting array is empty, an error is returned.</p>
+<h4 id="examples-49"><a href="#examples-49">3.3.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(last([1, 2, 3]), 3);
+assert_eq(last(3),         3); // equivalent to last([3])
+
+would_err(&#39;last([])&#39;); // Array is empty, so an error is returned
+</code></pre></div>
+<hr />
+<h3 id="leninput---int"><a href="#leninput---int">3.3.13 <code>len(input) -&gt; int</code></a></h3>
+<p>Returns the length of the given array or object
+For arrays and objects, this function returns the number of elements in the array or object.<br />
+For strings, it returns the number of characters.<br />
+For all other types it will return 1</p>
+<h4 id="examples-50"><a href="#examples-50">3.3.13.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(len(&#39;test&#39;),       4);
+assert_eq(len([1, 2, 3]),    3);
+assert_eq(len({&#39;a&#39;: 1, &#39;b&#39;: 2}), 2);
+assert_eq(len(38),           1);
+</code></pre></div>
+<hr />
+<h3 id="mergeleftarray-rightarray---array"><a href="#mergeleftarray-rightarray---array">3.3.14 <code>merge(left:array, right:array) -&gt; array</code></a></h3>
+<p>Merges the two given arrays into a single array, and returns the result
+The two input arrays are concatenated into a single new array.<br />
+The input arrays are not updated.</p>
+<h4 id="examples-51"><a href="#examples-51">3.3.14.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(merge([1, 2], [3, 4]), [1, 2, 3, 4]);
+assert_eq(merge([], [3, 4]), [3, 4]);
+assert_eq(merge([1, 2], []), [1, 2]);
+</code></pre></div>
+<hr />
+<h3 id="popinputarray---any"><a href="#popinputarray---any">3.3.15 <code>pop(input:array) -&gt; any</code></a></h3>
+<p>Removes and returns the last element of the given array
+Removes the last element from the given array and returns it.<br />
+If the array is empty, an error is returned.<br />
+If the input is a reference to an array in a variable, the variable is updated.</p>
+<h4 id="examples-52"><a href="#examples-52">3.3.15.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(pop([1, 2, 3]), 3);
+would_err(&#39;pop([]&#39;) // Array is empty, so an error is returned
+
+a = [1];
+assert_eq(pop(a), 1);
+assert_eq(a, []);
+</code></pre></div>
+<hr />
+<h3 id="pushinputarray-value---array"><a href="#pushinputarray-value---array">3.3.16 <code>push(input:array, value) -&gt; array</code></a></h3>
+<p>Appends the given value to the end of the given array, and returns the result
+Appends the given value to the end of the given array.<br />
+If the input is a reference to an array in a variable, the variable is updated.</p>
+<h4 id="examples-53"><a href="#examples-53">3.3.16.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(push([1, 2], 3), [1, 2, 3]);
+assert_eq(push([], 3), [3]);
+
+a = [1];
+assert_eq(push(a, 2), [1, 2]);
+assert_eq(a, [1, 2]);
+</code></pre></div>
+<hr />
+<h3 id="removeinputarray-indexint---array"><a href="#removeinputarray-indexint---array">3.3.17 <code>remove(input:array, index:int) -&gt; array</code></a></h3>
+<p>Removes the element at the given index in the given array, and returns value
+Removes the element at the given index in the given array.<br />
+If the input is a reference to an array in a variable, the variable is updated.<br />
+If the index is out of bounds, an error is returned.</p>
+<h4 id="examples-54"><a href="#examples-54">3.3.17.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(remove([1, 2, 3], 1), 2);
+assert_eq(remove([1, 2, 3], 2), 3);
+assert_eq(remove([1, 2, 3], 0), 1);
+
+would_err(&#39;remove([1, 2, 3], 3)&#39;) // Index out of bounds
+
+a = [1, 2, 3];
+assert_eq(remove(a, 1), 2);
+assert_eq(a, [1, 3]);
+</code></pre></div>
+<hr />
+<h3 id="reverseinputarray---array"><a href="#reverseinputarray---array">3.3.18 <code>reverse(input:array) -&gt; array</code></a></h3>
+<p>Reverses the given array, and returns the result
+The resulting array is the reverse of the input array.<br />
+The original array is not updated.</p>
+<h4 id="examples-55"><a href="#examples-55">3.3.18.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(reverse([1, 2, 3]), [3, 2, 1]);
+assert_eq(reverse([&#39;a&#39;, &#39;b&#39;, &#39;c&#39;]), [&#39;c&#39;, &#39;b&#39;, &#39;a&#39;]);
+</code></pre></div>
+<hr />
+<h3 id="sortinputarray---array"><a href="#sortinputarray---array">3.3.19 <code>sort(input:array) -&gt; array</code></a></h3>
+<p>Sorts the given array, and returns the result
+The resulting array is sorted in ascending order by value.<br />
+The original array is not updated.</p>
+<h4 id="examples-56"><a href="#examples-56">3.3.19.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(sort([3, 1, 2]), [1, 2, 3]);
+assert_eq(sort([&#39;c&#39;, &#39;a&#39;, &#39;b&#39;]), [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;]);
+</code></pre></div>
+<hr />
+<h3 id="splitinputarray-indexint---array"><a href="#splitinputarray-indexint---array">3.3.20 <code>split(input:array, index:int) -&gt; array</code></a></h3>
+<p>Splits the given array at the given index, and returns the two resulting arrays
+If the index is out of bounds, an error is returned.<br />
+Returns start-to-index (excluding index) and index-to-end (including index) arrays.</p>
+<h4 id="examples-57"><a href="#examples-57">3.3.20.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(split([1, 2, 3, 4], 2), [[1, 2], [3, 4]]);
+assert_eq(split([1, 2, 3, 4], 0), [[], [1, 2, 3, 4]]);
+assert_eq(split([1, 2, 3, 4], 4), [[1, 2, 3, 4], []]);
+
+would_err(&#39;split([1, 2, 3, 4], 5)&#39;) // Index out of bounds
+</code></pre></div>
+<hr />
+<h3 id="valuesinputobject---array"><a href="#valuesinputobject---array">3.3.21 <code>values(input:object) -&gt; array</code></a></h3>
+<p>Returns an array of the values of the given object
+Returns an array of the values of the given object.<br />
+The order of the values is not guaranteed.</p>
+<h4 id="examples-58"><a href="#examples-58">3.3.21.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(values({&#39;a&#39;: 1, &#39;b&#39;: 2}), [1, 2]);
+assert_eq(values({}), []);
+</code></pre></div>
+<hr />
+<h3 id="zipleftarray-rightarray---array"><a href="#zipleftarray-rightarray---array">3.3.22 <code>zip(left:array, right:array) -&gt; array</code></a></h3>
+<p>Zips the two given arrays into an array of pairs, and returns the result
+Zips the two given arrays into an array of pairs.<br />
+If the input arrays are of different lengths, the resulting array will have the length of the shortest input array.</p>
+<h4 id="examples-59"><a href="#examples-59">3.3.22.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(zip([1, 2, 3], [4, 5, 6]), [[1, 4], [2, 5], [3, 6]]);
+assert_eq(zip([1, 2], [4, 5, 6]), [[1, 4], [2, 5]]);
+assert_eq(zip([1, 2, 3], [4, 5]), [[1, 4], [2, 5]]);
+</code></pre></div>
+<hr />
+<h3 id="zopleftarray-rightarray---array"><a href="#zopleftarray-rightarray---array">3.3.23 <code>zop(left:array, right:array) -&gt; array</code></a></h3>
+<p>Zips the two given arrays into an array of pairs, and converts in to an object
+Zips the two given arrays into an array of pairs, then converts the result to object<br />
+If the input arrays are of different lengths, the result will have the length of the shortest input array.<br />
+Will fail if any resulting keys would be invalid (collections cannot be used as object keys)</p>
+<h4 id="examples-60"><a href="#examples-60">3.3.23.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(zop([&#39;a&#39;, &#39;b&#39;, &#39;c&#39;], [1, 2, 3]), {&#39;a&#39;: 1, &#39;b&#39;: 2, &#39;c&#39;: 3});
+</code></pre></div><h2 id="cryptographic-functions"><a href="#cryptographic-functions">3.4 Cryptographic Functions</a></h2><h3 id="md5inputstring---string"><a href="#md5inputstring---string">3.4.1 <code>md5(input:string) -&gt; string</code></a></h3>
+<p>Returns the md5 hash of a given string
+Will return an unsalted md5 hash of the input string.</p>
+<h4 id="examples-61"><a href="#examples-61">3.4.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    md5(&#39;hello&#39;),
+    &#39;5D41402ABC4B2A76B9719D911017C592&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="sha256inputstring---string"><a href="#sha256inputstring---string">3.4.2 <code>sha256(input:string) -&gt; string</code></a></h3>
+<p>Returns the sha256 hash of a given string
+Will return an unsalted sha256 hash of the input string.</p>
+<h4 id="examples-62"><a href="#examples-62">3.4.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    sha256(&#39;hello&#39;),
+    &#39;2CF24DBA5FB0A30E26E83B2AC5B9E29E1B161E5C1FA7425E73043362938B9824&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="sha512inputstring---string"><a href="#sha512inputstring---string">3.4.3 <code>sha512(input:string) -&gt; string</code></a></h3>
+<p>Returns the sha512 hash of a given string
+Will return an unsalted sha512 hash of the input string.</p>
+<h4 id="examples-63"><a href="#examples-63">3.4.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    sha512(&#39;hello&#39;),
+    &#39;9B71D224BD62F3785D96D46AD3EA3D73319BFBC2890CAADAE2DFF72519673CA72323C3D99BA5C11D7C7ACC6E14B8C5DA0C4663475C2E5C3ADEF46F73BCDEC043&#39;
+)
+</code></pre></div><h2 id="decorators-functions"><a href="#decorators-functions">3.5 Decorators Functions</a></h2><h3 id="audinputnumeric---string"><a href="#audinputnumeric---string">3.5.1 <code>@aud(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a AUD amount
+Includes a dollar sign and two decimal places.</p>
+<h4 id="examples-64"><a href="#examples-64">3.5.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @aud,
+    &#39;$100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="bininputnumeric---string"><a href="#bininputnumeric---string">3.5.2 <code>@bin(input:numeric) -&gt; string</code></a></h3>
+<p>Base 2 number formatting, such as 0b101
+Converts a number to a binary string. The output will be prefixed with ‘0b’ with a length based on the input type.</p>
+<h4 id="examples-65"><a href="#examples-65">3.5.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    255 @bin,
+    &#39;0b11111111&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="boolinput---string"><a href="#boolinput---string">3.5.3 <code>@bool(input) -&gt; string</code></a></h3>
+<p>Boolean formatting
+Converts a number to a boolean string.</p>
+<h4 id="examples-66"><a href="#examples-66">3.5.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    1 @bool,
+    &#39;true&#39;
+
+)
+</code></pre></div>
+<hr />
+<h3 id="cadinputnumeric---string"><a href="#cadinputnumeric---string">3.5.4 <code>@cad(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a CAD amount
+Includes a dollar sign and two decimal places.</p>
+<h4 id="examples-67"><a href="#examples-67">3.5.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @cad,
+    &#39;$100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="cnyinputnumeric---string"><a href="#cnyinputnumeric---string">3.5.5 <code>@cny(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a CNY amount
+Includes a yuan sign and two decimal places.</p>
+<h4 id="examples-68"><a href="#examples-68">3.5.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @cny,
+    &#39;¥100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="eurinputnumeric---string"><a href="#eurinputnumeric---string">3.5.6 <code>@eur(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a Euro amount
+Includes a euro sign and two decimal places.</p>
+<h4 id="examples-69"><a href="#examples-69">3.5.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @eur,
+    &#39;€100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="floatinputnumeric---string"><a href="#floatinputnumeric---string">3.5.7 <code>@float(input:numeric) -&gt; string</code></a></h3>
+<p>Floating point number formatting
+Converts a number to a floating point string.</p>
+<h4 id="examples-70"><a href="#examples-70">3.5.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    1.0 @float,
+    &#39;1.0&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="gbpinputnumeric---string"><a href="#gbpinputnumeric---string">3.5.8 <code>@gbp(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a GBP amount
+Includes a pound sign and two decimal places.</p>
+<h4 id="examples-71"><a href="#examples-71">3.5.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @gbp,
+    &#39;£100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="hexinputnumeric---string"><a href="#hexinputnumeric---string">3.5.9 <code>@hex(input:numeric) -&gt; string</code></a></h3>
+<p>Base 16 number formatting, such as 0xFF
+Converts a number to a hexadecimal string. The output will be prefixed with ‘0x’ with a length based on the input type.</p>
+<h4 id="examples-72"><a href="#examples-72">3.5.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    255 @hex,
+    &#39;0xff&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="inrinputnumeric---string"><a href="#inrinputnumeric---string">3.5.10 <code>@inr(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a INR amount
+Includes a rupee sign and two decimal places.</p>
+<h4 id="examples-73"><a href="#examples-73">3.5.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @inr,
+    &#39;₹100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="intinputnumeric---string"><a href="#intinputnumeric---string">3.5.11 <code>@int(input:numeric) -&gt; string</code></a></h3>
+<p>Integer number formatting
+Converts a number to an integer string.</p>
+<h4 id="examples-74"><a href="#examples-74">3.5.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    1000000 @int,
+    &#39;1000000&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="jpyinputnumeric---string"><a href="#jpyinputnumeric---string">3.5.12 <code>@jpy(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a JPY amount
+Includes a yen sign and no decimal places.</p>
+<h4 id="examples-75"><a href="#examples-75">3.5.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @jpy,
+    &#39;¥100&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="octinputnumeric---string"><a href="#octinputnumeric---string">3.5.13 <code>@oct(input:numeric) -&gt; string</code></a></h3>
+<p>Base 8 number formatting, such as 0o77
+Converts a number to an octal string. The output will be prefixed with ‘0o’ with a length based on the input type.</p>
+<h4 id="examples-76"><a href="#examples-76">3.5.13.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    255 @oct,
+    &#39;0o377&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="ordinputnumeric---string"><a href="#ordinputnumeric---string">3.5.14 <code>@ord(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets an integer as an ordinal number
+This function will append the appropriate suffix to the input number.</p>
+<h4 id="examples-77"><a href="#examples-77">3.5.14.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    123 @ord,
+    &#39;123rd&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="percentinputnumeric---string"><a href="#percentinputnumeric---string">3.5.15 <code>@percent(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a percentage
+This function will append a percentage sign to the input number times 100</p>
+<h4 id="examples-78"><a href="#examples-78">3.5.15.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    0.123 @percent,
+    &#39;12.3%&#39;
+
+)
+</code></pre></div>
+<hr />
+<h3 id="romaninputnumeric---string"><a href="#romaninputnumeric---string">3.5.16 <code>@roman(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets an integer as a roman numeral
+Like the roman system before it; this function only supports numbers up to 3999.</p>
+<h4 id="examples-79"><a href="#examples-79">3.5.16.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    123 @roman,
+    &#39;CXXIII&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="rubinputnumeric---string"><a href="#rubinputnumeric---string">3.5.17 <code>@rub(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a RUB amount
+Includes a ruble sign and two decimal places.</p>
+<h4 id="examples-80"><a href="#examples-80">3.5.17.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @rub,
+    &#39;₽100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="sciinputnumeric---string"><a href="#sciinputnumeric---string">3.5.18 <code>@sci(input:numeric) -&gt; string</code></a></h3>
+<p>Scientific notation
+Converts a floating point number to sci notation.</p>
+<h4 id="examples-81"><a href="#examples-81">3.5.18.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    1000000.0 @sci,
+    &#39;1e6&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="usdinputnumeric---string"><a href="#usdinputnumeric---string">3.5.19 <code>@usd(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets a number as a USD amount
+Includes a dollar sign and two decimal places.</p>
+<h4 id="examples-82"><a href="#examples-82">3.5.19.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    100 @usd,
+    &#39;$100.00&#39;
+)
+</code></pre></div>
+<hr />
+<h3 id="utcinputnumeric---string"><a href="#utcinputnumeric---string">3.5.20 <code>@utc(input:numeric) -&gt; string</code></a></h3>
+<p>Interprets an integer as a timestamp, and formats it in UTC standard
+This function will convert the input number to a UTC timestamp.</p>
+<h4 id="examples-83"><a href="#examples-83">3.5.20.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    123 @utc,
+    &#39;1970-01-01T00:02:03Z&#39;
+)
+</code></pre></div><h2 id="development-functions"><a href="#development-functions">3.6 Development Functions</a></h2><h3 id="tailfilestring-linesint---array"><a href="#tailfilestring-linesint---array">3.6.1 <code>tail(file:string, [lines:int]) -&gt; array</code></a></h3>
+<p>Returns the last <lines> lines from a given file
+If <lines> is not specified, the function will return the last line of the file.</p>
+<h4 id="examples-84"><a href="#examples-84">3.6.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>lines = tail(&#39;.gitignore&#39;)
+assert_eq(
+    lines,
+    [&#39;/Cargo.lock&#39;]
+)
+</code></pre></div>
+<hr />
+<h3 id="time---float"><a href="#time---float">3.6.2 <code>time() -&gt; float</code></a></h3>
+<p>Returns a unix timestamp for the current system time
+Returns a unix timestamp for the current system time.<br />
+The timestamp is a floating point number representing the number of seconds since the Unix epoch.</p>
+<h4 id="examples-85"><a href="#examples-85">3.6.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert(
+    time() &gt; 0
+)
+</code></pre></div><h2 id="math-functions"><a href="#math-functions">3.7 Math Functions</a></h2><h3 id="absvaluenumeric---numeric"><a href="#absvaluenumeric---numeric">3.7.1 <code>abs(value:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the absolute value of a number
+The function will return the absolute value of the input number.</p>
+<h4 id="examples-86"><a href="#examples-86">3.7.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    abs(-5),
+    5
+)
+</code></pre></div>
+<hr />
+<h3 id="ceilvaluenumeric---numeric"><a href="#ceilvaluenumeric---numeric">3.7.2 <code>ceil(value:numeric) -&gt; numeric</code></a></h3>
+<p>Rounds a number up to the nearest whole number
+The function will round the input number up to the nearest whole number.<br />
+If the input number is already a whole number, the function will return the input number.</p>
+<h4 id="examples-87"><a href="#examples-87">3.7.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    ceil(1.5),
+    2.0
+)
+</code></pre></div>
+<hr />
+<h3 id="floorvaluenumeric---numeric"><a href="#floorvaluenumeric---numeric">3.7.3 <code>floor(value:numeric) -&gt; numeric</code></a></h3>
+<p>Rounds a number down to the nearest whole number
+The function will round the input number down to the nearest whole number.<br />
+If the input number is already a whole number, the function will return the input number.</p>
+<h4 id="examples-88"><a href="#examples-88">3.7.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    floor(1.5),
+    1.0
+)
+</code></pre></div>
+<hr />
+<h3 id="ilog2valueint---numeric"><a href="#ilog2valueint---numeric">3.7.4 <code>ilog2(value:int) -&gt; numeric</code></a></h3>
+<p>Returns the base-2 logarithm of a number, rounded down to the nearest whole number</p>
+<h4 id="examples-89"><a href="#examples-89">3.7.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    ilog2(8),
+    3
+)
+</code></pre></div>
+<hr />
+<h3 id="lnvaluenumeric---numeric"><a href="#lnvaluenumeric---numeric">3.7.5 <code>ln(value:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the natural logarithm of a number</p>
+<h4 id="examples-90"><a href="#examples-90">3.7.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    ln(2.718281828459045),
+    1.0
+)
+</code></pre></div>
+<hr />
+<h3 id="logvaluenumeric-basenumeric---numeric"><a href="#logvaluenumeric-basenumeric---numeric">3.7.6 <code>log(value:numeric, [base:numeric]) -&gt; numeric</code></a></h3>
+<p>Returns the logarithm of a number to a given base</p>
+<h4 id="examples-91"><a href="#examples-91">3.7.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    log(8, 2),
+    3.0
+)
+</code></pre></div>
+<hr />
+<h3 id="log10valuenumeric---numeric"><a href="#log10valuenumeric---numeric">3.7.7 <code>log10(value:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the base-10 logarithm of a number</p>
+<h4 id="examples-92"><a href="#examples-92">3.7.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    log10(100),
+    2
+)
+</code></pre></div>
+<hr />
+<h3 id="log2valuenumeric---numeric"><a href="#log2valuenumeric---numeric">3.7.8 <code>log2(value:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the base-2 logarithm of a number</p>
+<h4 id="examples-93"><a href="#examples-93">3.7.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    log2(8),
+    3
+)
+</code></pre></div>
+<hr />
+<h3 id="maxoptionsarray---numeric"><a href="#maxoptionsarray---numeric">3.7.9 <code>max(options:array) -&gt; numeric</code></a></h3>
+<p>Returns the largest value in the given array
+The array can contain any number of elements, and they can be of any type.<br />
+Since all values in lavendeux are comparable, the function will work with any type of array.</p>
+<h4 id="examples-94"><a href="#examples-94">3.7.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    max([1, 2, 3, 4, 5]),
+    5
+)
+</code></pre></div>
+<hr />
+<h3 id="minoptionsarray---numeric"><a href="#minoptionsarray---numeric">3.7.10 <code>min(options:array) -&gt; numeric</code></a></h3>
+<p>Returns the smallest value in the given array
+The array can contain any number of elements, and they can be of any type.<br />
+Since all values in lavendeux are comparable, the function will work with any type of array.</p>
+<h4 id="examples-95"><a href="#examples-95">3.7.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    min([1, 2, 3, 4, 5]),
+    1
+)
+</code></pre></div>
+<hr />
+<h3 id="rootvaluenumeric-rootnumeric---numeric"><a href="#rootvaluenumeric-rootnumeric---numeric">3.7.11 <code>root(value:numeric, root:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the nth root of a number</p>
+<h4 id="examples-96"><a href="#examples-96">3.7.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    root(8, 3),
+    2.0
+)
+</code></pre></div>
+<hr />
+<h3 id="roundvaluenumeric-precisionint---numeric"><a href="#roundvaluenumeric-precisionint---numeric">3.7.12 <code>round(value:numeric, [precision:int]) -&gt; numeric</code></a></h3>
+<p>Rounds a number to the nearest whole number
+The function will round the input number to the nearest whole number.<br />
+If the input number is already a whole number, the function will return the input number.</p>
+<h4 id="examples-97"><a href="#examples-97">3.7.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    round(1.5),
+    2.0
+)
+</code></pre></div>
+<hr />
+<h3 id="sqrtvaluenumeric---numeric"><a href="#sqrtvaluenumeric---numeric">3.7.13 <code>sqrt(value:numeric) -&gt; numeric</code></a></h3>
+<p>Returns the square root of a number</p>
+<h4 id="examples-98"><a href="#examples-98">3.7.13.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    sqrt(9),
+    3.0
+)
+</code></pre></div><h2 id="network-functions"><a href="#network-functions">3.8 Network Functions</a></h2><h3 id="geturlstring-headersobject---string"><a href="#geturlstring-headersobject---string">3.8.1 <code>get(url:string, [headers:object]) -&gt; string</code></a></h3>
+<p>Performs an HTTP GET request
+This function performs an HTTP GET request to the specified URL.<br />
+If the request fails, this function will return an error or time out</p>
+<h4 id="examples-99"><a href="#examples-99">3.8.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>str_out = get(&#39;https://jsonplaceholder.typicode.com/users&#39;)
+obj_out = get(&#39;https://jsonplaceholder.typicode.com/users&#39;, {
+    &#39;Content-Type&#39;: &#39;application/json&#39;
+})
+assert(str_out is string)
+assert(obj_out is array)
+</code></pre></div>
+<hr />
+<h3 id="posturlstring-bodystring-headersobject---string"><a href="#posturlstring-bodystring-headersobject---string">3.8.2 <code>post(url:string, body:string, [headers:object]) -&gt; string</code></a></h3>
+<p>Performs an HTTP POST request
+This function performs an HTTP POST request to the specified URL.<br />
+If the request fails, this function will return an error or time out</p>
+<h4 id="examples-100"><a href="#examples-100">3.8.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>obj_out = post(
+    &#39;https://jsonplaceholder.typicode.com/users&#39;, 
+    &#39;{&quot;name&quot;: &quot;John Doe&quot;}&#39;,
+    {&#39;Content-Type&#39;: &#39;application/json&#39;}
+)
+</code></pre></div>
+<hr />
+<h3 id="resolvehostnamestring---string"><a href="#resolvehostnamestring---string">3.8.3 <code>resolve(hostname:string) -&gt; string</code></a></h3>
+<p>Resolves a hostname to an IP address
+This function uses the system’s DNS resolver to resolve a hostname to an IP address.<br />
+If the hostname cannot be resolved, this function will return an error, or time out</p>
+<h4 id="examples-101"><a href="#examples-101">3.8.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>resolve(&#39;example.com&#39;)
+</code></pre></div><h2 id="random-functions"><a href="#random-functions">3.9 Random Functions</a></h2><h3 id="chooseoptionsarray---string"><a href="#chooseoptionsarray---string">3.9.1 <code>choose(options:array) -&gt; string</code></a></h3>
+<p>Returns a random element from a given array
+Uses a uniform distribution to select a random element from the input array.</p>
+<h4 id="examples-102"><a href="#examples-102">3.9.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>s = [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;]
+assert(
+    s contains choose(s)
+)
+</code></pre></div>
+<hr />
+<h3 id="randrangerange---numeric"><a href="#randrangerange---numeric">3.9.2 <code>rand([range:range]) -&gt; numeric</code></a></h3>
+<p>Returns a random number within a given range, or between 0 and 1 if no range is specified.
+If no range is specified, the function will return a random number between 0 and 1.<br />
+If a range is specified, the function will return a random number within that range.</p>
+<h4 id="examples-103"><a href="#examples-103">3.9.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>r = rand(0..10)
+assert(
+    r &gt;= 0 &amp;&amp; r &lt;= 10
+)
+</code></pre></div><h2 id="string-functions"><a href="#string-functions">3.10 String Functions</a></h2><h3 id="base64_decodesstring---string"><a href="#base64_decodesstring---string">3.10.1 <code>base64_decode(s:string) -&gt; string</code></a></h3>
+<p>Decodes a base64 string into a string.
+This function will handle all Unicode characters.</p>
+<h4 id="examples-104"><a href="#examples-104">3.10.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello world&#39;, base64_decode(&#39;aGVsbG8gd29ybGQ=&#39;))
+</code></pre></div>
+<hr />
+<h3 id="base64_encodesstring---string"><a href="#base64_encodesstring---string">3.10.2 <code>base64_encode(s:string) -&gt; string</code></a></h3>
+<p>Encodes a string into base64
+This function will handle all Unicode characters.</p>
+<h4 id="examples-105"><a href="#examples-105">3.10.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;aGVsbG8gd29ybGQ=&#39;, base64_encode(&#39;hello world&#39;))
+</code></pre></div>
+<hr />
+<h3 id="chrii64---string"><a href="#chrii64---string">3.10.3 <code>chr(i:i64) -&gt; string</code></a></h3>
+<p>Returns a string containing the character represented by the Unicode code point.
+This is the complement of ord(); Output from one is valid input for the other.</p>
+<h4 id="examples-106"><a href="#examples-106">3.10.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;a&#39;, chr(97))
+</code></pre></div>
+<hr />
+<h3 id="concatpartsarray-joinerstring---string"><a href="#concatpartsarray-joinerstring---string">3.10.4 <code>concat(parts:array, [joiner:string]) -&gt; string</code></a></h3>
+<p>Concatenates an array of values into a single string.
+Converts all its arguments to strings and then concatenates them.<br />
+If a joiner is provided, it will be used to separate the parts.</p>
+<h4 id="examples-107"><a href="#examples-107">3.10.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello world&#39;, concat([&#39;hello&#39;, &#39; &#39;, &#39;world&#39;]))
+</code></pre></div>
+<hr />
+<h3 id="formatsstring-argsarray---string"><a href="#formatsstring-argsarray---string">3.10.5 <code>format(s:string, args:array) -&gt; string</code></a></h3>
+<p>Formats a string using positional arguments.
+The 2nd argument is an array of values to be consumed in order</p>
+<h4 id="examples-108"><a href="#examples-108">3.10.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello world&#39;, format(&#39;hello {}&#39;, [&#39;world&#39;]))
+</code></pre></div>
+<hr />
+<h3 id="lowercasesstring---string"><a href="#lowercasesstring---string">3.10.6 <code>lowercase(s:string) -&gt; string</code></a></h3>
+<p>Converts a string to lowercase.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-109"><a href="#examples-109">3.10.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello&#39;, lowercase(&#39;HELLO&#39;))
+</code></pre></div>
+<hr />
+<h3 id="ordcstring---i64"><a href="#ordcstring---i64">3.10.7 <code>ord(c:string) -&gt; i64</code></a></h3>
+<p>Returns the Unicode code point of the character at the specified index.
+Will always return a 32bit value, regardless of the width of the character.<br />
+This is the complement of chr(); Output from one is valid input for the other.</p>
+<h4 id="examples-110"><a href="#examples-110">3.10.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(97u32, ord(&#39;a&#39;))
+</code></pre></div>
+<hr />
+<h3 id="prettyjsonsobject---string"><a href="#prettyjsonsobject---string">3.10.8 <code>prettyjson(s:object) -&gt; string</code></a></h3>
+<p>Formats a JSON string for human readability.
+This function will handle all Unicode characters.</p>
+<h4 id="examples-111"><a href="#examples-111">3.10.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    &#39;{
+  &quot;hello&quot;: &quot;world&quot;
+}&#39;,
+    prettyjson({&quot;hello&quot;: &quot;world&quot;})
+)
+</code></pre></div>
+<hr />
+<h3 id="repeatsstring-ni64---string"><a href="#repeatsstring-ni64---string">3.10.9 <code>repeat(s:string, n:i64) -&gt; string</code></a></h3>
+<p>Repeats a string a specified number of times.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-112"><a href="#examples-112">3.10.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hellohellohello&#39;, repeat(&#39;hello&#39;, 3))
+</code></pre></div>
+<hr />
+<h3 id="replacesstring-fromstring-tostring---string"><a href="#replacesstring-fromstring-tostring---string">3.10.10 <code>replace(s:string, from:string, to:string) -&gt; string</code></a></h3>
+<p>Replaces all occurrences of a substring within a string with another string.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-113"><a href="#examples-113">3.10.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello world&#39;, replace(&#39;hello there&#39;, &#39;there&#39;, &#39;world&#39;))
+</code></pre></div>
+<hr />
+<h3 id="trimsstring---string"><a href="#trimsstring---string">3.10.11 <code>trim(s:string) -&gt; string</code></a></h3>
+<p>Removes leading and trailing whitespace from a string.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-114"><a href="#examples-114">3.10.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello&#39;, trim(&#39;  hello  &#39;))
+</code></pre></div>
+<hr />
+<h3 id="trim_endsstring---string"><a href="#trim_endsstring---string">3.10.12 <code>trim_end(s:string) -&gt; string</code></a></h3>
+<p>Removes trailing whitespace from a string.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-115"><a href="#examples-115">3.10.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;  hello&#39;, trim_end(&#39;  hello  &#39;))
+</code></pre></div>
+<hr />
+<h3 id="trim_startsstring---string"><a href="#trim_startsstring---string">3.10.13 <code>trim_start(s:string) -&gt; string</code></a></h3>
+<p>Removes leading whitespace from a string.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-116"><a href="#examples-116">3.10.13.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello  &#39;, trim_start(&#39;  hello  &#39;))
+</code></pre></div>
+<hr />
+<h3 id="uppercasesstring---string"><a href="#uppercasesstring---string">3.10.14 <code>uppercase(s:string) -&gt; string</code></a></h3>
+<p>Converts a string to uppercase.
+This function is locale-insensitive and will handle all Unicode characters.</p>
+<h4 id="examples-117"><a href="#examples-117">3.10.14.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;HELLO&#39;, uppercase(&#39;hello&#39;))
+</code></pre></div>
+<hr />
+<h3 id="url_decodesstring---string"><a href="#url_decodesstring---string">3.10.15 <code>url_decode(s:string) -&gt; string</code></a></h3>
+<p>Decodes a URL-safe string into a normal string.
+This function will handle all Unicode characters.</p>
+<h4 id="examples-118"><a href="#examples-118">3.10.15.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello world&#39;, url_decode(&#39;hello%20world&#39;))
+</code></pre></div>
+<hr />
+<h3 id="url_encodesstring---string"><a href="#url_encodesstring---string">3.10.16 <code>url_encode(s:string) -&gt; string</code></a></h3>
+<p>Encodes a string as a URL-safe string.
+This function will handle all Unicode characters.</p>
+<h4 id="examples-119"><a href="#examples-119">3.10.16.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;hello%20world&#39;, url_encode(&#39;hello world&#39;))
+</code></pre></div><h2 id="system-functions"><a href="#system-functions">3.11 System Functions</a></h2><h3 id="assertcondition---any"><a href="#assertcondition---any">3.11.1 <code>assert(condition) -&gt; any</code></a></h3>
+<p>Throws an error if the condition is false
+Does a weak-comparison to boolean, so 0, ‘’, [], etc. are all considered false.</p>
+<h4 id="examples-120"><a href="#examples-120">3.11.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert(true)
+assert( would_err(&#39;assert(false)&#39;) )
+</code></pre></div>
+<hr />
+<h3 id="assert_eqcondition-expected---any"><a href="#assert_eqcondition-expected---any">3.11.2 <code>assert_eq(condition, expected) -&gt; any</code></a></h3>
+<p>Asserts that 2 values are equal
+Raises an error if the condition is not equal to the expected value.<br />
+Also verifies type, as opposed to the <code>==</code> operator, which uses weak typing.<br />
+use assert(a == b) if you want to compare values without checking their types.</p>
+<h4 id="examples-121"><a href="#examples-121">3.11.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(true, true)
+assert_eq( true, would_err(&#39;assert_eq(1, true)&#39;) )
+</code></pre></div>
+<hr />
+<h3 id="assignnamestring-value---any"><a href="#assignnamestring-value---any">3.11.3 <code>assign(name:string, value) -&gt; any</code></a></h3>
+<p>Assigns a variable in the current scope
+Writes a value to the current scope, leaving other scopes unchanged.</p>
+<h4 id="examples-122"><a href="#examples-122">3.11.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>x = 5
+if true then {
+    assign(&#39;x&#39;, 6)
+    assert_eq(6, x)
+} else { 0 }
+assert_eq(5, x)
+</code></pre></div>
+<hr />
+<h3 id="assign_globalnamestring-value---any"><a href="#assign_globalnamestring-value---any">3.11.4 <code>assign_global(name:string, value) -&gt; any</code></a></h3>
+<p>Assigns a variable in the top-level scope
+Writes a value to the top-level scope, leaving other scopes unchanged.</p>
+<h4 id="examples-123"><a href="#examples-123">3.11.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>x = 5
+if true then {
+    assign_global(&#39;x&#39;, 6)
+    assert_eq(6, x)
+} else { 0 }
+assert_eq(6, x)
+</code></pre></div>
+<hr />
+<h3 id="call_functionnamestring-argsarray---any"><a href="#call_functionnamestring-argsarray---any">3.11.5 <code>call_function(name:string, args:array) -&gt; any</code></a></h3>
+<p>Calls a function or @decorator by name with the given arguments
+If the name begins with ‘@’, it will be treated as a decorator.<br />
+Maps the given object to the function’s arguments and calls the function.<br />
+Important note: Functions that take in a reference, such as pop/push etc, will act by-value and not modify the original object.</p>
+<h4 id="examples-124"><a href="#examples-124">3.11.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>@test(x) = x
+assert_eq(&#39;5&#39;, call_function(&#39;@test&#39;, {&#39;x&#39;: 5}))
+</code></pre></div>
+<hr />
+<h3 id="debugmsgstring---any"><a href="#debugmsgstring---any">3.11.6 <code>debug(msg:string) -&gt; any</code></a></h3>
+<p>Prints a debug message to the console
+The message will be both written to stdout, and returned as a string.<br />
+If the parser is not attached to a console, it will not be visible.</p>
+<h4 id="examples-125"><a href="#examples-125">3.11.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>debug(&quot;This is a debug message&quot;)
+</code></pre></div>
+<hr />
+<h3 id="errormsgstring---any"><a href="#errormsgstring---any">3.11.7 <code>error(msg:string) -&gt; any</code></a></h3>
+<p>Throws an error with the given message
+Throws an exception with a custom message. The error’s source will be the line where the error was thrown.</p>
+<h4 id="examples-126"><a href="#examples-126">3.11.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>would_err(&#39;error(&quot;This is an error&quot;)&#39;)
+</code></pre></div>
+<hr />
+<h3 id="evalexpressionstring---any"><a href="#evalexpressionstring---any">3.11.8 <code>eval(expression:string) -&gt; any</code></a></h3>
+<p>Evaluates a string as a Lavendeux expression and returns the result
+The string will be interpreted as a script and evaluated in it’s own scope.<br />
+If there are multiple lines, an array of values will be returned.</p>
+<h4 id="examples-127"><a href="#examples-127">3.11.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(5, eval(&#39;2 + 3&#39;))
+assert_eq([6, 6], eval(&#39;x = 6; x&#39;))
+assert_eq([1, 2, 3], eval(&#39;1\n2\n3&#39;))
+</code></pre></div>
+<hr />
+<h3 id="generate_documentation---string"><a href="#generate_documentation---string">3.11.9 <code>generate_documentation() -&gt; string</code></a></h3>
+<p>Generates documentation for all standard library functions
+Returns a markdown-formatted string containing documentation for all standard library functions.</p>
+<h4 id="examples-128"><a href="#examples-128">3.11.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>generate_documentation()
+</code></pre></div>
+<hr />
+<h3 id="includefilenamestring---any"><a href="#includefilenamestring---any">3.11.10 <code>include(filename:string) -&gt; any</code></a></h3>
+<p>Evaluates a file as a Lavendeux expression and returns the result
+The file will be interpreted as a script and evaluated in it’s own scope.<br />
+Returns an empty string in all cases.</p>
+<h4 id="examples-129"><a href="#examples-129">3.11.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>include(&#39;examples/stdlib_example.lav&#39;)
+</code></pre></div>
+<hr />
+<h3 id="typeofvalue---string"><a href="#typeofvalue---string">3.11.11 <code>typeof(value) -&gt; string</code></a></h3>
+<p>Returns the type of its input
+Returns the type of the given value as a string.</p>
+<h4 id="examples-130"><a href="#examples-130">3.11.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(&#39;string&#39;, typeof(&#39;hello&#39;))
+assert_eq(&#39;i64&#39;, typeof(5))
+assert_eq(&#39;object&#39;, typeof({}))
+</code></pre></div>
+<hr />
+<h3 id="variables---object"><a href="#variables---object">3.11.12 <code>variables() -&gt; object</code></a></h3>
+<p>Returns the currently defined variables
+Returns a map of all the variables currently defined in the current scope.</p>
+<h4 id="examples-131"><a href="#examples-131">3.11.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>x = 5; y = 6
+state = variables()
+assert_eq(5, state[&#39;x&#39;])
+assert_eq(6, state[&#39;y&#39;])
+</code></pre></div>
+<hr />
+<h3 id="would_errexpressionstring---bool"><a href="#would_errexpressionstring---bool">3.11.13 <code>would_err(expression:string) -&gt; bool</code></a></h3>
+<p>Returns true if the given expression would raise an error
+Returns true if expression given by the string would raise an error, false otherwise.<br />
+This is useful for testing error messages.</p>
+<h4 id="examples-132"><a href="#examples-132">3.11.13.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( false, would_err(&#39;1 + 1&#39;) )
+assert_eq( true, would_err(&#39;1 + asparagus&#39;) )
+</code></pre></div><h2 id="trigonometry-functions"><a href="#trigonometry-functions">3.12 Trigonometry Functions</a></h2><h3 id="acosnnumeric---float"><a href="#acosnnumeric---float">3.12.1 <code>acos(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the acos of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-133"><a href="#examples-133">3.12.1.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, acos(1) )
+</code></pre></div>
+<hr />
+<h3 id="acoshnnumeric---float"><a href="#acoshnnumeric---float">3.12.2 <code>acosh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the acosh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-134"><a href="#examples-134">3.12.2.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, acosh(1) )
+</code></pre></div>
+<hr />
+<h3 id="asinnnumeric---float"><a href="#asinnnumeric---float">3.12.3 <code>asin(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the asin of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-135"><a href="#examples-135">3.12.3.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, asin(0) )
+</code></pre></div>
+<hr />
+<h3 id="asinhnnumeric---float"><a href="#asinhnnumeric---float">3.12.4 <code>asinh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the asinh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-136"><a href="#examples-136">3.12.4.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, asinh(0) )
+</code></pre></div>
+<hr />
+<h3 id="atannnumeric---float"><a href="#atannnumeric---float">3.12.5 <code>atan(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the atan of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-137"><a href="#examples-137">3.12.5.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, atan(0) )
+</code></pre></div>
+<hr />
+<h3 id="atanhnnumeric---float"><a href="#atanhnnumeric---float">3.12.6 <code>atanh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the atanh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-138"><a href="#examples-138">3.12.6.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, atanh(0) )
+</code></pre></div>
+<hr />
+<h3 id="cosnnumeric---float"><a href="#cosnnumeric---float">3.12.7 <code>cos(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the cos of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-139"><a href="#examples-139">3.12.7.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 1.0, cos(0) )
+</code></pre></div>
+<hr />
+<h3 id="coshnnumeric---float"><a href="#coshnnumeric---float">3.12.8 <code>cosh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the cosh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-140"><a href="#examples-140">3.12.8.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 1.0, cosh(0) )
+</code></pre></div>
+<hr />
+<h3 id="sinnnumeric---float"><a href="#sinnnumeric---float">3.12.9 <code>sin(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the sin of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-141"><a href="#examples-141">3.12.9.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, sin(0) )
+</code></pre></div>
+<hr />
+<h3 id="sinhnnumeric---float"><a href="#sinhnnumeric---float">3.12.10 <code>sinh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the sinh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-142"><a href="#examples-142">3.12.10.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, sinh(0) )
+</code></pre></div>
+<hr />
+<h3 id="tannnumeric---float"><a href="#tannnumeric---float">3.12.11 <code>tan(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the tan of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-143"><a href="#examples-143">3.12.11.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, tan(0) )
+</code></pre></div>
+<hr />
+<h3 id="tanhnnumeric---float"><a href="#tanhnnumeric---float">3.12.12 <code>tanh(n:numeric) -&gt; float</code></a></h3>
+<p>Calculate the tanh of n
+Returns a result for the angle n (in radians).<br />
+You can use the <code>to_degrees</code> and <code>to_radians</code> functions to convert between degrees and radians.</p>
+<h4 id="examples-144"><a href="#examples-144">3.12.12.1 Examples</a></h4><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq( 0.0, tanh(0) )
+</code></pre></div>
+    
+</body>
+</html>

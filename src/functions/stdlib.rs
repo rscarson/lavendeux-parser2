@@ -47,7 +47,7 @@ mod test {
             if examples.is_empty() {
                 errors.push(Error {
                     details: ErrorDetails::Custom {
-                        message: format!(
+                        msg: format!(
                             "No examples for function {}::{name}",
                             function.documentation().category
                         ),
@@ -67,7 +67,7 @@ mod test {
                 Err(e) => {
                     errors.push(Error {
                         details: ErrorDetails::Custom {
-                            message: format!(
+                            msg: format!(
                                 "Failed to parse example for function {}::{name}",
                                 function.documentation().category
                             ),

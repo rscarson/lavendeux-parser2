@@ -1,3 +1,36 @@
+/// This macro defines a standard function and registers it with the standard library of functions.
+/// The standard function is a function that takes multiple arguments and returns a value.
+///
+/// # Usage
+/// ```rust
+/// define_stdfunction!(
+///     add { a: Number, b: Number },
+///     returns = Number,
+///     docs = {
+///         category: "Math",
+///         description: "Addition",
+///         ext_description: "Adds two numbers together.",
+///         examples: "
+///             assert_eq(
+///                 add(2, 3),
+///                 5
+///             )
+///         "
+///     },
+///     handler = |state: &mut State| -> Result<polyvalue::Value, crate::Error> {
+///         let a = state.get_variable("a").unwrap().as_a::<Number>()?;
+///         let b = state.get_variable("b").unwrap().as_a::<Number>()?;
+///         Ok((a + b).into())
+///     }
+/// );
+/// ```
+///
+/// # Arguments
+/// - `$name:ident`: The name of the function.
+/// - `$aname:ident : $meta:ident::$atype:ident`: The arguments of the function, where `$aname` is the argument name, `$meta` is how to process the argument (Standard, Optional or Plural), and `$atype` is the argument value type (See [polyvalue::ValueType]).
+/// - `returns = $return:ident`: The return value type of the function. See [polyvalue::ValueType].
+/// - `docs = { ... }`: The documentation for the function, including the category name, description, extended description, and examples.
+/// - `handler = $handler:expr`: The handler function that implements the logic of the function.
 #[macro_export]
 macro_rules! define_stdfunction {
     (
@@ -73,6 +106,34 @@ macro_rules! define_stdfunction {
     };
 }
 
+/// Defines a decorator function and registers it with the standard library of functions.
+/// The decorator function is a function that takes a single argument and returns a string.
+///
+/// # Usage
+/// ```rust
+/// define_stddecorator!(
+///     upper { input: String },
+///     docs = {
+///         description: "Uppercase",
+///         ext_description: "Converts the input string to uppercase.",
+///         examples: "
+///             assert_eq(
+///                 'hello' @upper,
+///                 'HELLO'
+///             )
+///         "
+///     },
+///     handler = |input: polyvalue::Value| -> Result<String, crate::Error> {
+///         Ok(input.as_a::<String>()?.to_uppercase())
+///     }
+/// );
+/// ```
+///
+/// # Arguments
+/// - `$name:ident`: The name of the function.
+/// - `$aname:ident : $atype:ident`: The argument of the function, where `$aname` is the argument name and `$atype` is the argument value type (See [polyvalue::ValueType]).
+/// - `docs = { ... }`: The documentation for the function, including the category name, description, extended description, and examples.
+/// - `handler = $handler:expr`: The handler function that implements the logic of the function.
 #[macro_export]
 macro_rules! define_stddecorator {
     (

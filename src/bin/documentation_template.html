@@ -1,0 +1,52 @@
+<style>
+    /* Move TOC to a sidebar */
+    #TOC {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 20%;
+        height: 100%;
+        overflow: auto;
+        padding: 10px;
+        background-color: #f8f8f8;
+        border-right: 1px solid #ddd;
+    }
+    #TOC ul {
+        list-style-type: none;
+        margin-top: 5px;
+    }
+    body {
+        margin-left: 20%;
+        padding: 20px;
+        padding-left: 40px;
+    }
+    </style>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script type="text/javascript">
+        hljs.register('lavendeux', () => ({
+            case_insensitive: true, // language is case-insensitive
+            keywords: 'for if while',
+            contains: [
+            {
+                className: 'string',
+                begin: '"',
+                end: '"'
+            },
+            hljs.COMMENT(
+                '/\\*', // begin
+                '\\*/', // end
+                {
+                contains: [{
+                    className: 'doc',
+                    begin: '@\\w+'
+                }]
+                }
+            )
+            ]
+        }))
+
+
+        hljs.highlightAll();
+    </script>

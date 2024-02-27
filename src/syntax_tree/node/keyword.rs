@@ -1,8 +1,7 @@
 use super::*;
 use crate::{
-    define_prattnode,
     error::WrapExternalError,
-    error_matches, oops,
+    error_matches,
     pest::{Rule, ToAstNode},
     token::ToToken,
     State,

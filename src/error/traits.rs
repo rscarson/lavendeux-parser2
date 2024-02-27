@@ -1,8 +1,11 @@
-use crate::{error::ErrorDetails, Error, Token};
+use crate::{error::ErrorDetails, pest::Rule, Error, Token};
+
+/// Wraps a syntax error into an Error.
 pub trait WrapSyntaxError<T, R> {
+    /// Turns a pest error into an Error.
     fn wrap_syntax_error(self, input: &str) -> Result<T, Error>;
 }
-impl<T, R> WrapSyntaxError<T, R> for Result<T, pest::error::Error<R>> {
+impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
     fn wrap_syntax_error(self, input: &str) -> Result<T, Error> {
         match self {
             Ok(v) => Ok(v),
@@ -31,9 +34,15 @@ impl<T, R> WrapSyntaxError<T, R> for Result<T, pest::error::Error<R>> {
     }
 }
 
+/// Wrap a 3rd party error into an Error.
 pub trait WrapExternalError<T> {
+    /// Adds a context [Token]
     fn with_context(self, context: &Token) -> Result<T, Error>;
+
+    /// Adds a source [Error]
     fn with_source(self, source: Error) -> Result<T, Error>;
+
+    /// Wraps the error without context or a source
     fn without_context(self) -> Result<T, Error>;
 }
 
@@ -63,7 +72,9 @@ where
     }
 }
 
+/// Wrap an `Option<T>` into a `Result<T, Error>`
 pub trait WrapOption<T> {
+    /// Turns an `Option<T>` into a `Result<T, Error>`
     fn or_error(self, error: ErrorDetails) -> Result<T, Error>;
 }
 impl<T> WrapOption<T> for Option<T> {

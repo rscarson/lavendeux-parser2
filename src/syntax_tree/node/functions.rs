@@ -1,6 +1,5 @@
 use super::*;
 use crate::{
-    define_prattnode,
     error::{ErrorDetails, WrapExternalError},
     functions::{ParserFunction, UserDefinedFunction},
     Rule, State, ToToken,

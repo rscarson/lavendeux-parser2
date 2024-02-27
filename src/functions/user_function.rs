@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{error::ErrorDetails, oops, syntax_tree::Node, Error, State};
+use crate::{error::ErrorDetails, syntax_tree::Node, Error, State};
 use polyvalue::{Value, ValueType};
 
 use super::{

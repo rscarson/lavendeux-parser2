@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, oops, State};
+use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
 use polyvalue::{fpdec::Round, types::CurrencyInner, InnerValue, Value, ValueTrait};
 
 define_stdfunction!(

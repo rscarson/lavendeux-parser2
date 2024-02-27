@@ -6,15 +6,24 @@ use pest::iterators::Pair;
 /// the input it was parsed from, and the references to variables it contains
 #[derive(Debug, Clone)]
 pub struct Token {
+    /// Source-code line number
     pub line: usize,
+
+    /// Grammar-rule that this token was parsed from
+    /// See [crate::Rule]
     pub rule: Rule,
+
+    /// Part of the input that this token was parsed from
     pub input: String,
 
     /// An optional variable reference, for pass-by-ref
+    /// Used by a handful of stdlib functions, like push, insert, etc
     pub references: Option<String>,
 }
 
 impl Token {
+    #[cfg(test)]
+    /// Create a dummy token
     pub fn dummy() -> Self {
         Self {
             line: 0,

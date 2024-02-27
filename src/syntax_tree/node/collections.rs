@@ -3,7 +3,7 @@
 //! Nodes mapping to array, object, range, etc
 //!
 use super::*;
-use crate::{define_prattnode, error::WrapExternalError, oops, Rule, State, ToToken};
+use crate::{error::WrapExternalError, Rule, State, ToToken};
 use pest::iterators::Pair;
 use polyvalue::{operations::IndexingOperationExt, Value, ValueType};
 

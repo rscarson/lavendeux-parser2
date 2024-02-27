@@ -3,13 +3,15 @@ use crate::{
     error::ErrorDetails,
     functions::{stdlib, ParserFunction},
     network::ApiRegistry,
-    oops, Error, Value,
+    Error, Value,
 };
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
 };
 
+/// The main parser state
+/// Stores variables, scoping data, functions, and metadata about the current parse
 #[derive(Debug)]
 pub struct State {
     /// Current depth of the parser
@@ -54,21 +56,26 @@ impl Default for State {
 impl State {
     const MAX_DEPTH: usize = 999;
 
-    pub fn with_timeout(timeout: Duration) -> Self {
-        Self {
-            timeout,
-            ..Self::default()
-        }
-    }
-
     /// Creates a new parser state
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Returns the current depth of the parser
-    pub fn current_depth(&self) -> usize {
-        self.depth
+    /**
+     *
+     * Timeout handling functions
+     *
+     */
+
+    /// Creates a new parser state with a timeout
+    /// Parsing will fail with `ErrorDetails::Timeout` if the timeout is exceeded
+    /// The timer does not begin until `start_timer` is called
+    /// And is checked with `check_timer` (which is called internally by the parser)
+    pub fn with_timeout(timeout: Duration) -> Self {
+        Self {
+            timeout,
+            ..Self::default()
+        }
     }
 
     /// Sets the timeout of the parser
@@ -84,6 +91,17 @@ impl State {
         } else {
             Ok(())
         }
+    }
+
+    /**
+     *
+     * Scope handling functions
+     *
+     */
+
+    /// Returns the current depth of the parser
+    pub fn current_depth(&self) -> usize {
+        self.depth
     }
 
     /// Sets the depth to 0, and destroys all scopes but the root scope
@@ -148,6 +166,12 @@ impl State {
             .rev()
             .take(self.depth - self.locked + 1)
     }
+
+    /**
+     *
+     * Variable handling functions
+     *
+     */
 
     /// Assigns a variable in the state, in the root scope
     pub fn global_assign_variable(&mut self, name: &str, value: Value) {
@@ -214,6 +238,7 @@ impl State {
         None
     }
 
+    /// Deletes a variable from the state
     pub fn delete_variable(&mut self, name: &str) -> Option<Value> {
         for scope in self.get_valid_scopes_mut() {
             if let Some(value) = scope.remove(name) {
@@ -244,6 +269,12 @@ impl State {
         variables
     }
 
+    /**
+     *
+     * Function handling functions
+     *
+     */
+
     /// Returns true if the given function is a read-only system function
     pub fn is_system_function(&self, name: &str) -> bool {
         if let Some(function) = self.functions.get(name) {
@@ -253,12 +284,14 @@ impl State {
         }
     }
 
+    /// Registers a function in the state
+    /// See [crate::define_stdfunction] for an example of how to define a function
     pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
         let name = function.name();
         if self.is_system_function(name) {
-            oops!(ReadOnlyFunction {
+            return oops!(ReadOnlyFunction {
                 name: name.to_string()
-            })
+            });
         } else {
             self.functions
                 .insert(name.to_string(), function.clone_self());
@@ -266,6 +299,7 @@ impl State {
         }
     }
 
+    /// Unregisters a function from the state
     pub fn unregister_function(
         &mut self,
         name: &str,
@@ -279,14 +313,18 @@ impl State {
         }
     }
 
+    /// Returns a function from the state
     pub fn get_function(&self, name: &str) -> Option<&Box<dyn ParserFunction>> {
         self.functions.get(name)
     }
 
+    /// List all functions in the state
     pub fn all_functions(&self) -> &HashMap<String, Box<dyn ParserFunction>> {
         &self.functions
     }
 
+    /// Calls a function in the state
+    /// arg1_references maps to the references field of the source [crate::Token]
     pub fn call_function(
         &mut self,
         name: &str,
@@ -303,6 +341,7 @@ impl State {
         function.exec(&args, self, arg1_references)
     }
 
+    /// Calls a decorator function
     pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error> {
         let name = format!("@{name}");
         match self.call_function(&name, vec![value], None) {
@@ -373,38 +412,5 @@ mod test {
         let variables = state.all_variables();
         assert!(variables.contains_key("a"));
         assert!(variables.contains_key("b"));
-    }
-
-    /*
-    #[test]
-    fn test_user_functions() {
-        let mut state = State::new();
-        let function = UserFunction::new("test", vec![], vec!["2.0".to_string()]).unwrap();
-        state.set_user_function(function);
-        assert_eq!(state.get_user_function("test").unwrap().name(), "test");
-        assert_eq!(state.get_function("test").unwrap().name(), "test");
-    }
-    #[test]
-    fn test_help() {
-        let mut state = State::new();
-        let function = UserFunction::new("testasdfasdf", vec![], vec!["2.0".to_string()]).unwrap();
-        state.set_user_function(function);
-        assert!(state.help(None).contains("testasdfasdf"));
-        assert!(state.help(None).contains("Bitwise"));
-        assert!(!state
-            .help(Some("bitwise".to_string()))
-            .contains("testasdfasdf"));
-    }*/
-
-    #[cfg(feature = "extensions")]
-    #[test]
-    fn test_extensions() {
-        use crate::Lavendeux;
-
-        let state = State::new();
-        Lavendeux::load_extension("example_extensions/simple_extension.js").unwrap();
-
-        assert!(state.get_ext_function("add").is_some());
-        assert!(state.get_function("add").is_some());
     }
 }

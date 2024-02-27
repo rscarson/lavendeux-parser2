@@ -1,6 +1,7 @@
+use crate::documentation::{DocumentationTemplate, MarkdownFormatter};
 use crate::functions::ParserFunction;
 use crate::pest::{parse_input, Rule};
-use crate::{oops, Error, State, Value};
+use crate::{Error, State, Value};
 use polyvalue::types::Array;
 use polyvalue::ValueTrait;
 use std::num::NonZeroUsize;
@@ -11,8 +12,14 @@ use std::time::Duration;
 /// stack_size - The stack size in bytes for the parsing thread
 #[derive(Debug, Clone)]
 pub struct ParserOptions {
+    /// Timeout value to use when building the [State]
     pub timeout: Duration,
+
+    /// Stack size for the thread running the parser
     pub stack_size: usize,
+
+    /// The maximum number of calls to the pest parser
+    /// This is used to prevent stack overflows
     pub pest_call_limit: usize,
 }
 impl Default for ParserOptions {
@@ -25,6 +32,7 @@ impl Default for ParserOptions {
     }
 }
 
+/// The main parser, and the entrypoint for the library
 #[derive(Debug)]
 pub struct Lavendeux {
     state: State,
@@ -42,14 +50,17 @@ impl Lavendeux {
         Self { state, options }
     }
 
+    /// Register a function with the parser
     pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
         self.state.register_function(function)
     }
 
+    /// Get a reference to the state
     pub fn state(&self) -> &State {
         &self.state
     }
 
+    /// Get a mutable reference to the state
     pub fn state_mut(&mut self) -> &mut State {
         &mut self.state
     }
@@ -61,6 +72,7 @@ impl Lavendeux {
     }
 
     /// Parses the given input
+    /// Returns an array of values, one for each line in the input
     pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
@@ -95,46 +107,10 @@ impl Lavendeux {
         Ok(lines)
     }
 
-    /// Load extension from a loaded module
-    /// # Arguments
-    /// * `module` - The extension source
-    ///
-    /// # Returns
-    /// An error if the extension could not be loaded
-    #[cfg(feature = "extensions")]
-    pub fn load_extension_module(
-        module: rustyscript::Module,
-    ) -> Result<crate::extensions::ExtensionDetails, Error> {
-        Ok(crate::extensions::ExtensionController::with(
-            |controller| controller.add_extension(module),
-        )?)
-    }
-
-    /// Load an extension from a file and register it
-    /// # Arguments
-    /// * `filename` - The filename of the extension to load
-    ///
-    /// # Returns
-    /// An error if the extension could not be loaded
-    #[cfg(feature = "extensions")]
-    pub fn load_extension(filename: &str) -> Result<crate::extensions::ExtensionDetails, Error> {
-        Ok(crate::extensions::ExtensionController::with(
-            |controller| controller.register(filename),
-        )?)
-    }
-
-    /// Unload an extension, stopping the thread and unregistering all functions
-    /// # Arguments
-    /// * `name` - The filename of the extension to unload
-    #[cfg(feature = "extensions")]
-    pub fn unload_extension(filename: &str) {
-        crate::extensions::ExtensionController::with(|controller| controller.unregister(filename));
-    }
-
-    /// Unload all extensions, stopping all threads and unregistering all functions
-    #[cfg(feature = "extensions")]
-    pub fn unload_all_extensions() {
-        crate::extensions::ExtensionController::with(|controller| controller.unregister_all());
+    /// Generates markdown formatted documentation for the parser
+    /// Returns it as a string
+    pub fn generate_documentation(&self) -> String {
+        DocumentationTemplate::new(MarkdownFormatter).render(&self.state)
     }
 }
 

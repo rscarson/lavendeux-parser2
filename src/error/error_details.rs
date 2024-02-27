@@ -1,9 +1,11 @@
-use crate::Token;
 use polyvalue::{Value, ValueType};
 use thiserror::Error;
 
 const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issues/new?assignees=&labels=&template=bug_report.md&title=";
 
+/// Inner error type for Lavendeux
+/// Gives more detailed information about the error
+/// And gets wrapped in the main Error type, along with metadata
 #[derive(Error, Debug)]
 #[rustfmt::skip]
 pub enum ErrorDetails {
@@ -17,6 +19,7 @@ pub enum ErrorDetails {
         BUG_REPORT_URL
     )]
     Internal {
+        /// Message describing the error
         msg: String,
     },
 
@@ -31,6 +34,7 @@ pub enum ErrorDetails {
     /// Error causing the parser thread to panic
     #[error("Fatal error: {msg}")]
     Fatal {
+        /// Message describing the error
         msg: String
     },
 
@@ -39,20 +43,16 @@ pub enum ErrorDetails {
     Timeout,
 
     /// An error caused by a custom error message
-    #[error("{message}")]
-    Custom{
-        message: String,
-    },
-
-    /// An error caused by a problem with the syntax of the script
-    #[error("Invalid preprocessor directive: {directive}")]
-    InvalidDirective {
-        directive: String,
+    #[error("{msg}")]
+    Custom {
+        /// Message describing the error
+        msg: String,
     },
 
     /// An error used to return a value from a function early
     #[error("Returned from the root scope")]
     Return {
+        /// Value being returned
         value: Value,
     },
 
@@ -72,6 +72,7 @@ pub enum ErrorDetails {
     /// An error caused by attempting to modify a read-only stdlib function
     #[error("Could not alter system function {name}")]
     ReadOnlyFunction {
+        /// Name of the function being referred to
         name: String,
     },
 
@@ -92,16 +93,20 @@ pub enum ErrorDetails {
     UnexpectedDecorator,
 
     /// An error caused by using a postfix operator without an operand
-    #[error("Expected '*/'")]
+    #[error("Unterminated block comment: Expected '*/'")]
     UnterminatedComment,
 
     /// An error caused by a missing bracket
-    #[error("Expected ']'")]
+    #[error("Unclosed bracket: Expected ']'")]
     UnterminatedArray,
 
     /// An error caused by a missing brace
-    #[error("Expected '}}'")]
+    #[error("Unclosed brace: Expected '}}'")]
     UnterminatedObject,
+
+    /// An error caused by a missing brace
+    #[error("Unclosed parentheses: Expected '('")]
+    UnterminatedParen,
 
     /// An error caused by ending a script on a backslash
     #[error("Missing linebreak after '\\'")]
@@ -111,28 +116,21 @@ pub enum ErrorDetails {
     #[error("Expected ' or \"")]
     UnterminatedLiteral,
 
-    /// An error caused by a missing parentheses
-    #[error("Expected ')'")]
-    UnterminatedParen,
-
-    #[error("Expected a pattern to match against (an array, value, or regex literal)")]
-    IncompleteMatchingExpression,
-
-    #[error("Expected 2 bounds for range expression, for example: 1..2 or 'a'..'z'")]
-    IncompleteRangeExpression,
-
-    #[error("Expected a key-value pair, for example: {{0: 'test'}}")]
-    IncompleteObject,
-
+    /// Cause by a missing default case in a switch statement
     #[error("Match expression is not exhaustive. Add a default case '_' to match all values")]
     NonExhaustiveSwitch,
 
+    /// Caused by a default case eclipsing other cases in a switch statement
     #[error("All cases after the default case '_' are unreachable")]
     UnreachableSwitchCase,
 
+    /// Caused by a type mismatch in a switch statement
     #[error("{case} is not valid for this switch statement. Expected a {expected_type}")]
     SwitchCaseTypeMismatch {
+        /// Case that caused the issue
         case: Value,
+
+        /// Type that was expected
         expected_type: ValueType,
     },
 
@@ -141,82 +139,104 @@ pub enum ErrorDetails {
     // Mostly deals with variables, and value objects
     ///////////////////////////////////////////////////////////////////////////
     
+    /// Caused by assignments to constants
     #[error("Cannot assign to a constant value")]
     ConstantValue,
 
-    #[error("Implicit multiplication is not allowed between {left} and {right}")]
-    IllegalImplicitMultiplication {
-        left: String, right: String, token: Token
-    },
-
+    /// An error caused by a mismatch in types for a range
     #[error("Invalid combination of types for range. Use a pair of either integers, or characters")]
     RangeTypeMismatch,
 
+    /// An error caused by invalid range values
     #[error("{start}..{end} is not a valid range: use integers or single-byte strings")]
     InvalidRange {
+        /// Start value
         start: String,
+
+        /// End value
         end: String,
     },
 
+    /// An error caused by invalid range values
     #[error("{start}..{end} is not a valid range: start > end")]
     RangeStartGT {
+        /// Start value
         start: String,
+
+        /// End value
         end: String,
     },
 
+    /// An error caused by a value being out of range
     #[error("Arithmetic overflow")]
     Overflow,
 
+    /// Caused by a mismatch in the number of values in a destructuring assignment
     #[error("Expected {expected_length} values, found {actual_length}")]
     DestructuringAssignment {
+        /// Number of values expected
         expected_length: usize,
+
+        /// Number of values found
         actual_length: usize,
     },
 
+    /// An error caused by a value not being able to be parsed
     #[error("Input could not be parsed as {expected_format}")]
     ValueFormat {
+        /// Format that was expected
         expected_format: String,
     },
 
+    /// An error caused by a value being out of range
     #[error("{input} was out of range")]
     Range {
+        /// Input that was out of range
         input: String,
     },
 
+    /// An error caused by a missing variable
     #[error("Undefined variable {name}. You can assign a value with {name} = ...")]
     VariableName {
+        /// Name of the variable being referred to
         name: String,
     },
 
+    /// An error caused by an attempt to access an element of an empty array
     #[error("Array empty")]
     ArrayEmpty,
-    
-    #[error("An index is required here")]
-    EmptyIndex,
 
     ///////////////////////////////////////////////////////////////////////////
     // Function Errors
     // Deals with issues during builtin, user, or extension function calls
     ///////////////////////////////////////////////////////////////////////////
 
+    /// An error caused by a decorator specifying the wrong number of arguments
     #[error("Decorator @{name} must accept a single argument")]
     DecoratorSignatureArgs {
+        /// Name of the decorator being referred to
         name: String,
     },
 
+    /// An error caused by a decorator specifying a return type
     #[error("@{name} does not need to specify a return type; decorators always return a string")]
     DecoratorSignatureReturn {
+        /// Name of the decorator being referred to
         name: String,
     },
 
+    /// An error caused by a function call
     #[error("Error in `{name}()`")]
     FunctionCall {
+        /// Name of the source function
         name: String
     },
 
+    /// An error caused by a function calling itself too many times
     #[error("Recursive function went too deep")]
     StackOverflow,
     
+    /// An error caused by calling a function with the wrong type of argument
     #[error("Expected {expected_type} value for argument {arg} of `{signature}`")]
     FunctionArgumentType {
         /// Argument number causing the issue (1-based)
@@ -230,8 +250,10 @@ pub enum ErrorDetails {
 
     },
 
+    /// An error caused by calling a function that does not exist
     #[error("Undefined function {name}. You can define a function with {name}(a, b, c) = ...")]
     FunctionName {
+        /// Name of the function being referred to
         name: String,
     },
 
@@ -256,12 +278,14 @@ pub enum ErrorDetails {
     /// An error caused by calling a decorator that does not exist
     #[error("No decorator named @{name}")]
     DecoratorName {
+        /// Name of the decorator being referred to
         name: String,
     },
     
     /// An error caused by attempting to use an API without registering it
     #[error("API {name} was not found. Add it with api_register(\"{name}\", base_url, [optional api key])")]
     UnknownApi {
+        /// Name of the API being referred to
         name: String,
     },
 

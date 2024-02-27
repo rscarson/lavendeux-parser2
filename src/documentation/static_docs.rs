@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use super::DocumentationFormatter;
 const INTRO_TEXT: &str = "
 This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
-It was created for use in Lavendeux (https://rscarson.github.io/lavendeux/).
+It was created for use in Lavendeux (<https://rscarson.github.io/lavendeux/>).
 
 Inputs are a series of expressions separated by a newline, or a `;`.
 Lines can optionally end with an @decorator to format the output as a string (see `section 3.2`)
@@ -60,13 +60,13 @@ impl DocumentationTemplate {
         output += &self.0.format_title(Self::DOCUMENT_TITLE);
         output += INTRO_TEXT;
 
-        output += &self.0.format_subtitle(Self::VALUES_TITLE);
+        output += &self.0.format_title(Self::VALUES_TITLE);
         output += &self.render_values();
 
-        output += &self.0.format_subtitle(Self::OPERATOR_TITLE);
+        output += &self.0.format_title(Self::OPERATOR_TITLE);
         output += &self.render_operators();
 
-        output += &self.0.format_subtitle(Self::FUNCTION_TITLE);
+        output += &self.0.format_title(Self::FUNCTION_TITLE);
         output += &self.render_functions(state, None);
 
         output

@@ -3,7 +3,7 @@ use crate::{
     error::{ErrorDetails, WrapExternalError, WrapOption},
     functions::std_function::ParserFunction,
     network::{request, resolve, ApiDefinition, ApiRegistry},
-    oops, State,
+    State,
 };
 use polyvalue::{types::Object, Value};
 use serde_json::json;
@@ -216,7 +216,7 @@ define_stdfunction!(
 
         let registry = ApiRegistry::new(state);
         let api = registry.get(&name).or_error(ErrorDetails::Custom {
-            message: format!("API '{}' not found", name),
+            msg: format!("API '{}' not found", name),
         })?;
 
         api.call(path.as_deref(), None, Default::default())
@@ -248,7 +248,7 @@ define_stdfunction!(
 
         let registry = ApiRegistry::new(state);
         let api = registry.get(&name).or_error(ErrorDetails::Custom {
-            message: format!("API '{}' not found", name),
+            msg: format!("API '{}' not found", name),
         })?;
 
         api.call(path.as_deref(), Some(body), Default::default())
@@ -279,7 +279,7 @@ define_stdfunction!(
 
         let mut registry = ApiRegistry::new(state);
         let mut api = registry.get(&name).or_error(ErrorDetails::Custom {
-            message: format!("API '{}' not found", name),
+            msg: format!("API '{}' not found", name),
         })?.clone();
 
         api.auth_key = Some(auth_key);
@@ -308,7 +308,7 @@ define_stdfunction!(
         let prompt = state.get_variable("prompt").unwrap().to_string();
         let registry = ApiRegistry::new(state);
         let api = registry.get("chatgpt").or_error(ErrorDetails::Custom {
-            message: "API 'chatgpt' not found".to_string(),
+            msg: "API 'chatgpt' not found".to_string(),
         })?;
 
         if api.auth_key.is_none() {

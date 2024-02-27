@@ -1,6 +1,7 @@
+#![allow(missing_docs)]
 use crate::error::WrapSyntaxError;
 use crate::syntax_tree::resolver;
-use crate::{oops, Error, Node, State, Token, Value};
+use crate::{Error, Node, State, Token, Value};
 use pest::{iterators::Pair, Parser};
 use pest_derive::Parser;
 
@@ -19,6 +20,7 @@ struct LavendeuxParser;
 /// * `hnd` - A handler to run on the AST node
 ///
 /// You can also pass in an existing tree instead of an input and rule
+#[cfg(test)]
 #[macro_export]
 macro_rules! assert_tree {
     ($input:literal, $rule:ident, $expected:ty, $hnd:expr) => {
@@ -49,6 +51,8 @@ macro_rules! assert_tree {
     };
 }
 
+/// Asserts that the input given parses into the expected value
+#[cfg(test)]
 #[macro_export]
 macro_rules! assert_tree_value {
     ($input:literal, $expected:expr) => {
@@ -59,6 +63,8 @@ macro_rules! assert_tree_value {
     };
 }
 
+/// A macro to test the type of a node
+#[cfg(test)]
 #[macro_export]
 macro_rules! node_is_type {
     ($node:expr, $type:path) => {
@@ -70,6 +76,7 @@ macro_rules! node_is_type {
 /// # Arguments
 /// * `input` - The input to parse
 /// * `err` - The expected error
+#[cfg(test)]
 #[macro_export]
 macro_rules! assert_tree_error {
     ($input:literal, $err:ident) => {

@@ -3,8 +3,9 @@
 //! High-level nodes that are used to build the syntax tree.
 //!
 use super::*;
-use crate::{oops, syntax_tree::pratt, Error, Rule, State, ToToken, Value};
+use crate::{syntax_tree::pratt, Error, Rule, State, ToToken};
 use pest::iterators::Pair;
+use polyvalue::Value;
 
 define_node!(
     Script { lines: Vec<Node> },

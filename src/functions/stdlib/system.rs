@@ -2,7 +2,7 @@ use crate::{
     define_stdfunction,
     documentation::{DocumentationTemplate, MarkdownFormatter},
     functions::std_function::ParserFunction,
-    oops, Lavendeux, State,
+    Lavendeux, State,
 };
 use polyvalue::{types::Object, Value};
 
@@ -156,7 +156,7 @@ define_stdfunction!(
             Ok(cond)
         } else {
             oops!(Custom {
-                message: "Assertion failed".to_string()
+                msg: "Assertion failed".to_string()
             })
         }
     },
@@ -190,7 +190,7 @@ define_stdfunction!(
             Ok(cond)
         } else {
             let message = format!("Assertion failed: {:?} != {:?}", cond, expected);
-            oops!(Custom { message: message })
+            oops!(Custom { msg: message })
         }
     },
 );
@@ -225,7 +225,7 @@ define_stdfunction!(
 
 define_stdfunction!(
     error {
-        message: Standard::String
+        msg: Standard::String
     },
     returns = Any,
 
@@ -241,13 +241,13 @@ define_stdfunction!(
     },
     handler = |state: &mut State| {
         let message = state.get_variable("message").unwrap().to_string();
-        oops!(Custom { message: message })
+        oops!(Custom { msg: message })
     },
 );
 
 define_stdfunction!(
     debug {
-        message: Standard::String
+        msg: Standard::String
     },
     returns = Any,
 
