@@ -25,8 +25,9 @@ mod syntax_tree;
 mod pest;
 pub use pest::Rule; // exported for Token
 
-// StdLib lives here
-mod functions;
+/// Function related definitions
+/// Home of the stdlib, user-functions, and function docs
+pub mod functions;
 
 // The main parser state
 mod state;
@@ -54,15 +55,6 @@ use token::ToToken;
 #[cfg(test)]
 mod test {
     use crate::Lavendeux;
-
-    #[test]
-    fn test_load_stdlib() {
-        if let Err(e) =
-            Lavendeux::new(Default::default()).parse("'examples/stdlib_example.lav'.include()")
-        {
-            panic!("Failed to load stdlib:\n{}", e);
-        }
-    }
 
     #[test]
     fn test_empty_input() {

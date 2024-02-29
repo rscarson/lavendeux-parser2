@@ -36,7 +36,7 @@ macro_rules! assert_tree {
         $tree
             .as_any_mut()
             .downcast_mut::<$expected>()
-            .ok_or(Error::Internal(format!(
+            .ok_or(Error<'i>::Internal(format!(
                 "Could not downcast to requested type"
             )))
             .and_then(|tree| {
@@ -86,14 +86,14 @@ macro_rules! assert_tree_error {
                 match tree.get_value(&mut $crate::State::new()) {
                     Ok(_) => panic!("Expected error"),
                     Err(err) => {
-                        if !matches!(err, Error::$err { .. }) {
+                        if !matches!(err, Error<'i>::$err { .. }) {
                             panic!("Expected error {:?} but got {:?}", stringify!($err), err);
                         }
                     }
                 }
             }
             Err(err) => {
-                if !matches!(err, Error::$err { .. }) {
+                if !matches!(err, Error<'i>::$err { .. }) {
                     panic!("Expected error {:?} but got {:?}", stringify!($err), err);
                 }
             }
@@ -104,36 +104,43 @@ macro_rules! assert_tree_error {
 /// A trait for all nodes in the syntax tree
 /// The trait is used to build the AST, and to evaluate it by getting the
 /// value of each node
-pub trait AstNode: std::fmt::Display + std::fmt::Debug {
-    fn from_pair(input: Pair<Rule>) -> Result<Node, Error>
+pub trait AstNode<'i>: std::fmt::Display + std::fmt::Debug + Send + Sync {
+    fn from_pair(input: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>
     where
         Self: Sized;
-    fn get_value(&self, state: &mut State) -> Result<Value, Error>;
+
+    fn from_pratt(
+        input: &'i crate::syntax_tree::pratt::PrattPair<'i>,
+    ) -> Result<crate::Node<'i>, crate::Error<'i>>
+    where
+        Self: Sized;
+
+    fn get_value(&'i self, state: &mut State) -> Result<Value, Error<'i>>;
     fn token(&self) -> &Token;
     fn token_offsetline(&mut self, offset: usize);
-    fn boxed(self) -> Node
+    fn boxed(self) -> Node<'i>
     where
         Self: Sized + 'static;
 
-    fn as_any(&self) -> &dyn std::any::Any;
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+    fn as_any(&'i self) -> &'i dyn std::any::Any;
+    fn as_any_mut(&'i mut self) -> &'i mut dyn std::any::Any;
 }
 
 /// A trait used to convert a pest pair into an AST node
 /// This is used to build the AST
-pub trait ToAstNode {
-    fn to_ast_node(self) -> Result<Box<dyn AstNode>, Error>;
+pub trait ToAstNode<'i> {
+    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>>;
 }
-impl ToAstNode for Pair<'_, Rule> {
+impl<'i> ToAstNode<'i> for Pair<'i, Rule> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(self) -> Result<Box<dyn AstNode>, Error> {
+    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
         resolver::handle_pair(self)
     }
 }
 
 /// Main function to parse the input into a syntax tree
-pub fn parse_input(input: &str, rule: Rule) -> Result<Node, Error> {
+pub fn parse_input<'i>(input: &'i str, rule: Rule) -> Result<Node<'i>, Error<'i>> {
     let pairs = LavendeuxParser::parse(rule, input).wrap_syntax_error(input)?;
     if let Some(pair) = pairs.flatten().next() {
         pair.to_ast_node()

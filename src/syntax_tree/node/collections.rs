@@ -3,14 +3,13 @@
 //! Nodes mapping to array, object, range, etc
 //!
 use super::*;
-use crate::{error::WrapExternalError, Rule, State, ToToken};
-use pest::iterators::Pair;
+use crate::{error::WrapExternalError, Rule, ToToken};
 use polyvalue::{operations::IndexingOperationExt, Value, ValueType};
 
 define_node!(
-    Array { elements: Vec<Node> },
+    Array { elements: Vec<Node<'i>> },
     rules = [ARRAY_TERM],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
         children.next(); // Skip the array term
@@ -19,7 +18,7 @@ define_node!(
         let elements = children.map(|c| c.to_ast_node()).collect::<Result<_, _>>()?;
         Ok(Self { elements, token }.boxed())
     },
-    value = |this: &Array, state: &mut State| {
+    value = (this, state) {
         let elements = this.elements.iter().map(|element| element.get_value(state)).collect::<Result<Vec<_>, _>>()?;
         Ok(Value::array(elements))
     },
@@ -43,10 +42,10 @@ define_node!(
 
 define_node!(
     Object {
-        pairs: Vec<(Node, Node)>
+        pairs: Vec<(Node<'i>, Node<'i>)>
     },
     rules = [OBJECT_TERM],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
 
@@ -59,9 +58,9 @@ define_node!(
 
         Ok(Self { pairs, token }.boxed())
     },
-    value = |this: &Object, state: &mut State| {
+    value = (this, state) {
         let values = this.pairs.iter()
-            .map(|(key, value)| Ok::<(_, _), Error>((key.get_value(state)?, value.get_value(state)?)))
+            .map(|(key, value)| Ok::<(_, _), Error<'i>>((key.get_value(state)?, value.get_value(state)?)))
             .collect::<Result<Vec<(_, _)>, _>>()?;
         Value::try_from(values).with_context(this.token())
     },
@@ -84,11 +83,11 @@ define_node!(
 
 define_prattnode!(
     Range {
-        start: Node,
-        end: Node
+        start: Node<'i>,
+        end: Node<'i>
     },
     rules = [OP_RANGE],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let start = children.next().unwrap().to_ast_node()?;
@@ -97,7 +96,7 @@ define_prattnode!(
 
         Ok(Self { start, end, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let start = this.start.get_value(state)?;
         let end = this.end.get_value(state)?;
 
@@ -178,12 +177,12 @@ define_prattnode!(
 
 define_prattnode!(
     IndexingExpression {
-        target: Node,
-        indices: Vec<Option<Node>>
+        target: Node<'i>,
+        indices: Vec<Option<Node<'i>>>
     },
     rules = [POSTFIX_INDEX],
 
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let target = children.next().unwrap().to_ast_node()?;
@@ -201,7 +200,7 @@ define_prattnode!(
         Ok(Self { target, indices, token }.boxed())
     },
 
-    value = |this: &IndexingExpression, state: &mut State| {
+    value = (this, state) {
         let base = this.target.get_value(state)?;
         let mut result = base;
         for index in &this.indices {

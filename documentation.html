@@ -53,133 +53,137 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script type="text/javascript">
         hljs.registerLanguage('lavendeux', function(hljs) {
-  var COMMENT = hljs.COMMENT('//', '$');
-  var KEYWORDS = {
-    keyword: 'if then else for in do match skip continue break return as true false',
-    built_in: 'pi e tau',
-    literal: 'null undefined',
-    type: 'u8 i8 u16 i16 u32 i32 u64 i64 f32 f64 string bool array object',
-    meta: 'include',
-    _: 'matches contains starts_with ends_with'
-  };
-  var IDENTIFIER = {
-    begin: /[a-zA-Z_]\w*/,
-    illegal: /\W/,
-    keywords: KEYWORDS,
-    relevance: 0
-  };
-  var NUMBER = {
-    className: 'number',
-    variants: [
-      { begin: /0b[01][01_]*/, relevance: 0 },
-      { begin: /0o[0-7][0-7_]*/, relevance: 0 },
-      { begin: /0x[0-9a-fA-F][0-9a-fA-F_]*/, relevance: 0 },
-      { begin: /(?:\d[\d_]*)(?:\.(?!\d)|(?:(?:\.(?:\d[\d_]*)?)?(?:[eE][-+]?\d[\d_]*)))?/, relevance: 0 }
-    ],
-    relevance: 0
-  };
-  var STRING = {
-    className: 'string',
-    variants: [
-      { begin: /"/, end: /"/ },
-      { begin: /'/, end: /'/ }
-    ],
-    contains: [hljs.BACKSLASH_ESCAPE],
-    relevance: 0
-  };
-  var REGEX = {
-    className: 'regexp',
-    begin: /\//, end: /\/[gismuy]*/,
-    contains: [hljs.BACKSLASH_ESCAPE],
-    relevance: 0
-  };
-  var PREFIX_OP = {
-    className: 'keyword',
-    begin: /\@?[a-zA-Z_]\w*/,
-    relevance: 0
-  };
-  var INFIX_OP = {
-    className: 'operator',
-    begin: /[-+*/%^&|!<>=]=?|\.\.?|\?\:?|contains|matches|starts_with|ends_with/,
-    relevance: 0
-  };
+          var COMMENT = hljs.COMMENT('//', '$');
+          var KEYWORDS = {
+            keyword: 'if then else for in do match skip continue break return as true false',
+            built_in: 'pi e tau',
+            literal: 'null undefined',
+            type: 'u8 i8 u16 i16 u32 i32 u64 i64 f32 f64 string bool array object',
+            meta: 'include',
+            _: 'matches contains starts_with ends_with'
+          };
+          var IDENTIFIER = {
+            begin: /[a-zA-Z_]\w*/,
+            illegal: /\W/,
+            keywords: KEYWORDS,
+            relevance: 0
+          };
+          var NUMBER = {
+            className: 'number',
+            variants: [
+              { begin: /0b[01][01_]*/, relevance: 0 },
+              { begin: /0o[0-7][0-7_]*/, relevance: 0 },
+              { begin: /0x[0-9a-fA-F][0-9a-fA-F_]*/, relevance: 0 },
+              { begin: /(?:\d[\d_]*)(?:\.(?!\d)|(?:(?:\.(?:\d[\d_]*)?)?(?:[eE][-+]?\d[\d_]*)))?/, relevance: 0 }
+            ],
+            relevance: 0
+          };
+          var STRING = {
+            className: 'string',
+            variants: [
+              { begin: /"/, end: /"/ },
+              { begin: /'/, end: /'/ }
+            ],
+            contains: [hljs.BACKSLASH_ESCAPE],
+            relevance: 0
+          };
+          var REGEX = {
+            className: 'regexp',
+            begin: /\//, end: /\/[gismuy]*/,
+            contains: [hljs.BACKSLASH_ESCAPE],
+            relevance: 0
+          };
+          var PREFIX_OP = {
+            className: 'keyword',
+            begin: /\@?[a-zA-Z_]\w*/,
+            relevance: 0
+          };
+          var INFIX_OP = {
+            className: 'operator',
+            begin: /[-+*/%^&|!<>=]=?|\.\.?|\?\:?|contains|matches|starts_with|ends_with/,
+            relevance: 0
+          };
 
-  return {
-    name: 'Lavendeux',
-    aliases: ['ld', 'lavendeux'],
-    keywords: KEYWORDS,
-    contains: [
-      COMMENT,
-      NUMBER,
-      STRING,
-      REGEX,
-      PREFIX_OP,
-      INFIX_OP,
-      IDENTIFIER
-    ]
-  };
-});
-
+          return {
+            name: 'Lavendeux',
+            aliases: ['ld', 'lavendeux'],
+            keywords: KEYWORDS,
+            contains: [
+              COMMENT,
+              NUMBER,
+              STRING,
+              REGEX,
+              PREFIX_OP,
+              INFIX_OP,
+              IDENTIFIER
+            ]
+          };
+        });
 
         hljs.highlightAll();
+
+        function toggle_toc(self) {
+            var toc = document.getElementById('TOC');
+            if (toc.style.display === 'none') {
+                toc.style.display = 'block';
+                document.body.style.marginLeft = '20%';
+                document.body.style.paddingLeft = '40px';
+
+                self.target.innerHTML = 'Hide Table of Contents';
+            } else {
+                toc.style.display = 'none';
+                document.body.style.marginLeft = '0';
+                document.body.style.paddingLeft = '20px';
+
+                self.target.innerHTML = 'Show Table of Contents';
+            }
+        }
+
+        /* Add toggle btn to the top of the page */
+        var toggle_btn = document.createElement('button');
+        toggle_btn.innerHTML = 'Hide Table of Contents';
+        toggle_btn.onclick = toggle_toc;
+        document.body.insertBefore(toggle_btn, document.body.firstChild);
+        
     </script>
 
     <h1 class="title">Lavendeux Documentation</h1>
     <nav id="TOC"><ul>
-<li><a href="#values-and-literals">1 Values and Literals</a><ul>
-<li><a href="#numeric-types">1.1 Numeric Types</a><ul></ul></li>
-<li><a href="#collection-types">1.2 Collection Types</a><ul></ul></li>
-<li><a href="#strings">1.3 Strings</a><ul></ul></li>
-<li><a href="#type-conversion">1.4 Type Conversion</a><ul></ul></li></ul></li>
+<li><a href="#the-type-system">1 The Type System</a><ul>
+<li><a href="#bool">1.1 bool</a><ul></ul></li>
+<li><a href="#int">1.2 int</a><ul></ul></li>
+<li><a href="#float">1.3 float</a><ul></ul></li>
+<li><a href="#fixed">1.4 fixed</a><ul></ul></li>
+<li><a href="#currency">1.5 currency</a><ul></ul></li>
+<li><a href="#array">1.6 array</a><ul></ul></li>
+<li><a href="#object">1.7 object</a><ul></ul></li>
+<li><a href="#range">1.8 range</a><ul></ul></li>
+<li><a href="#string">1.9 string</a><ul></ul></li></ul></li>
 <li><a href="#operators-and-syntax">2 Operators and Syntax</a><ul>
-<li><a href="#arithmetic">2.1 Arithmetic</a><ul>
-<li><a href="#examples">2.1.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#array-literals">2.2 Array Literals</a><ul>
-<li><a href="#examples-1">2.2.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#assignment-operator">2.3 Assignment Operator</a><ul>
-<li><a href="#examples-2">2.3.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#bitwise">2.4 Bitwise</a><ul>
-<li><a href="#examples-3">2.4.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#boolean">2.5 Boolean</a><ul>
-<li><a href="#examples-4">2.5.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#cast">2.6 Cast</a><ul>
-<li><a href="#examples-5">2.6.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#constant">2.7 Constant</a><ul>
-<li><a href="#examples-6">2.7.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#decorator">2.8 Decorator</a><ul>
-<li><a href="#examples-7">2.8.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#deletion-keyword">2.9 Deletion Keyword</a><ul>
-<li><a href="#examples-8">2.9.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#for">2.10 For</a><ul>
-<li><a href="#examples-9">2.10.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#function-assignment">2.11 Function Assignment</a><ul>
-<li><a href="#examples-10">2.11.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#function-call">2.12 Function Call</a><ul>
-<li><a href="#examples-11">2.12.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#identifier">2.13 Identifier</a><ul>
-<li><a href="#examples-12">2.13.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#if">2.14 If</a><ul>
-<li><a href="#examples-13">2.14.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#indexing">2.15 Indexing</a><ul>
-<li><a href="#examples-14">2.15.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#matching">2.16 Matching</a><ul>
-<li><a href="#examples-15">2.16.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#object-literals">2.17 Object Literals</a><ul>
-<li><a href="#examples-16">2.17.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#range-literals">2.18 Range Literals</a><ul>
-<li><a href="#examples-17">2.18.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#ternary">2.19 Ternary</a><ul>
-<li><a href="#examples-18">2.19.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#unary-bitwise-not">2.20 Unary Bitwise Not</a><ul>
-<li><a href="#examples-19">2.20.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#unary-boolean-not">2.21 Unary Boolean Not</a><ul>
-<li><a href="#examples-20">2.21.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#unary-incrementdecrement">2.22 Unary Increment/Decrement</a><ul>
-<li><a href="#examples-21">2.22.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#unary-negation">2.23 Unary Negation</a><ul>
-<li><a href="#examples-22">2.23.1 Examples</a><ul></ul></li></ul></li>
-<li><a href="#match">2.24 match</a><ul>
-<li><a href="#examples-23">2.24.1 Examples</a><ul></ul></li></ul></li></ul></li>
+<li><a href="#arithmetic">2.1 Arithmetic</a><ul></ul></li>
+<li><a href="#array-literals">2.2 Array Literals</a><ul></ul></li>
+<li><a href="#assignment-operator">2.3 Assignment Operator</a><ul></ul></li>
+<li><a href="#bitwise">2.4 Bitwise</a><ul></ul></li>
+<li><a href="#boolean">2.5 Boolean</a><ul></ul></li>
+<li><a href="#cast">2.6 Cast</a><ul></ul></li>
+<li><a href="#constant">2.7 Constant</a><ul></ul></li>
+<li><a href="#decorator">2.8 Decorator</a><ul></ul></li>
+<li><a href="#deletion-keyword">2.9 Deletion Keyword</a><ul></ul></li>
+<li><a href="#for">2.10 For</a><ul></ul></li>
+<li><a href="#function-assignment">2.11 Function Assignment</a><ul></ul></li>
+<li><a href="#function-call">2.12 Function Call</a><ul></ul></li>
+<li><a href="#identifier">2.13 Identifier</a><ul></ul></li>
+<li><a href="#if">2.14 If</a><ul></ul></li>
+<li><a href="#indexing">2.15 Indexing</a><ul></ul></li>
+<li><a href="#matching">2.16 Matching</a><ul></ul></li>
+<li><a href="#object-literals">2.17 Object Literals</a><ul></ul></li>
+<li><a href="#range-literals">2.18 Range Literals</a><ul></ul></li>
+<li><a href="#ternary">2.19 Ternary</a><ul></ul></li>
+<li><a href="#unary-bitwise-not">2.20 Unary Bitwise Not</a><ul></ul></li>
+<li><a href="#unary-boolean-not">2.21 Unary Boolean Not</a><ul></ul></li>
+<li><a href="#unary-incrementdecrement">2.22 Unary Increment/Decrement</a><ul></ul></li>
+<li><a href="#unary-negation">2.23 Unary Negation</a><ul></ul></li>
+<li><a href="#match">2.24 match</a><ul></ul></li></ul></li>
 <li><a href="#functions">3 Functions</a><ul>
 <li><a href="#api-functions">3.1 API Functions</a><ul>
 <li><a href="#api_add">3.1.1 api_add</a><ul></ul></li>
@@ -228,15 +232,15 @@
 <li><a href="#decorators-functions">3.5 Decorators Functions</a><ul>
 <li><a href="#aud">3.5.1 @aud</a><ul></ul></li>
 <li><a href="#bin">3.5.2 @bin</a><ul></ul></li>
-<li><a href="#bool">3.5.3 @bool</a><ul></ul></li>
+<li><a href="#bool-1">3.5.3 @bool</a><ul></ul></li>
 <li><a href="#cad">3.5.4 @cad</a><ul></ul></li>
 <li><a href="#cny">3.5.5 @cny</a><ul></ul></li>
 <li><a href="#eur">3.5.6 @eur</a><ul></ul></li>
-<li><a href="#float">3.5.7 @float</a><ul></ul></li>
+<li><a href="#float-1">3.5.7 @float</a><ul></ul></li>
 <li><a href="#gbp">3.5.8 @gbp</a><ul></ul></li>
 <li><a href="#hex">3.5.9 @hex</a><ul></ul></li>
 <li><a href="#inr">3.5.10 @inr</a><ul></ul></li>
-<li><a href="#int">3.5.11 @int</a><ul></ul></li>
+<li><a href="#int-1">3.5.11 @int</a><ul></ul></li>
 <li><a href="#jpy">3.5.12 @jpy</a><ul></ul></li>
 <li><a href="#oct">3.5.13 @oct</a><ul></ul></li>
 <li><a href="#ord">3.5.14 @ord</a><ul></ul></li>
@@ -313,64 +317,151 @@
 <li><a href="#sin">3.12.9 sin</a><ul></ul></li>
 <li><a href="#sinh">3.12.10 sinh</a><ul></ul></li>
 <li><a href="#tan">3.12.11 tan</a><ul></ul></li>
-<li><a href="#tanh">3.12.12 tanh</a><ul></ul></li></ul></li></ul></li></ul></nav><p>This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
+<li><a href="#tanh">3.12.12 tanh</a><ul></ul></li></ul></li></ul></li></ul></nav><p>Lavendish a language designed to manipulate values with concise, single-line expressions.
 It was created for use in Lavendeux (<a href="https://rscarson.github.io/lavendeux/">https://rscarson.github.io/lavendeux/</a>).</p>
 <p>Inputs are a series of expressions separated by a newline, or a <code>;</code>.
-Expressions can optionally end with an @decorator to format the output as a string (see <code>section 3.2</code>)</p>
-<p>Comments are either <code>//</code>, which turns the rest of the line into a comment
-Or a block comment bounded by /* and */</p>
-<h1 id="values-and-literals"><a href="#values-and-literals">1 Values and Literals</a></h1>
-<p>All expressions in Lavendeux will return a value of a specific type.
+Expressions can optionally end with an @decorator to format the output as a string</p>
+<p>Key features:</p>
+<ul>
+<li>Functions (<a href="#function-assignment">reference</a>)</li>
+<li>@Decorators (<a href="#decorator">reference</a>)</li>
+<li>Seamless type conversion (<a href="#the-type-system">reference</a>)</li>
+</ul>
+<h1 id="the-type-system"><a href="#the-type-system">1 The Type System</a></h1>
+<p>All expressions in Lavendeux must return a value of a specific type.
 These types can be broadly categorized as <code>numeric</code>, <code>collection</code>, or <code>string</code>.</p>
-<h2 id="numeric-types"><a href="#numeric-types">1.1 Numeric Types</a></h2>
-<p>The first group of types are classified as numeric; they can all freely be cast to each other.
-If a type is downcast to a smaller numeric type, it will be truncated to fit (1.6 becomes 1 for example)</p>
-<p>Note; Bool is an outlier here, since any type can be cast to bool:
-Truth is determined by equivalence to 0, or by emptiness, depending on the type.</p>
-<p>But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):</p>
+<p>The type of a given expression is calculated on a hierarchy, based on the ‘specificity’ of the types involved.
+The hierarchy is as follows (from lowest to highest priority):</p>
 <ul>
-<li>Bool: a single-bit truth value [<code>true</code>, <code>false</code>]</li>
-<li>Int: One of <code>U8/I8 / U16/I16 / U32/I32 / U64/I64</code></li>
-<li>Float: A 64bit floating-point number [<code>1.0</code>, <code>.2</code>, <code>3e+7</code>]</li>
-<li>Fixed: A fixed-point decimal value [<code>1.22D</code>, <code>4D</code>]</li>
-<li>Currency: A fixed-point decimal value with a currency symbol [<code>$1</code>, <code>$2.00</code>, <code>3￥</code>]</li>
+<li>Bool</li>
+<li>Int (in order, <code>u8, i8, u16, i16, u32, i32, u64, i64</code>)</li>
+<li>Float</li>
+<li>Fixed, then Currency</li>
+<li>Array, then Object</li>
+<li>String</li>
 </ul>
-<p>Integers can be written in decimal, binary, octal, or hexadecimal, with an optional suffix to specify the type.
+<p>Note that range is not included, since it can only be compared to itself, or to arrays.</p>
+<p>So for example, if you add an int to a float, the result will be a float.
+Some types can also be grouped together, like <code>int</code> (see aboove), or <code>numeric</code> (which includes all numeric types),
+and <code>collection</code> (which includes range, string, array and object). ‘any’ is the implicit type that includes everything.</p>
+<p>The names of the types, for the most part, are self-explanatory, but here’s a quick rundown:
+<code>bool</code> - A single-bit truth value
+<code>int</code> - A signed or unsigned integer of various sizes (<code>u8</code> to <code>i64</code>)
+<code>float</code> - A 64bit floating-point number
+<code>fixed</code> - A fixed-point decimal value
+<code>currency</code> - A fixed-point decimal value with a currency symbol and set precision
+<code>array</code> - An ordered collection of values, indexed by integers
+<code>object</code> - An unordered collection of key-value pairs
+<code>range</code> - An inclusive range of integers
+<code>string</code> - A sequence of characters
+<code>numeric</code> - The implicit type that includes all numeric types, and <code>bool</code>
+<code>collection</code> - The implicit type that includes all collection types
+<code>any</code> - The implicit type that includes everything</p>
+<hr />
+<h2 id="bool"><a href="#bool">1.1 bool</a></h2>
+<p>The <code>bool</code> type is a single-bit truth value, and can be either <code>true</code> or <code>false</code>.
+In arithmetic operations, <code>true</code> is equivalent to <code>1</code>, and <code>false</code> is equivalent to <code>0</code>; operations are performed as if on a wrapping 1-bit integer.</p>
+<p><strong>Casting:</strong>
+It can be cast from any type; and truth is determined by equivalence to 0, or by emptiness, depending on the type.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as <code>true</code> or <code>false</code>.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1 as bool; // true
+[] as bool; // false
+</code></pre></div><h2 id="int"><a href="#int">1.2 int</a></h2>
+<p>Covering the types from <code>u8</code> to <code>i64</code>, <code>int</code> is a signed or unsigned integer of various sizes.
+Integers can be written in decimal, binary, octal, or hexadecimal, with an optional suffix to specify the type.
 If no suffix is provided, the type defaults to i64.</p>
-<p>Examples:</p>
-<ul>
-<li><code>38_000i32</code></li>
-<li><code>0xFFu8</code></li>
-<li><code>0o77i16</code></li>
-<li><code>077</code></li>
-<li><code>0b1010_1010_1010_1010i32</code></li>
-</ul>
-<p>Supported currency symbols:</p>
+<p><strong>Casting:</strong>
+It can be cast from and to any type, and from any numeric type.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as a decimal number. For other formatting options, see <a href="#decorators-functions">decorators</a>.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>0xFFu8; // 255
+0o77i16; // 63
+077; // 63
+0b1010_1010_1010_1010i32; // 43690
+38_000; // 38,000
+</code></pre></div><h2 id="float"><a href="#float">1.3 float</a></h2>
+<p>A 64bit floating-point number, <code>float</code> can be written in decimal, or in scientific notation.</p>
+<p><strong>Casting:</strong>
+It can be cast from and to any type, and from any numeric type.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as a decimal number. For other formatting options, see <a href="#decorators-functions">decorators</a>.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1.0; // 1.0
+.2; // 0.2
+3e+7; // 30,000,000
+</code></pre></div><h2 id="fixed"><a href="#fixed">1.4 fixed</a></h2>
+<p>A fixed-point decimal value. Fixed literals are suffixed with <code>D</code>.</p>
+<p>Note that fixed-point exponentiation is not supported, and will result in an implicit cast to float.</p>
+<p><strong>Casting:</strong>
+It can be cast from and to any type, and from any numeric type.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will appear similar to int or float, depending on the decimal precision of the value.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1.22D; // 1.22
+4D; // 4
+</code></pre></div><h2 id="currency"><a href="#currency">1.5 currency</a></h2>
+<p>A fixed-point decimal value with a currency symbol and set precision. Arithmetic operations will maintain the currency symbol only if both operands share the same one, and will use the larger precision.</p>
+<p><strong>Casting:</strong>
+It can be cast from and to any type, and from any numeric type.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will appear similar to fixed, but with the currency symbol.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>$1.00 + 1; // $1.00
+$2.00 + £1.000; // 3.000
+3￥; // 3
+</code></pre></div>
+<p><strong>Supported currency symbols:</strong></p>
 
 <div class="example-wrap"><pre class="rust rust-example-rendered"><code>$ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
 ￡ | ￥ | ￦</code></pre></div>
-<h2 id="collection-types"><a href="#collection-types">1.2 Collection Types</a></h2>
-<p>The second group are collections, which encapsulate a set of values:</p>
-<ul>
-<li>Array: An ordered collection of values, indexed by integers. Values can be a mix of types.</li>
-<li>Object: An unordered collection of key-value pairs, where keys are any non-collection type and values can be a mix of types.</li>
-<li>Range: An inclusive range of integers, with a start and end value. Start and end can be single characters, or any numeric type.</li>
-</ul>
-<p>Attempting to convert non-compound types into one of these will result in a single-value array or object.
-Range is the exception - no type can be converted into range, and range can only be converted into an array.</p>
-<p>For example, <code>1 as array</code> would result in <code>[1]</code>,
-and <code>1 as object</code> would be the equivalent to <code>[1] as object</code>, which is <code>{0: 1}</code>
-(Non-compound types are first cast to array before being transformed into objects)</p>
-<p>Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1, and will simply extract that value:</p>
-<ul>
-<li>For example, <code>['a'] as string</code> would result in <code>'a'</code></li>
-</ul>
-<h2 id="strings"><a href="#strings">1.3 Strings</a></h2>
-<p>The last value is string, which any value can be cast to in order to get a string representation.</p>
-<p>They are Single or double quote enclosed
-With the following supported escape sequences:</p>
+<h2 id="array"><a href="#array">1.6 array</a></h2>
+<p>An ordered collection of values, indexed by integers. Values can be a mix of types.</p>
+<p><strong>Casting:</strong>
+It can be cast from any type; and will result in a single-value array - <code>A as array</code> is equivalent to <code>[A]</code>.
+When cast to any non-collection type, it will extract the single value, if the array has a length of 1 - <code>['a'] as int</code> would result in <code>a</code>.
+Casting a larger array to a non-collection type will result in an error.
+Casting array to object will result in an object with integer keys, and the values of the array.
+Casting range to array will result in an array of the range values (very large ranges may result in an error).</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as a comma-separated list of values, enclosed in square brackets.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3]; // [1, 2, 3]
+[1] as int; // 1
+[1, 2, 3] as object; // {0: 1, 1: 2, 2: 3}
+1..3 as array; // [1, 2, 3]
+</code></pre></div><h2 id="object"><a href="#object">1.7 object</a></h2>
+<p>An unordered collection of key-value pairs, where keys are any non-collection type and values can be a mix of types.
+Unlike boolean comparison operators (see &lt;#boolean&gt;), key comparison is type-sensitive - <code>{1: 2} == {'1': 2}</code> would be false.</p>
+<p><strong>Casting:</strong>
+It can be cast from any type; and will result in a single-value object - <code>A as object</code> is equivalent to <code>{0: A}</code>.
+This is the same as casting to array, then to object.
+When cast to any non-collection type, it will extract the single value, if the object has a length of 1 - <code>{0: 'a'} as int</code> would result in <code>a</code>.
+Casting a larger object to a non-collection type will result in an error.
+Casting object to array will result in an array of the object values.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as a comma-separated list of key-value pairs, enclosed in curly brackets.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>{1: 2}; // {1: 2}
+{1: 2} as array; // [2]
+{1: 2} as int; // 2
+{1: 2} as string; // &quot;{1: 2}&quot;
+</code></pre></div><h2 id="range"><a href="#range">1.8 range</a></h2>
+<p>An inclusive range of integers, with a start and end value. Start and end can be single characters, or any numeric type.</p>
+<p><strong>Casting:</strong>
+Ranges cannot be cast from any type, and can only be cast to an array.</p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted in the form <code>start..end</code>.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1..3 as array; // [1, 2, 3]
+&#39;a&#39;..&#39;c&#39; as array // [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;]
+</code></pre></div><h2 id="string"><a href="#string">1.9 string</a></h2>
+<p>Any value can be cast to a string, to get a string representation of that value. It is encoding as a UTF-8 string.
+It is enclosed in single or double quotes, and supports the following supported escape sequences:</p>
 <ul>
 <li><code>\'</code> Single-quote</li>
 <li><code>\&quot;</code> Double-quote</li>
@@ -379,33 +470,25 @@ With the following supported escape sequences:</p>
 <li><code>\t</code> Tab</li>
 <li><code>\\</code> Literal backslash</li>
 </ul>
-<h2 id="type-conversion"><a href="#type-conversion">1.4 Type Conversion</a></h2>
-<p>You can manually convert between types using <code>&lt;value&gt; as &lt;type&gt;</code>, so long as that conversion is allowed:</p>
-<ul>
-<li>Numeric values can always convert to other numeric values [<code>1 as float</code>, <code>true as fixed</code> or <code>$1.00 as int</code> are all valid]</li>
-<li>Non-compound non-numeric values cannot convert into numeric values [<code>'test' as int</code> would be an error]</li>
-<li>Any type <code>T</code> can be converted to an array as <code>[T]</code>, or an object as <code>{0: T}</code></li>
-<li>Conversely, single-element compound values such as <code>[T]</code> or <code>{0: T}</code> can be freely converted to any type valid for <code>T</code></li>
-<li>All types can be converted to string or bool</li>
-<li>Range can become string, bool or array, but no type can become range</li>
-</ul>
-<p>Comparisons and expressions will always try and cooerce both values to the same type, using these rules, in this order:</p>
-<ul>
-<li>If either value is a range, compare the values as arrays</li>
-<li>If either value is an object, compare the values as objects</li>
-<li>If either value is an array, compare the values as arrays</li>
-<li>If either value is an string, compare the values as strings</li>
-<li>If either value is an currency, compare the values as currencies</li>
-<li>If either value is a fixed-point, compare the values as fixed-points</li>
-<li>If either value is an float, compare the values as floats</li>
-<li>If either value is an int, compare the values as ints</li>
-<li>If either value is a bool, compare the values as bools</li>
-</ul>
+<p><strong>Casting:</strong>
+It can be cast from any type, and cast to array or object.
+Casting to array will result in a character array, and casting to object will in a single-value object with the key <code>0i64</code></p>
+<p><strong>Formatting:</strong>
+When cast to a string, it will be formatted as a string literal, without enclosing quotes.
+Inside a, array or object, it will be formatted as a string literal, with enclosing quotes.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>&quot;test \&quot;&quot;
+1 as string // &quot;1&quot;
+[1] as string // &quot;[1]&quot;
+{0: 1} as string // &quot;{0: 1}&quot;
+</code></pre></div>
+<hr />
 <h1 id="operators-and-syntax"><a href="#operators-and-syntax">2 Operators and Syntax</a></h1><h2 id="arithmetic"><a href="#arithmetic">2.1 Arithmetic</a></h2>
 <p>**[+, -, *, /, %, <strong>]</strong><br />
 Performs arithmetic operations on two values.
 All but exponentiation are left-associative.</p>
-<h3 id="examples"><a href="#examples">2.1.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 / 3
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 / 3
 2 ** 3
 </code></pre></div><h2 id="array-literals"><a href="#array-literals">2.2 Array Literals</a></h2>
 <p><strong>[[ a, b, … ]]</strong><br />
@@ -413,7 +496,8 @@ A collection of values.
 Arrays can contain any type of value, including other arrays.
 Arrays are 0-indexed, meaning the first element is at index 0.
 The indexing operator (a[b]) can be used to access elements of an array.</p>
-<h3 id="examples-1"><a href="#examples-1">2.2.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3, 4, 5]
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3, 4, 5]
 [&quot;Hello&quot;, &quot;World&quot;]
 [1, [2, 3], 4]
 </code></pre></div><h2 id="assignment-operator"><a href="#assignment-operator">2.3 Assignment Operator</a></h2>
@@ -423,7 +507,8 @@ Target is either a literal with optional indices, or a destructuring assignment
 If an index is empty, a new value will be appended to the array
 If the target is a destructuring assignment, the value must be a collection of the same length
 If the operator is present, the value will be transformed before assignment</p>
-<h3 id="examples-2"><a href="#examples-2">2.3.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[a, b] = [1, 2]
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>[a, b] = [1, 2]
 a = 1; a += 1
 a = [1]; a[] = 2
 </code></pre></div><h2 id="bitwise"><a href="#bitwise">2.4 Bitwise</a></h2>
@@ -432,7 +517,8 @@ A left-associative infix operator that performs bitwise operations on two values
 Values are first converted to integers.
 Shifts are arithmetic for signed integers and logical for unsigned integers.
 A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
-<h3 id="examples-3"><a href="#examples-3">2.4.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>5 | 3 &amp; 3
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>5 | 3 &amp; 3
 5 ^ 3
 5 &lt;&lt; 3 &gt;&gt; 3
 </code></pre></div><h2 id="boolean"><a href="#boolean">2.5 Boolean</a></h2>
@@ -442,26 +528,30 @@ Comparisons are weak, meaning that the types of the values are not checked.
 Result are always a boolean value.
 And and Or are short-circuiting.
 All are left-associative.</p>
-<h3 id="examples-4"><a href="#examples-4">2.5.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>true || false
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>true || false
 1 &lt; 2
 </code></pre></div><h2 id="cast"><a href="#cast">2.6 Cast</a></h2>
 <p><strong>[as]</strong><br />
 Casts a value to a different type.
 The type can be a string or an identifier.
 The operator is right-associative</p>
-<h3 id="examples-5"><a href="#examples-5">2.6.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>5 as float
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>5 as float
 5 as &#39;float&#39;
 5 as i8
 </code></pre></div><h2 id="constant"><a href="#constant">2.7 Constant</a></h2>
 <p><strong>[pi, e, tau]</strong><br />
 A constant value.
 A predefined set of values that are always available.</p>
-<h3 id="examples-6"><a href="#examples-6">2.7.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>pi; e; tau
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>pi; e; tau
 </code></pre></div><h2 id="decorator"><a href="#decorator">2.8 Decorator</a></h2>
 <p><strong>[@name]</strong><br />
 Converts a value to a formatted string.
 It calls a function named ‘@name’ with the value as an argument.</p>
-<h3 id="examples-7"><a href="#examples-7">2.8.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
     5 @float,
     &#39;5.0&#39;
 )
@@ -471,7 +561,8 @@ Deletes a value, function, @decorator, or index
 Will return the value deleted (or the function signature if a function was deleted)
 Index can be blank to delete the last value in an array, or negative to count from the end
 Indices can also be a collection to delete multiple values at once</p>
-<h3 id="examples-8"><a href="#examples-8">2.9.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 2; del a
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 2; del a
 a = [1]; del a[]
 a = {&#39;test&#39;: 1}; del a[&#39;test&#39;]
 
@@ -483,7 +574,8 @@ A loop that iterates over a range, array, or object.
 The variable is optional, and if not provided, the loop will not bind a variable.
 The expression will return an array of the results of the block.
 Break and skip/continue can be used to exit the loop or skip the current iteration.</p>
-<h3 id="examples-9"><a href="#examples-9">2.10.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>for i in 0..10 { i }
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>for i in 0..10 { i }
 for i in [1, 2, 3] { i }
 for i in {&#39;a&#39;: 1, &#39;b&#39;: 2} { i }
 
@@ -497,7 +589,8 @@ If the function name begins with <code>@</code>, it is a decorator and must take
 Return type or argued types can be specified with <code>: type</code>, but are optional.</p>
 <p>Arguments will be cooerced to the specified type if provided, as will the return value.
 Valid type names are: <code>u[8-64]</code>, <code>i[8-64]</code>, <code>float</code>, <code>int</code>, <code>numeric</code>, <code>string</code>, <code>array</code>, <code>object</code>, <code>bool</code>, <code>any</code>.</p>
-<h3 id="examples-10"><a href="#examples-10">2.11.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>// Decorator taking in a number and returning a string
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>// Decorator taking in a number and returning a string
 @double(x:numeric) = 2*x
 5 @double
 
@@ -510,7 +603,8 @@ add(3, 4.5)
 <p><strong>[name(arg1, arg2, …), arg1.func(arg2, arg3, …)]</strong><br />
 Calls a function with the given arguments.
 The help() will list all available functions, and can filter by category or function name.</p>
-<h3 id="examples-11"><a href="#examples-11">2.12.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>arr = []
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>arr = []
 push(arr, 3)
 arr.push(3)
 help(push)
@@ -519,7 +613,8 @@ help(collections)
 <p><strong>[a, b, c]</strong><br />
 A variable name.
 The value of the variable is looked up in the state.</p>
-<h3 id="examples-12"><a href="#examples-12">2.13.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[a, b, c] = [1, 2, 3]
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>[a, b, c] = [1, 2, 3]
 a; b; c
 </code></pre></div><h2 id="if"><a href="#if">2.14 If</a></h2>
 <p><strong>[if <condition> then <block> else <block>, if <condition> {block} else {block}]</strong><br />
@@ -527,7 +622,8 @@ A conditional expression that evaluates a condition and then one of two branches
 body can be either a block or a single expression. The last expression is returned from a block.
 Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
 As such, all if expressions must have both a then and an else branch.</p>
-<h3 id="examples-13"><a href="#examples-13">2.14.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
 if a &gt; 5 { a } else { 5 }
 if a == 4 {
     a
@@ -544,7 +640,8 @@ If the index is a collection, it is used to access multiple elements.
 If the index is a string, it is used to access a character.
 If the index is blank, it is used to access the last element of the collection.
 Negative indices can be used to access elements from the end of the collection.</p>
-<h3 id="examples-14"><a href="#examples-14">2.15.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3][0]
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>[1, 2, 3][0]
 [1, 2, 3][0..1]
 { &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }[&quot;name&quot;]
 </code></pre></div><h2 id="matching"><a href="#matching">2.16 Matching</a></h2>
@@ -552,7 +649,8 @@ Negative indices can be used to access elements from the end of the collection.<
 A set of left-associative boolean operators comparing a collection with a pattern
 ‘is’ is a special case that compares type (<code>value is string</code> is equivalent <code>typeof(value) == 'string'</code>)
 starts/ends with are not applicable to objects, which are not ordered</p>
-<h3 id="examples-15"><a href="#examples-15">2.16.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>{&#39;name&#39;: &#39;test&#39;} contains &#39;name&#39;
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>{&#39;name&#39;: &#39;test&#39;} contains &#39;name&#39;
 &#39;hello&#39; matches &#39;ell&#39;
 &#39;hello&#39; is string
 &#39;hello&#39; starts_with &#39;hel&#39;
@@ -563,7 +661,8 @@ A collection of key-value pairs.
 Values can contain any type, including other objects.
 Keys can be any non-collection type
 The indexing operator (a[b]) can be used to access elements of an object.</p>
-<h3 id="examples-16"><a href="#examples-16">2.17.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }
 { &quot;name&quot;: &quot;John&quot;, &quot;address&quot;: { &quot;city&quot;: &quot;New York&quot;, &quot;state&quot;: &quot;NY&quot; } }
 </code></pre></div><h2 id="range-literals"><a href="#range-literals">2.18 Range Literals</a></h2>
 <p><strong>[first..last]</strong><br />
@@ -572,47 +671,56 @@ Ranges can be used to create arrays of numbers or characters.
 Ranges are inclusive, meaning the start and end values are included in the array.
 Start and end values must be of the same type, and start must be &lt;= end.
 Character ranges are inclusive and can only be used with single-character strings.</p>
-<h3 id="examples-17"><a href="#examples-17">2.18.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>1..5
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>1..5
 &#39;a&#39;..&#39;z&#39;
 </code></pre></div><h2 id="ternary"><a href="#ternary">2.19 Ternary</a></h2>
 <p><strong>[condition ? then : else]</strong><br />
 A right-associative ternary operator.
 The condition is evaluated first, then either the then or else branch is evaluated.</p>
-<h3 id="examples-18"><a href="#examples-18">2.19.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>true ? 1 : 2
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>true ? 1 : 2
 </code></pre></div><h2 id="unary-bitwise-not"><a href="#unary-bitwise-not">2.20 Unary Bitwise Not</a></h2>
 <p><strong>[~]</strong><br />
 A prefix operator that performs bitwise NOT on a value.
 The value is first converted to an integer.
 A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
-<h3 id="examples-19"><a href="#examples-19">2.20.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>~5
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>~5
 </code></pre></div><h2 id="unary-boolean-not"><a href="#unary-boolean-not">2.21 Unary Boolean Not</a></h2>
 <p><strong>[not]</strong><br />
 Negates a boolean value.
 If the value is not a boolean, it is cooerced to boolean first.</p>
-<h3 id="examples-20"><a href="#examples-20">2.21.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>!true == false
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>!true == false
 !&#39;test&#39; == false
 !0 == true
 </code></pre></div><h2 id="unary-incrementdecrement"><a href="#unary-incrementdecrement">2.22 Unary Increment/Decrement</a></h2>
 <p><strong>[++, –]</strong><br />
-Increments or decrements a variable by 1.</p>
-<h3 id="examples-21"><a href="#examples-21">2.22.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 0
+Increments or decrements a variable by 1.
+<strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 0
 assert_eq(a++, 0)
 assert_eq(--a, 0)
 </code></pre></div><h2 id="unary-negation"><a href="#unary-negation">2.23 Unary Negation</a></h2>
 <p><strong>[-]</strong><br />
-Negates a value.</p>
-<h3 id="examples-22"><a href="#examples-22">2.23.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>-1
+Negates a value.
+<strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>-1
 </code></pre></div><h2 id="match"><a href="#match">2.24 match</a></h2>
 <p><strong>[match <value> { <condition> =&gt; <block>, _ =&gt; <block> }]</strong><br />
 A conditional expression that evaluates a value and then one of several cases.
 match blocks must be exhaustive, and therefore must end in a default case</p>
-<h3 id="examples-23"><a href="#examples-23">2.24.1 Examples</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 6
 match a {
     5 =&gt; { &#39;five&#39; },
     6 =&gt; { &#39;six&#39; },
     _ =&gt; { &#39;other&#39; }
 }
-</code></pre></div><h1 id="functions"><a href="#functions">3 Functions</a></h1><h2 id="api-functions"><a href="#api-functions">3.1 API Functions</a></h2><h3 id="api_add"><a href="#api_add">3.1.1 api_add</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>api_add(name:string, endpoint) -&gt; string
+</code></pre></div>
+<hr />
+<h1 id="functions"><a href="#functions">3 Functions</a></h1><h2 id="api-functions"><a href="#api-functions">3.1 API Functions</a></h2><h3 id="api_add"><a href="#api_add">3.1.1 api_add</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>api_add(name:string, endpoint) -&gt; string
 </code></pre></div>
 <p>Registers an API
 This function registers an API with the system. The API can then be used to make requests to the specified endpoint.<br />
@@ -1080,7 +1188,7 @@ Converts a number to a binary string. The output will be prefixed with ‘0b’ 
 )
 </code></pre></div>
 <hr />
-<h3 id="bool"><a href="#bool">3.5.3 @bool</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@bool(input) -&gt; string
+<h3 id="bool-1"><a href="#bool-1">3.5.3 @bool</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@bool(input) -&gt; string
 </code></pre></div>
 <p>Boolean formatting
 Converts a number to a boolean string.<br />
@@ -1125,7 +1233,7 @@ Includes a euro sign and two decimal places.<br />
 )
 </code></pre></div>
 <hr />
-<h3 id="float"><a href="#float">3.5.7 @float</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@float(input:numeric) -&gt; string
+<h3 id="float-1"><a href="#float-1">3.5.7 @float</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@float(input:numeric) -&gt; string
 </code></pre></div>
 <p>Floating point number formatting
 Converts a number to a floating point string.<br />
@@ -1169,7 +1277,7 @@ Includes a rupee sign and two decimal places.<br />
 )
 </code></pre></div>
 <hr />
-<h3 id="int"><a href="#int">3.5.11 @int</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@int(input:numeric) -&gt; string
+<h3 id="int-1"><a href="#int-1">3.5.11 @int</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>@int(input:numeric) -&gt; string
 </code></pre></div>
 <p>Integer number formatting
 Converts a number to an integer string.<br />

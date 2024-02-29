@@ -62,3 +62,9 @@ name = "generate_docs"
 
 [[bin]]
 name = "coverage_report"
+
+[[bin]]
+name = "load_zarban"
+
+[profile.release]
+debug = true

@@ -1,5 +1,5 @@
 use super::*;
-use crate::{error::WrapExternalError, pest::Rule, State};
+use crate::{error::WrapExternalError, pest::Rule};
 use polyvalue::{
     operations::{BooleanOperation, BooleanOperationExt},
     Value,
@@ -7,8 +7,8 @@ use polyvalue::{
 
 define_prattnode!(
     InfixBoolean {
-        left: Node,
-        right: Node,
+        left: Node<'i>,
+        right: Node<'i>,
         operator: BooleanOperation
     },
     rules = [
@@ -21,7 +21,7 @@ define_prattnode!(
         OP_BOOL_LT,
         OP_BOOL_GT
     ],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let left = children.next().unwrap().to_ast_node()?;
@@ -55,7 +55,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         // Short-circuit evaluation
         if this.operator == BooleanOperation::Or {
             let left = this.left.get_value(state)?;
@@ -95,16 +95,16 @@ define_prattnode!(
 );
 
 define_prattnode!(
-    BooleanNot { base: Node },
+    BooleanNot { base: Node<'i> },
     rules = [PREFIX_BOOL_NOT],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         children.next(); // Skip the operator
         let base = children.next().unwrap().to_ast_node()?;
         Ok(Self { base, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Value::boolean_not(&this.base.get_value(state)?).with_context(this.token())
     },
 

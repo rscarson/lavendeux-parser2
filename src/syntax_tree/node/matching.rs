@@ -1,5 +1,5 @@
 use super::*;
-use crate::{error::WrapExternalError, pest::Rule, State};
+use crate::{error::WrapExternalError, pest::Rule};
 use polyvalue::{
     operations::{MatchingOperation, MatchingOperationExt},
     Value,
@@ -7,8 +7,8 @@ use polyvalue::{
 
 define_prattnode!(
     InfixMatch {
-        left: Node,
-        right: Node,
+        left: Node<'i>,
+        right: Node<'i>,
         operator: MatchingOperation
     },
     rules = [
@@ -18,7 +18,7 @@ define_prattnode!(
         OP_MATCH_STARTSWITH,
         OP_MATCH_ENDSWITH
     ],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let left = children.next().unwrap().to_ast_node()?;
@@ -49,12 +49,12 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let left = this.left.get_value(state)?;
         let right = if this.operator == MatchingOperation::Is
             && this.right.token().rule == Rule::identifier
         {
-            Value::from(this.right.token().input.as_str())
+            Value::from(this.right.token().input)
         } else {
             this.right.get_value(state)?
         };

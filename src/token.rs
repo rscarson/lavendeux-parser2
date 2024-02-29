@@ -5,7 +5,7 @@ use pest::iterators::Pair;
 /// It stores metadata about the token, such as the rule it was parsed from,
 /// the input it was parsed from, and the references to variables it contains
 #[derive(Debug, Clone)]
-pub struct Token {
+pub struct Token<'i> {
     /// Source-code line number
     pub line: usize,
 
@@ -13,43 +13,43 @@ pub struct Token {
     /// See [crate::Rule]
     pub rule: Rule,
 
-    /// Part of the input that this token was parsed from
-    pub input: String,
+    /// The input that this token was parsed from
+    pub input: &'i str,
 
     /// An optional variable reference, for pass-by-ref
     /// Used by a handful of stdlib functions, like push, insert, etc
     pub references: Option<String>,
 }
 
-impl Token {
+impl Token<'_> {
     #[cfg(test)]
     /// Create a dummy token
     pub fn dummy() -> Self {
         Self {
             line: 0,
             rule: Rule::SCRIPT,
-            input: "".to_string(),
+            input: "",
             references: None,
         }
     }
 }
 
 /// A trait used to convert a pest pair into a token
-pub trait ToToken {
-    fn to_token(&self) -> Token;
+pub trait ToToken<'i> {
+    fn to_token(&'i self) -> Token<'i>;
 }
-impl ToToken for Pair<'_, Rule> {
-    fn to_token(&self) -> Token {
+impl<'i> ToToken<'i> for Pair<'_, Rule> {
+    fn to_token(&'i self) -> Token<'i> {
         Token {
             line: self.as_span().start_pos().line_col().0,
             rule: self.as_rule(),
-            input: self.as_str().to_string(),
+            input: self.as_str(),
             references: None,
         }
     }
 }
 
-impl std::fmt::Display for Token {
+impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Line {}: {}", self.line, self.input)
     }

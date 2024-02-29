@@ -1,18 +1,21 @@
-//! Error Nodes
+//! Error<'i> Nodes
 //!
 //! High-level nodes that are used to build the syntax tree.
 //!
 use super::*;
-use crate::{Rule, State, ToToken};
-use pest::iterators::Pair;
+use crate::ToToken;
 
 macro_rules! define_errornode {
     ($rule:ident, $error:ident) => {
         define_node!(
             $error,
             rules = [$rule],
-            new = |input: Pair<Rule>| { oops!($error, input.to_token()) },
-            value = |_: &Self, _: &mut State| unreachable!()
+            new = (input) {
+                oops!($error, input.to_token())
+            },
+            value = (_this, _state) {
+                unreachable!()
+            }
         );
     };
 }

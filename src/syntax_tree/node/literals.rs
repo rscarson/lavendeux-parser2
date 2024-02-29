@@ -7,18 +7,17 @@ use std::str::FromStr;
 use super::*;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
-    Rule, State, ToToken,
+    Rule, ToToken,
 };
-use pest::iterators::Pair;
 use polyvalue::{types::*, Value, ValueTrait, ValueType};
 
 define_prattnode!(
     DecoratorExpression {
-        expression: Node,
+        expression: Node<'i>,
         decorator: String
     },
     rules = [POSTFIX_DECORATE],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let expression = children.next().unwrap().to_ast_node()?;
@@ -31,7 +30,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let value = this.expression.get_value(state)?;
         let result = state.decorate(&this.decorator, value).with_context(this.token())?;
         Ok(Value::from(result))
@@ -55,11 +54,11 @@ define_prattnode!(
 
 define_prattnode!(
     CastExpression {
-        expression: Node,
-        target: Node
+        expression: Node<'i>,
+        target: Node<'i>
     },
     rules = [OP_CAST],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let expression = children.next().unwrap().to_ast_node()?;
@@ -73,7 +72,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let value = this.expression.get_value(state)?;
 
         let target = if this.target.token().rule == Rule::identifier {
@@ -105,14 +104,14 @@ define_prattnode!(
 define_node!(
     Identifier { name: String },
     rules = [identifier],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let mut token = input.to_token();
         let name = input.as_str().to_string();
         token.references = Some(name.clone());
 
         Ok(Self { name, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         state
             .get_variable(&this.name)
             .ok_or(ErrorDetails::VariableName {
@@ -138,7 +137,7 @@ define_node!(
 define_node!(
     ConstantValue { value: Value },
     rules = [const_literal],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let text = input.as_str();
 
@@ -146,6 +145,7 @@ define_node!(
             "pi" => Value::from(std::f64::consts::PI),
             "e" => Value::from(std::f64::consts::E),
             "tau" => Value::from(std::f64::consts::TAU),
+            "nil" => Value::from(false),
 
             _ => {
                 return oops!(Internal {
@@ -156,17 +156,22 @@ define_node!(
 
         Ok(Self { value, token }.boxed())
     },
-    value = |this: &Self, _state: &mut State| { Ok(this.value.clone()) },
+    value = (this, state) { Ok(this.value.clone()) },
 
     docs = {
         name: "Constant",
-        symbols = ["pi", "e", "tau"],
+        symbols = ["pi", "e", "tau", "nil"],
         description: "
             A constant value.
             A predefined set of values that are always available.
+
+            - `pi` - The mathematical constant π
+            - `e` - The mathematical constant e
+            - `tau` - The mathematical constant τ
+            - `nil` - The nil value - used to represent nothing or an empty value, especially in the context of a side-effect conditional
         ",
         examples: "
-            pi; e; tau
+            pi; e; tau; nil
         ",
     }
 );
@@ -183,7 +188,7 @@ define_node!(
         string_literal,
         int_literal
     ],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let value = match input.as_rule() {
             Rule::int_literal => {
@@ -243,7 +248,7 @@ define_node!(
 
         Ok(Self { value, token }.boxed())
     },
-    value = |this: &Self, _state: &mut State| { Ok(this.value.clone()) }
+    value = (this, state) { Ok(this.value.clone()) }
 );
 
 fn parse_string(input: &str) -> String {
@@ -262,17 +267,34 @@ fn parse_string(input: &str) -> String {
     // Now we split along our \\ backslash escapes, and rejoin after
     // to prevent going over them twice. This method isn't super
     // neat, there's likely a better way
-    c.as_str()
-        .split("\\\\")
-        .map(|s| {
-            s.replace("\\'", "\'")
-                .replace("\\\"", "\"")
-                .replace("\\n", "\n")
-                .replace("\\\n", "\n")
-                .replace("\\\r", "\r")
-                .replace("\\r", "\r")
-                .replace("\\t", "\t")
-        })
-        .collect::<Vec<String>>()
-        .join("\\")
+    let mut out = String::new();
+    let mut await_escape = false;
+    for char in c {
+        match char {
+            '\\' => {
+                if await_escape {
+                    out.push('\\');
+                    await_escape = false;
+                } else {
+                    await_escape = true;
+                }
+            }
+            _ => {
+                if await_escape {
+                    out.push(match char {
+                        '\'' => '\'',
+                        '"' => '"',
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        _ => char,
+                    });
+                    await_escape = false;
+                } else {
+                    out.push(char);
+                }
+            }
+        }
+    }
+    return out;
 }

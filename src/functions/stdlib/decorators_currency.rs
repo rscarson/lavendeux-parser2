@@ -1,8 +1,5 @@
-use crate::{define_stddecorator, functions::std_function::ParserFunction, Error, State};
-use polyvalue::{
-    types::{CurrencyInner, Fixed},
-    Value,
-};
+use crate::{define_stddecorator, functions::std_function::ParserFunction, Error};
+use polyvalue::types::{CurrencyInner, Fixed};
 
 define_stddecorator!(
     usd { input: Numeric },
@@ -16,7 +13,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_dollars(input).to_string())
     }
@@ -34,7 +31,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_euros(input).to_string())
     }
@@ -52,7 +49,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_dollars(input).to_string())
     }
@@ -70,7 +67,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_dollars(input).to_string())
     }
@@ -88,7 +85,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_pounds(input).to_string())
     }
@@ -106,7 +103,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_yen(input).to_string())
     }
@@ -124,7 +121,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_yuan(input).to_string())
     }
@@ -142,7 +139,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_rupees(input).to_string())
     }
@@ -160,7 +157,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Fixed>()?;
         Ok(CurrencyInner::as_rubles(input).to_string())
     }

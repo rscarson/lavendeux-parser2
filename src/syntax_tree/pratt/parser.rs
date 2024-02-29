@@ -4,7 +4,7 @@ use crate::{
     syntax_tree::Node,
     Error,
 };
-use pest::{iterators::Pair, pratt_parser::PrattParser};
+use pest::{iterators::Pairs, pratt_parser::PrattParser};
 
 pub struct Parser;
 impl Parser {
@@ -20,13 +20,13 @@ impl Parser {
         pratt
     }
 
-    pub fn parse(input: Pair<Rule>) -> Result<Node, Error> {
+    pub fn parse<'i>(input: Pairs<'i, Rule>) -> Result<Node<'i>, Error<'i>> {
         let pratt = Self::get_pratt_parser();
         let mut pratt = pratt
             .map_primary(|primary| PrattPair::Primary(primary))
             .map_infix(|l, o, r| PrattPair::Infix(Box::new(l), o, Box::new(r)))
             .map_prefix(|o, r| PrattPair::Prefix(o, Box::new(r)))
             .map_postfix(|l, o| PrattPair::Postfix(Box::new(l), o));
-        pratt.parse(input.into_inner()).to_ast_node()
+        pratt.parse(input).to_ast_node()
     }
 }

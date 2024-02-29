@@ -3,38 +3,37 @@
 //! High-level nodes that are used to build the syntax tree.
 //!
 use super::*;
-use crate::{syntax_tree::pratt, Error, Rule, State, ToToken};
-use pest::iterators::Pair;
+use crate::{syntax_tree::pratt, Error, ToToken};
 use polyvalue::Value;
 
 define_node!(
-    Script { lines: Vec<Node> },
+    Script { lines: Vec<Node<'i>> },
     rules = [SCRIPT],
 
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let lines = input.into_inner().map(|child| child.to_ast_node()).collect::<Result<_, _>>()?;
         Ok(Self { lines, token }.boxed())
     },
 
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Ok(Value::array(this.lines.iter().map(|l| l.get_value(state)).collect::<Result<Vec<_>, _>>()?))
     }
 );
 
 define_node!(
     Block {
-        run_statements: Vec<Node>,
-        ret_statement: Node
+        run_statements: Vec<Node<'i>>,
+        ret_statement: Node<'i>
     },
     rules = [BLOCK],
 
-    new = |input:Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut run_statements = input.into_inner()
             .filter(|c| c.as_str().trim().len() > 0)
             .map(|child| child.to_ast_node())
-            .collect::<Result<Vec<_>, Error>>()?;
+            .collect::<Result<Vec<_>, Error<'i>>>()?;
 
         if run_statements.len() == 0 {
             oops!(EmptyBlock, token)
@@ -48,7 +47,7 @@ define_node!(
         }
     },
 
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         for statement in &this.run_statements {
             statement.get_value(state)?;
         }
@@ -57,8 +56,17 @@ define_node!(
 );
 
 define_node!(
-    Expression { inner: Node },
+    Expression { inner: Node<'i> },
     rules = [EXPR],
-    new = |input: Pair<Rule>| { pratt::Parser::parse(input) },
-    value = |this: &Self, state: &mut State| { this.inner.get_value(state) }
+    new = (input) {
+        let mut input = input.into_inner();
+        if input.len() == 1 {
+            return input.next().unwrap().to_ast_node();
+        } else {
+            pratt::Parser::parse(input)
+        }
+    },
+    value = (this, state) {
+        this.inner.get_value(state)
+    }
 );

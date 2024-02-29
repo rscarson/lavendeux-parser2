@@ -20,7 +20,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty)
@@ -49,7 +49,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty)
@@ -78,7 +78,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap().as_a::<f64>()?;
         Ok(value.ceil().into())
     }
@@ -103,7 +103,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap().as_a::<f64>()?;
         Ok(value.floor().into())
     }
@@ -127,7 +127,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         match value.inner() {
             InnerValue::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
@@ -140,10 +140,10 @@ define_stdfunction!(
 
             InnerValue::Float(n) => Ok(Value::from(n.inner().abs())),
 
-            InnerValue::U8(n) => Ok(Value::from(n)),
-            InnerValue::U16(n) => Ok(Value::from(n)),
-            InnerValue::U32(n) => Ok(Value::from(n)),
-            InnerValue::U64(n) => Ok(Value::from(n)),
+            InnerValue::U8(n) => Ok(Value::from(n.clone())),
+            InnerValue::U16(n) => Ok(Value::from(n.clone())),
+            InnerValue::U32(n) => Ok(Value::from(n.clone())),
+            InnerValue::U64(n) => Ok(Value::from(n.clone())),
 
             InnerValue::I8(n) => Ok(Value::from(n.abs())),
             InnerValue::I16(n) => Ok(Value::from(n.abs())),
@@ -180,7 +180,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let precision = state.get_variable("precision").unwrap_or(0.into()).as_a::<i64>()?;
 
@@ -225,7 +225,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -249,7 +249,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let type_name = value.own_type();
         let value = value.as_a::<i64>()?;
@@ -273,7 +273,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -297,7 +297,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -322,7 +322,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap().as_a::<f64>()?;
         let base = state.get_variable("base").unwrap_or(10.into()).as_a::<f64>()?;
         Ok(value.log(base).into())
@@ -345,7 +345,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap().as_a::<f64>()?;
         Ok(value.sqrt().into())
     }
@@ -368,7 +368,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap().as_a::<f64>()?;
         let root = state.get_variable("root").unwrap().as_a::<f64>()?;
         Ok(value.powf(1.0 / root).into())

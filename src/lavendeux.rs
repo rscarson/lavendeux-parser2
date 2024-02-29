@@ -1,6 +1,7 @@
 use crate::documentation::{DocumentationTemplate, MarkdownFormatter};
 use crate::functions::ParserFunction;
 use crate::pest::{parse_input, Rule};
+use crate::syntax_tree::Node;
 use crate::{Error, State, Value};
 use polyvalue::types::Array;
 use polyvalue::ValueTrait;
@@ -67,13 +68,13 @@ impl Lavendeux {
 
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
-    pub fn eval(input: &str, state: &mut State) -> Result<Value, Error> {
-        parse_input(input, Rule::SCRIPT)?.get_value(state)
+    pub fn eval<'i>(input: &'i str, state: &mut State) -> Result<Node<'i>, Error<'i>> {
+        parse_input(input, Rule::SCRIPT)
     }
 
     /// Parses the given input
     /// Returns an array of values, one for each line in the input
-    pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
+    pub fn parse<'i>(&mut self, input: &'i str) -> Result<Vec<Value>, Error<'i>> {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
 
@@ -83,7 +84,7 @@ impl Lavendeux {
                 .name("lavendeux-parser".to_string())
                 .spawn_scoped(s, || {
                     self.state.start_timer();
-                    Self::eval(input, &mut self.state)
+                    Self::eval(input, &mut self.state)?.get_value(&mut self.state)
                 })
                 .or(oops!(Fatal {
                     msg: "Failed to spawn parser thread".to_string()

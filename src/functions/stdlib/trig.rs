@@ -17,7 +17,7 @@ macro_rules! define_trigfunction {
                 ",
                 examples: $examples,
             },
-            handler = |state: &mut State| {
+            handler = (state) {
                 let n = state.get_variable("n").unwrap().as_a::<f64>()?;
                 Ok(Value::from(n.$name()))
             }

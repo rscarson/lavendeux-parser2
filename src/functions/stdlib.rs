@@ -20,6 +20,8 @@ mod decorators_types;
 mod network;
 
 inventory::collect!(&'static dyn ParserFunction);
+/// Returns a map of all standard library functions
+/// Used by the state to load stdlib
 pub fn all() -> HashMap<String, Box<dyn ParserFunction>> {
     inventory::iter::<&'static dyn ParserFunction>
         .into_iter()
@@ -41,7 +43,7 @@ mod test {
         let mut errors = vec![];
 
         for (name, function) in stdlib {
-            let examples = function.documentation().examples.unwrap();
+            let examples = function.documentation().examples().unwrap();
             let skip_example = examples.starts_with("#skip");
             let examples = examples.trim_start_matches("#skip").trim();
             if examples.is_empty() {
@@ -49,7 +51,7 @@ mod test {
                     details: ErrorDetails::Custom {
                         msg: format!(
                             "No examples for function {}::{name}",
-                            function.documentation().category
+                            function.documentation().category()
                         ),
                     },
                     source: None,
@@ -69,7 +71,7 @@ mod test {
                         details: ErrorDetails::Custom {
                             msg: format!(
                                 "Failed to parse example for function {}::{name}",
-                                function.documentation().category
+                                function.documentation().category()
                             ),
                         },
                         source: Some(Box::new(e)),

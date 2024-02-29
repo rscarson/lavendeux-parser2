@@ -1,8 +1,5 @@
 use super::request;
-use crate::{
-    error::{ErrorDetails, WrapOption},
-    Error,
-};
+use crate::{error::ErrorDetails, Error};
 use polyvalue::{types::Object, Value, ValueTrait, ValueType};
 use std::collections::HashMap;
 
@@ -33,8 +30,8 @@ impl ApiDefinition {
 }
 
 impl TryFrom<Value> for ApiDefinition {
-    type Error = Error;
-    fn try_from(value: Value) -> Result<Self, Error> {
+    type Error = ErrorDetails;
+    fn try_from(value: Value) -> Result<Self, Self::Error> {
         let value = if value.is_a(ValueType::String) {
             Object::try_from(vec![(
                 Value::from("base_url"),
@@ -47,7 +44,7 @@ impl TryFrom<Value> for ApiDefinition {
         let mut base_url =
         value
             .get(&Value::from("base_url"))
-            .or_error(ErrorDetails::ValueFormat {
+            .ok_or(ErrorDetails::ValueFormat {
                 expected_format: format!("<base_url: string> | {{<base_url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}}"),
             })?.to_string();
 

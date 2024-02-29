@@ -34,7 +34,7 @@ define_stdfunction!(
             assert_eq(len(38),           1);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         Ok(Value::i64(input.len() as i64))
     },
@@ -58,7 +58,7 @@ define_stdfunction!(
         assert_eq(is_empty(38),     false);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         Ok(Value::bool(input.len() == 0))
     },
@@ -81,7 +81,7 @@ define_stdfunction!(
             would_err('first([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?;
         input.first().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
     },
@@ -104,7 +104,7 @@ define_stdfunction!(
             would_err('last([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?;
         input.last().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
     },
@@ -136,7 +136,7 @@ define_stdfunction!(
             assert_eq(a, []);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -172,7 +172,7 @@ define_stdfunction!(
         assert_eq(a, [1, 2]);
     ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -211,7 +211,7 @@ define_stdfunction!(
             assert_eq(a, [2, 1])
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -251,7 +251,7 @@ define_stdfunction!(
             assert_eq(a, [2]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -295,7 +295,7 @@ define_stdfunction!(
             assert_eq(a, [1, 4, 2, 3]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -342,7 +342,7 @@ define_stdfunction!(
             assert_eq(a, [1, 3]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap();
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
@@ -383,7 +383,7 @@ define_stdfunction!(
             assert_eq(keys({}), []);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Object>()?;
         Ok(Value::from(
             input.keys().iter().cloned().cloned().collect::<Vec<_>>()
@@ -406,7 +406,7 @@ define_stdfunction!(
             assert_eq(values({}), []);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Object>()?;
         Ok(Value::from(
             input.values().iter().cloned().cloned().collect::<Vec<_>>()
@@ -436,7 +436,7 @@ define_stdfunction!(
             assert_eq(all([]), true);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?;
         Ok(Value::bool(input.iter().all(|v| v.is_truthy())))
     },
@@ -458,7 +458,7 @@ define_stdfunction!(
             assert_eq(any([]), false);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?;
         Ok(Value::bool(input.iter().any(|v| v.is_truthy())))
     },
@@ -493,7 +493,7 @@ define_stdfunction!(
             would_err('split([1, 2, 3, 4], 5)') // Index out of bounds
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
         let index = state.get_variable("index").unwrap().as_a::<i64>()?.clone();
 
@@ -526,7 +526,7 @@ define_stdfunction!(
             assert_eq(merge([1, 2], []), [1, 2]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
         let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
         Ok(Value::from(left.iter().chain(right.iter()).cloned().collect::<Vec<_>>()))
@@ -556,7 +556,7 @@ define_stdfunction!(
             assert_eq(a, [1, 2, 3, 4]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let left = state.get_variable("left").unwrap();
         let input_type = left.own_type();
         let mut left = left.as_a::<Array>()?.clone();
@@ -594,7 +594,7 @@ define_stdfunction!(
             assert_eq(chunks([1, 2, 3, 4, 5], 5), [[1, 2, 3, 4, 5]]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
         let size = state.get_variable("size").unwrap().as_a::<i64>()?.clone();
 
@@ -619,7 +619,7 @@ define_stdfunction!(
             assert_eq(flatten([[], []]), []);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
         let result = input.iter().flat_map(|v| v.clone().as_a::<Array>().unwrap().iter().cloned().collect::<Vec<_>>()).collect::<Vec<_>>();
         Ok(Value::from(result))
@@ -645,7 +645,7 @@ define_stdfunction!(
             assert_eq(zip([1, 2, 3], [4, 5]), [[1, 4], [2, 5]]);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
         let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
 
@@ -672,7 +672,7 @@ define_stdfunction!(
             assert_eq(zop(['a', 'b', 'c'], [1, 2, 3]), {'a': 1, 'b': 2, 'c': 3});
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
         let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
 
@@ -697,7 +697,7 @@ define_stdfunction!(
             assert_eq(sort(['c', 'a', 'b']), ['a', 'b', 'c']);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.sort();
@@ -720,7 +720,7 @@ define_stdfunction!(
             assert_eq(reverse(['a', 'b', 'c']), ['c', 'b', 'a']);
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.reverse();

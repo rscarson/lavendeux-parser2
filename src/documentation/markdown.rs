@@ -40,15 +40,15 @@ impl DocumentationFormatter for MarkdownFormatter {
         pieces.push(MarkdownSnippet::H3(function.name().to_string()));
         pieces.push(MarkdownSnippet::CodeBlock(function.signature().to_string()));
 
-        if let Some(desc) = function.documentation().description {
+        if let Some(desc) = function.documentation().description() {
             pieces.push(MarkdownSnippet::Text(desc.to_string()));
         }
-        if let Some(ext_desc) = function.documentation().ext_description {
+        if let Some(ext_desc) = function.documentation().ext_description() {
             for line in ext_desc.split("\n") {
                 pieces.push(MarkdownSnippet::Text(line.to_string() + "  "));
             }
         }
-        if let Some(examples) = function.documentation().examples {
+        if let Some(examples) = function.documentation().examples() {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
                 pieces.push(MarkdownSnippet::Text(format!("**Examples:**  ",)));
@@ -120,7 +120,7 @@ impl DocumentationFormatter for MarkdownFormatter {
 
             output.push(MarkdownSnippet::Text(operator.description.to_string()));
 
-            output.push(MarkdownSnippet::H3("Examples".to_string()));
+            output.push(MarkdownSnippet::Text(format!("**Examples:**  ",)));
             output.push(MarkdownSnippet::CodeBlock(operator.examples.to_string()));
         }
 

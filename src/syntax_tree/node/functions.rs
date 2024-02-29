@@ -2,9 +2,8 @@ use super::*;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
     functions::{ParserFunction, UserDefinedFunction},
-    Rule, State, ToToken,
+    Rule, ToToken,
 };
-use pest::iterators::Pair;
 use polyvalue::{Value, ValueType};
 
 // DECORATOR_SYMBOL? ~ identifier ~ "(" ~ (identifier ~ ("," ~ identifier)* ~ ","?)? ~ ")" ~ "=" ~ BLOCK
@@ -17,7 +16,7 @@ define_node!(
     },
     rules = [FUNCTION_ASSIGNMENT_STATEMENT],
 
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
 
@@ -44,7 +43,7 @@ define_node!(
                 None => ValueType::Any
             };
             Ok((name, t))
-        }).collect::<Result<Vec<_>, Error>>()?;
+        }).collect::<Result<Vec<_>, Error<'i>>>()?;
 
         // Make sure decorators follow the `@name(in): string` signature
         if name.starts_with('@') {
@@ -68,7 +67,7 @@ define_node!(
         }.boxed())
     },
 
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let mut function = UserDefinedFunction::new(&this.name, this.src.clone())?;
         function.set_returns(this.returns);
         function.set_src_line_offset(this.token().line);
@@ -114,37 +113,32 @@ define_node!(
 define_prattnode!(
     FunctionCall {
         name: String,
-        arguments: Vec<Node>
+        arguments: Vec<Node<'i>>
     },
     rules = [POSTFIX_CALL],
 
-    new = |input: PrattPair| {
+    new = (input) {
         let mut token = input.as_token();
         let mut children = input.into_inner();
 
         let lhs = children.next().unwrap();
-        let lhs = lhs.first_pair();
-
         let rhs = children.next().unwrap();
         let mut rhs = rhs.first_pair().into_inner();
 
-        let mut name = lhs.as_str().to_string();
+        let mut name = lhs.first_pair().as_str().to_string();
         let mut arguments = Vec::new();
-        if let Some(c) = rhs.peek() {
-            // Catch <arg>.func() calls
-            // The first argument was actually an argument
-            // and not the function name
-            if c.as_rule() == Rule::identifier {
-                name = c.as_str().to_string();
+
+        // Check if the function is called in object mode
+        if let Some(node) = rhs.peek() {
+            if node.as_rule() == Rule::POSTFIX_OBJECTMODE {
+                name = rhs.next().unwrap().into_inner().next().unwrap().as_str().to_string();
                 arguments.push(lhs.to_ast_node()?);
-                rhs.next();
             }
         }
 
-        // Rest of the arguments
-        for arg in rhs {
-            let node = arg.to_ast_node()?;
-            arguments.push(node);
+        // Collect arguments
+        for node in rhs {
+            arguments.push(node.to_ast_node()?);
         }
 
         // Function arguments can have variable references to the first argument in order to
@@ -154,11 +148,11 @@ define_prattnode!(
         Ok(Self {
             name,
             arguments,
-            token
+            token,
         }.boxed())
     },
 
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         if &this.name == "help" {
             let filter = this.arguments.get(0);
             // Try to get filter as an identifier
@@ -184,7 +178,7 @@ define_prattnode!(
         }
 
         let reference = this.token().references.as_deref();
-        match state.call_function(&this.name, arguments, reference).with_context(this.token()) {
+        match state.call_function(&this.name, arguments, reference) {
             Ok(value) => Ok(value),
             Err(e) => {
                 if let ErrorDetails::Return { value, .. } = e.details {

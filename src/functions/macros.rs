@@ -3,9 +3,10 @@
 ///
 /// # Usage
 /// ```rust
+/// use lavendeux_parser::{define_stdfunction, polyvalue, Error, functions::ParserFunction, State};
 /// define_stdfunction!(
-///     add { a: Number, b: Number },
-///     returns = Number,
+///     add { a: Standard::Numeric, b: Standard::Numeric },
+///     returns = Numeric,
 ///     docs = {
 ///         category: "Math",
 ///         description: "Addition",
@@ -17,9 +18,9 @@
 ///             )
 ///         "
 ///     },
-///     handler = |state: &mut State| -> Result<polyvalue::Value, crate::Error> {
-///         let a = state.get_variable("a").unwrap().as_a::<Number>()?;
-///         let b = state.get_variable("b").unwrap().as_a::<Number>()?;
+///     handler = (state) -> Result<polyvalue::Value, Error<'i>> {
+///         let a = state.get_variable("a").unwrap().as_a::<i64>()?;
+///         let b = state.get_variable("b").unwrap().as_a::<i64>()?;
 ///         Ok((a + b).into())
 ///     }
 /// );
@@ -42,7 +43,7 @@ macro_rules! define_stdfunction {
             ext_description: $ext_description:literal,
             examples: $examples:literal$(,)?
         },
-        handler = $handler:expr$(,)?
+        handler = ($hndstate:ident) $handler:block$(,)?
     ) => {
         paste::paste! {
             #[allow(non_camel_case_types)]
@@ -51,16 +52,16 @@ macro_rules! define_stdfunction {
             impl [<_stdlibfn_$name>] {
                 const NAME: &'static str = stringify!($name);
 
-                const DOCS: crate::functions::FunctionDocumentation = crate::functions::FunctionDocumentation {
+                const DOCS: $crate::functions::StaticFunctionDocumentation = $crate::functions::StaticFunctionDocumentation {
                     category: $category,
                     description: Some($description),
                     ext_description: Some(indoc::indoc! { $ext_description }),
                     examples: Some(indoc::indoc! { $examples })
                 };
-                const ARGUMENTS: &'static [(&'static str, crate::functions::FunctionArgument)] = &[$(
-                    (stringify!($aname), crate::functions::FunctionArgument {
+                const ARGUMENTS: &'static [(&'static str, $crate::functions::FunctionArgument)] = &[$(
+                    (stringify!($aname), $crate::functions::FunctionArgument {
                         expected_type: polyvalue::ValueType::$atype,
-                        meta: crate::functions::FunctionArgumentType::$meta
+                        meta: $crate::functions::FunctionArgumentType::$meta
                     })
                 ),*];
 
@@ -78,15 +79,19 @@ macro_rules! define_stdfunction {
                     true
                 }
 
-                fn documentation(&self) -> &crate::functions::FunctionDocumentation {
+                fn documentation(&self) -> &dyn $crate::functions::FunctionDocumentation {
                     &Self::DOCS
+                }
+
+                fn documentation_mut(&mut self) -> &mut dyn $crate::functions::FunctionDocumentation {
+                    unimplemented!()
                 }
 
                 fn return_type(&self) -> polyvalue::ValueType {
                     polyvalue::ValueType::$return
                 }
 
-                fn expected_arguments(&self) -> Vec<(&str, crate::functions::FunctionArgument)> {
+                fn expected_arguments(&self) -> Vec<(&str, $crate::functions::FunctionArgument)> {
                     Self::ARGUMENTS.to_vec()
                 }
 
@@ -94,9 +99,7 @@ macro_rules! define_stdfunction {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut State) -> Result<polyvalue::Value, crate::Error> {
-                    $handler(state)
-                }
+                fn call(&self, $hndstate: &mut State) -> Result<polyvalue::Value, $crate::Error> $handler
             }
 
             inventory::submit! {
@@ -111,6 +114,7 @@ macro_rules! define_stdfunction {
 ///
 /// # Usage
 /// ```rust
+/// use lavendeux_parser::{define_stddecorator, polyvalue, Error, functions::ParserFunction};
 /// define_stddecorator!(
 ///     upper { input: String },
 ///     docs = {
@@ -123,7 +127,7 @@ macro_rules! define_stdfunction {
 ///             )
 ///         "
 ///     },
-///     handler = |input: polyvalue::Value| -> Result<String, crate::Error> {
+///     handler = |input: polyvalue::Value| -> Result<String, Error<'i>> {
 ///         Ok(input.as_a::<String>()?.to_uppercase())
 ///     }
 /// );
@@ -143,7 +147,7 @@ macro_rules! define_stddecorator {
             ext_description: $ext_description:literal,
             examples: $examples:literal$(,)?
         },
-        handler = $handler:expr$(,)?
+        handler = ($hndval:ident) $handler:block$(,)?
     ) => {
         paste::paste! {
             #[allow(non_camel_case_types)]
@@ -152,16 +156,16 @@ macro_rules! define_stddecorator {
             impl [<_stdlibfn_dec_$name>] {
                 const NAME: &'static str = concat!("@", stringify!($name));
 
-                const DOCS: crate::functions::FunctionDocumentation = crate::functions::FunctionDocumentation {
+                const DOCS: $crate::functions::StaticFunctionDocumentation = $crate::functions::StaticFunctionDocumentation {
                     category: "Decorators",
                     description: Some($description),
                     ext_description: Some(indoc::indoc! { $ext_description }),
                     examples: Some(indoc::indoc! { $examples })
                 };
-                const ARGUMENTS: &'static [(&'static str, crate::functions::FunctionArgument)] = &[
-                    (stringify!($aname), crate::functions::FunctionArgument {
+                const ARGUMENTS: &'static [(&'static str, $crate::functions::FunctionArgument)] = &[
+                    (stringify!($aname), $crate::functions::FunctionArgument {
                         expected_type: polyvalue::ValueType::$atype,
-                        meta: crate::functions::FunctionArgumentType::Standard
+                        meta: $crate::functions::FunctionArgumentType::Standard
                     })
                 ];
 
@@ -179,31 +183,35 @@ macro_rules! define_stddecorator {
                     true
                 }
 
-                fn documentation(&self) -> &crate::functions::FunctionDocumentation {
+                fn documentation(&self) -> & dyn $crate::functions::FunctionDocumentation {
                     &Self::DOCS
                 }
 
-                fn return_type(&self) -> polyvalue::ValueType {
+                fn documentation_mut(&mut self) -> &mut dyn $crate::functions::FunctionDocumentation {
+                    unimplemented!()
+                }
+
+                fn return_type(&self) -> $crate::polyvalue::ValueType {
                     polyvalue::ValueType::String
                 }
 
-                fn expected_arguments(&self) -> Vec<(&str, crate::functions::FunctionArgument)> {
+                fn expected_arguments(&self) -> Vec<(&str, $crate::functions::FunctionArgument)> {
                     Self::ARGUMENTS.to_vec()
                 }
 
-                fn clone_self(&self) -> Box<dyn ParserFunction> {
+                fn clone_self(&self) -> Box<dyn $crate::functions::ParserFunction> {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut State) -> Result<polyvalue::Value, crate::Error> {
-                    let input = state.get_variable(stringify!($aname)).unwrap();
-                    let value: String = $handler(input)?;
-                    Ok(value.into())
+                fn call(&self, state: &mut $crate::State) -> Result<polyvalue::Value, $crate::Error> {
+                    let $hndval = state.get_variable(stringify!($aname)).unwrap();
+                    let value: Result<String, Error> = $handler;
+                    Ok(value?.into())
                 }
             }
 
             inventory::submit! {
-                &[<_stdlibfn_dec_$name>] as &'static dyn ParserFunction
+                &[<_stdlibfn_dec_$name>] as &'static dyn $crate::functions::ParserFunction
             }
         }
     };

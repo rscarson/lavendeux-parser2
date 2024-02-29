@@ -17,7 +17,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |_: &mut State| {
+    handler = (_state) {
         Ok(Value::from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -46,7 +46,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let n = state.get_variable("lines").unwrap_or(1.into()).as_a::<i64>()?;
         let file = state.get_variable("file").unwrap().to_string();
 

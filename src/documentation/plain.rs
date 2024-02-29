@@ -36,15 +36,15 @@ impl DocumentationFormatter for PlaintextFormatter {
     fn format_function(&self, state: &State, name: &str) -> Option<String> {
         let function = state.get_function(name)?;
         let mut lines = Vec::new();
-        if let Some(desc) = function.documentation().description {
+        if let Some(desc) = function.documentation().description() {
             lines.push(desc.to_string());
         }
-        if let Some(ext_desc) = function.documentation().ext_description {
+        if let Some(ext_desc) = function.documentation().ext_description() {
             for line in ext_desc.split("\n") {
                 lines.push(line.to_string());
             }
         }
-        if let Some(examples) = function.documentation().examples {
+        if let Some(examples) = function.documentation().examples() {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
                 lines.push("Examples:".to_string());
@@ -68,10 +68,10 @@ impl DocumentationFormatter for PlaintextFormatter {
 
         for f in functions {
             let mut lines = Vec::new();
-            if let Some(desc) = f.documentation().description {
+            if let Some(desc) = f.documentation().description() {
                 lines.push(desc.to_string());
             }
-            if let Some(ext_desc) = f.documentation().ext_description {
+            if let Some(ext_desc) = f.documentation().ext_description() {
                 for line in ext_desc.split("\n") {
                     lines.push(line.to_string());
                 }
@@ -98,7 +98,7 @@ impl DocumentationFormatter for PlaintextFormatter {
             let functions = categories.get(category).unwrap();
             let lines = functions
                 .iter()
-                .map(|f| match f.documentation().description {
+                .map(|f| match f.documentation().description() {
                     Some(desc) => format!("{} : {}", f.signature(), desc),
                     None => f.signature(),
                 })

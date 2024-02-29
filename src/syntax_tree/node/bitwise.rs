@@ -1,5 +1,5 @@
 use super::*;
-use crate::{error::WrapExternalError, pest::Rule, State};
+use crate::{error::WrapExternalError, pest::Rule};
 use polyvalue::{
     operations::{BitwiseOperation, BitwiseOperationExt},
     Value,
@@ -7,12 +7,12 @@ use polyvalue::{
 
 define_prattnode!(
     InfixBitwise {
-        left: Node,
-        right: Node,
+        left: Node<'i>,
+        right: Node<'i>,
         operator: BitwiseOperation
     },
     rules = [OP_BIT_OR, OP_BIT_XOR, OP_BIT_AND, OP_BIT_SL, OP_BIT_SR],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let left = children.next().unwrap().to_ast_node()?;
@@ -43,7 +43,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Value::bitwise_op(
             &this.left.get_value(state)?,
             &this.right.get_value(state)?,
@@ -70,16 +70,16 @@ define_prattnode!(
 );
 
 define_prattnode!(
-    BitwiseNot { base: Node },
+    BitwiseNot { base: Node<'i> },
     rules = [PREFIX_BIT_NOT],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         children.next(); // Skip the operator
         let base = children.next().unwrap().to_ast_node()?;
         Ok(Self { base, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Value::bitwise_not(&this.base.get_value(state)?).with_context(this.token())
     },
 

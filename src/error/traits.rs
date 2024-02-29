@@ -1,12 +1,12 @@
 use crate::{error::ErrorDetails, pest::Rule, Error, Token};
 
-/// Wraps a syntax error into an Error.
-pub trait WrapSyntaxError<T, R> {
-    /// Turns a pest error into an Error.
-    fn wrap_syntax_error(self, input: &str) -> Result<T, Error>;
+/// Wraps a syntax error into an Error<'i>.
+pub trait WrapSyntaxError<'i, T, R> {
+    /// Turns a pest error into an Error<'i>.
+    fn wrap_syntax_error(self, input: &str) -> Result<T, Error<'i>>;
 }
-impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
-    fn wrap_syntax_error(self, input: &str) -> Result<T, Error> {
+impl<'i, T> WrapSyntaxError<'i, T, Rule> for Result<T, pest::error::Error<Rule>> {
+    fn wrap_syntax_error(self, input: &str) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -24,7 +24,7 @@ impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
                 let token = crate::Token {
                     line,
                     rule: crate::Rule::SCRIPT,
-                    input: span.split('\n').next().unwrap_or_default().to_string(),
+                    input: span.split('\n').next().unwrap_or_default(),
                     references: None,
                 };
 
@@ -34,37 +34,37 @@ impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
     }
 }
 
-/// Wrap a 3rd party error into an Error.
-pub trait WrapExternalError<T> {
+/// Wrap a 3rd party error into an Error<'i>.
+pub trait WrapExternalError<'i, T> {
     /// Adds a context [Token]
-    fn with_context(self, context: &Token) -> Result<T, Error>;
+    fn with_context(self, context: &Token) -> Result<T, Error<'i>>;
 
-    /// Adds a source [Error]
-    fn with_source(self, source: Error) -> Result<T, Error>;
+    /// Adds a source [Error<'i>]
+    fn with_source(self, source: Error<'i>) -> Result<T, Error<'i>>;
 
     /// Wraps the error without context or a source
-    fn without_context(self) -> Result<T, Error>;
+    fn without_context(self) -> Result<T, Error<'i>>;
 }
 
-impl<T, E> WrapExternalError<T> for Result<T, E>
+impl<'i, T, E> WrapExternalError<'i, T> for Result<T, E>
 where
-    E: Into<Error>,
+    E: Into<Error<'i>>,
 {
-    fn with_context(self, context: &Token) -> Result<T, Error> {
+    fn with_context(self, context: &Token) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into().with_context(context.clone())),
         }
     }
 
-    fn with_source(self, source: Error) -> Result<T, Error> {
+    fn with_source(self, source: Error<'i>) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into().with_source(source)),
         }
     }
 
-    fn without_context(self) -> Result<T, Error> {
+    fn without_context(self) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into().without_context()),
@@ -72,13 +72,13 @@ where
     }
 }
 
-/// Wrap an `Option<T>` into a `Result<T, Error>`
-pub trait WrapOption<T> {
-    /// Turns an `Option<T>` into a `Result<T, Error>`
-    fn or_error(self, error: ErrorDetails) -> Result<T, Error>;
+/// Wrap an `Option<T>` into a `Result<T, Error<'i>>`
+pub trait WrapOption<'i, T> {
+    /// Turns an `Option<T>` into a `Result<T, Error<'i>>`
+    fn or_error(self, error: ErrorDetails) -> Result<T, Error<'i>>;
 }
-impl<T> WrapOption<T> for Option<T> {
-    fn or_error(self, error: ErrorDetails) -> Result<T, Error> {
+impl<'i, T> WrapOption<'i, T> for Option<T> {
+    fn or_error(self, error: ErrorDetails) -> Result<T, Error<'i>> {
         match self {
             Some(v) => Ok(v),
             None => Err(Error {

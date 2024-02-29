@@ -1,5 +1,5 @@
 use super::*;
-use crate::{error::WrapExternalError, pest::Rule, State};
+use crate::{error::WrapExternalError, pest::Rule};
 use polyvalue::{
     operations::{ArithmeticOperation, ArithmeticOperationExt},
     Value,
@@ -7,12 +7,12 @@ use polyvalue::{
 
 define_prattnode!(
     InfixArithmetic {
-        left: Node,
-        right: Node,
+        left: Node<'i>,
+        right: Node<'i>,
         operator: ArithmeticOperation
     },
     rules = [OP_ADD, OP_SUB, OP_POW, OP_DIV, OP_MOD, OP_MUL],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let left = children.next().unwrap().to_ast_node()?;
@@ -44,7 +44,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Value::arithmetic_op(
             &this.left.get_value(state)?,
             &this.right.get_value(state)?,
@@ -68,16 +68,16 @@ define_prattnode!(
 );
 
 define_prattnode!(
-    ArithmeticNeg { base: Node },
+    ArithmeticNeg { base: Node<'i> },
     rules = [PREFIX_NEG],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         children.next(); // Skip the operator
         let base = children.next().unwrap().to_ast_node()?;
         Ok(Self { base, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         Value::arithmetic_neg(&this.base.get_value(state)?).with_context(this.token())
     },
 
@@ -96,7 +96,7 @@ define_prattnode!(
         is_increment: bool
     },
     rules = [PREFIX_INC, PREFIX_DEC, POSTFIX_INC, POSTFIX_DEC],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let (base, is_postfix, is_increment) = match input {
             PrattPair::Prefix(o, v) => (v, false, matches!(o.as_rule(), Rule::PREFIX_INC)),
@@ -116,7 +116,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let value = state.get_variable(&this.base).unwrap_or(Value::i64(0));
         let operation = if this.is_increment {
             ArithmeticOperation::Add

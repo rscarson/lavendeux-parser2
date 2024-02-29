@@ -1,0 +1,105 @@
+/*
+ * This file contains implementations of the stdlib's string functions
+ * for lavendeux, written in lavendish
+ * 
+ * This serves as a test-case of language features, 
+ * and as a reference for the language
+ *
+ * Note that some functionality of the stdlib requires a bit of compiler magic, and so
+ * implementations of those functions may differ slightly from the actual stdlib
+ * For example, stdlib's assert will list the callsite of the assertion, while the one below
+ * will show the location the throw() inside the assert function
+ * 
+ * ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+ * ║ String                                                                                                   ║
+ * ╟──────────────────────────────────────────────────────────────────────────────────────────────────────────╢
+ * ║ atob(string) -> string : Returns a base64-encoded string                                                 ║
+ * ║ btoa(string) -> string : Returns a base64-decoded string                                                 ║
+ * ║ chr(int) -> string : Returns a string containing the character represented by a Unicode code point       ║
+ * ║ lowercase(string) -> string : Returns a lowercase version of a string                                    ║
+ * ║ ord(string) -> int : Returns the Unicode code point of the first character in a string                   ║
+ * ║ prettyjson(any) -> string : Returns a pretty-printed JSON string                                         ║
+ * ║ replace(string, string, string) -> string : Replaces all instances of a substring with another substring ║
+ * ║ trim(string) -> string : Removes whitespace from the beginning and end of a string                       ║
+ * ║ trim_end(string) -> string : Removes whitespace from the end of a string                                 ║
+ * ║ trim_start(string) -> string : Removes whitespace from the beginning of a string                         ║
+ * ║ uppercase(string) -> string : Returns an uppercase version of a string                                   ║
+ * ║ urldecode(string) -> string : Returns a URL-decoded string                                               ║
+ * ║ urlencode(string) -> string : Returns a URL-encoded string                                               ║
+ * ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+ */
+
+// concat(array) -> string : Treats the argument as an array of strings and concatenates them
+_concat(a) = {
+    out = ''
+    for s in a do {
+        out += s
+    }
+    out
+}
+assert_eq(_concat(["Hello", ", ", "World!"]), "Hello, World!")
+
+// lowercase(string) -> string : Returns a lowercase version of a string
+_lowercase(s) = {
+    _concat(for c in s.chars() do {
+        if ('A'..'Z') contains c then {
+            chr(ord(c) + 32)
+        } else {
+            c
+        }
+    })
+}
+assert_eq(_lowercase("Hello, World!"), "hello, world!")
+assert_eq(_lowercase("HELLO, WORLD!"), "hello, world!")
+
+// repeat(string, int) -> string : Repeats a string a specified number of times
+_repeat(s, n) = {
+    if n == 0 then {
+        ''
+    } else {
+        _concat(for _ in 0..(n-1) {
+            s
+        })
+    }
+}
+assert_eq(_repeat('a', 5), 'aaaaa')
+
+// prettyjson(any) -> string : Returns a pretty-printed JSON string
+_prettyjson(s) = {
+    indent = 0
+    pretty = ""
+    for c in s.chars() do {
+        if c == '{' || c == '[' then {
+            indent += 1
+            pretty += c + "\n" + _repeat('  ', indent)
+        } else if c == '}' || c == ']' then {
+            indent -= 1
+            pretty += "\n" + _repeat('  ', indent) + c
+        } else if c == ',' then {
+            pretty += c + "\n" + _repeat('  ', indent)
+        } else if c == ' ' || c == '\t' then {
+            // ignore whitespace
+            continue
+        } else if c == ':' then {
+            pretty += c + " "
+        } else {
+            pretty += c
+        }
+    }
+
+    pretty
+}
+assert_eq(_prettyjson('{"a": 1, "b": [1, 2, 3]}'), "{\n  \"a\": 1,\n  \"b\": [\n    1,\n    2,\n    3\n  ]\n}")
+
+// uppercase(string) -> string : Returns an uppercase version of a string
+_uppercase(s) = {
+    _concat(for c in s.chars() do {
+        if ('a'..'z') contains c then {
+            chr(ord(c) - 32)
+        } else {
+            c
+        }
+    })
+}
+assert_eq(_uppercase("Hello, World!"), "HELLO, WORLD!")
+assert_eq(_uppercase("hello, world!"), "HELLO, WORLD!")

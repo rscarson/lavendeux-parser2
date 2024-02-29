@@ -22,12 +22,15 @@ fn next_command() -> String {
     return input.trim().to_string();
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), Error<'i>> {
     let mut lavendeux = Lavendeux::new(ParserOptions {
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         pest_call_limit: 25000000,
         ..Default::default()
     });
+
+    // Load example scripts
+    lavendeux.parse("include('example_scripts/zarbans_grotto.lav')")?;
 
     // Load extensions
     //  Lavendeux::load_extension("example_extensions/simple_extension.js")?;
@@ -61,7 +64,7 @@ fn main() -> Result<(), Error> {
                         println!("{}", value);
                     }
                 }
-                Err(e) => println!("Error:\n{}", e),
+                Err(e) => println!("Error<'i>:\n{}", e),
             }
         }
     }

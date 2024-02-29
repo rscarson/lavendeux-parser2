@@ -1,49 +1,46 @@
+use super::Node;
 use super::*;
 use crate::{
     error::WrapExternalError,
     error_matches,
     pest::{Rule, ToAstNode},
     token::ToToken,
-    State,
 };
-use pest::iterators::Pair;
 use polyvalue::{
     types::{Object, Range},
     Value, ValueTrait, ValueType,
 };
 
-use super::Node;
-
 define_node!(
     BreakExpression,
     rules = [BREAK_KEYWORD],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
         children.next(); // Break keyword
 
         Ok(Self { token }.boxed())
     },
-    value = |this: &BreakExpression, _state: &mut State| { oops!(Break, this.token.clone()) }
+    value = (this, state) { oops!(Break, this.token.clone()) }
 );
 
 define_node!(
     SkipExpression,
     rules = [SKIP_KEYWORD],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
         children.next(); // skip keyword
 
         Ok(Self { token }.boxed())
     },
-    value = |this: &SkipExpression, _state: &mut State| { oops!(Skip, this.token.clone()) }
+    value = (this, state) { oops!(Skip, this.token.clone()) }
 );
 
 define_node!(
-    ReturnExpression { expression: Node },
+    ReturnExpression { expression: Node<'i> },
     rules = [RETURN_EXPRESSION],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
 
@@ -51,7 +48,7 @@ define_node!(
 
         Ok(Self { expression, token }.boxed())
     },
-    value = |this: &ReturnExpression, state: &mut State| {
+    value = (this, state) {
         let value = this.expression.get_value(state)?;
         oops!(Return { value: value }, this.token.clone())
     }
@@ -59,12 +56,12 @@ define_node!(
 
 define_node!(
     IfExpression {
-        condition: Node,
-        then_branch: Node,
-        else_branch: Node
+        condition: Node<'i>,
+        then_branch: Node<'i>,
+        else_branch: Node<'i>
     },
     rules = [IF_EXPRESSION],
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let children = input.into_inner().collect::<Vec<_>>();
         if children.len() % 2 == 0 {
@@ -94,7 +91,7 @@ define_node!(
 
         Ok(else_branch)
     },
-    value = |this: &IfExpression, state: &mut State| {
+    value = (this, state) {
         let condition = this.condition.get_value(state)?;
         state.scope_into().with_context(this.token())?;
         let result = if condition.is_truthy() {
@@ -131,19 +128,19 @@ define_node!(
 );
 
 #[derive(Debug)]
-pub enum SwitchCase {
-    Default(Node),
-    Case(Node, Node),
+pub enum SwitchCase<'i> {
+    Default(Node<'i>),
+    Case(Node<'i>, Node<'i>),
 }
 
 define_node!(
     SwitchExpression {
-        match_on: Node,
-        cases: Vec<SwitchCase>
+        match_on: Node<'i>,
+        cases: Vec<SwitchCase<'i>>
     },
     rules = [SWITCH_EXPRESSION],
 
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner();
 
@@ -173,7 +170,7 @@ define_node!(
         .boxed())
     },
 
-    value = |this: &SwitchExpression, state: &mut State| {
+    value = (this, state) {
         let match_on = this.match_on.get_value(state)?;
 
         for case in &this.cases {
@@ -230,29 +227,43 @@ define_node!(
 
 define_node!(
     ForExpression {
-        iterable: Node,
+        iterable: Node<'i>,
+        condition: Option<Node<'i>>,
         variable: Option<String>,
-        body: Node
+        body: Node<'i>
     },
     rules = [FOR_LOOP_EXPRESSION],
 
-    new = |input: Pair<Rule>| {
+    new = (input) {
         let token = input.to_token();
         let mut children = input.into_inner().rev();
 
-        let body = children.next().unwrap().to_ast_node()?;
+        let condition_node = children.next().unwrap();
+        let (body, condition) = if condition_node.as_rule() == Rule::for_conditional {
+            (
+                children.next().unwrap().to_ast_node()?,
+                Some(condition_node.into_inner().next().unwrap().to_ast_node()?)
+            )
+        } else {
+            (
+                condition_node.to_ast_node()?,
+                None
+            )
+        };
+
         let iterable = children.next().unwrap().to_ast_node()?;
         let variable = children.next().map(|c| c.as_str().to_string());
 
         Ok(Self {
             variable,
+            condition,
             iterable,
             body,
             token
         }.boxed())
     },
 
-    value = |this: &ForExpression, state: &mut State| {
+    value = (this, state) {
         let iterable = this.iterable.get_value(state)?;
 
         // An iterator over Into<Value>
@@ -286,6 +297,13 @@ define_node!(
             if let Some(variable) = &this.variable {
                 state.set_variable(variable, v);
             }
+            if let Some(condition) = &this.condition {
+                let condition = condition.get_value(state)?;
+                if !condition.is_truthy() {
+                    state.scope_out();
+                    continue;
+                }
+            }
 
             let value = this.body.get_value(state);
             state.scope_out();
@@ -307,17 +325,20 @@ define_node!(
 
     docs = {
         name: "For",
-        symbols = ["for <variable> in <iterable> { <block> }", "for [<variable> in] <iterable> do <block>"],
+        symbols = ["for <variable> in <iterable> { <block> }", "for [<variable> in] <iterable> do <block> [if <condition>]"],
         description: "
             A loop that iterates over a range, array, or object.
             The variable is optional, and if not provided, the loop will not bind a variable.
             The expression will return an array of the results of the block.
             Break and skip/continue can be used to exit the loop or skip the current iteration.
+            A condition can be provided to filter the loop.
         ",
         examples: "
             for i in 0..10 { i }
             for i in [1, 2, 3] { i }
             for i in {'a': 1, 'b': 2} { i }
+
+            for a in 0..10 do a if a % 2 == 0
 
             for 0..10 do '!'
         ",
@@ -326,12 +347,12 @@ define_node!(
 
 define_prattnode!(
     TernaryExpression {
-        condition: Node,
-        then_branch: Node,
-        else_branch: Node
+        condition: Node<'i>,
+        then_branch: Node<'i>,
+        else_branch: Node<'i>
     },
     rules = [OP_TERNARY],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
 
@@ -354,7 +375,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &TernaryExpression, state: &mut State| {
+    value = (this, state) {
         let condition = this.condition.get_value(state)?;
         state.scope_into().with_context(this.token())?;
         let result = if condition.is_truthy() {

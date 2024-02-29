@@ -17,7 +17,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().to_string();
 
         use sha2::{Digest, Sha256};
@@ -45,7 +45,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().to_string();
 
         use sha2::{Digest, Sha512};
@@ -73,7 +73,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("input").unwrap().to_string();
 
         use md5::{Digest, Md5};
@@ -101,7 +101,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty);
@@ -132,7 +132,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         use rand::Rng;
 
         if let Some(range) = state.get_variable("range") {

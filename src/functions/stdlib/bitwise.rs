@@ -21,7 +21,7 @@ macro_rules! define_standard_bitwise_fn {
                 ",
                 examples: $examples,
             },
-            handler = |state: &mut State| {
+            handler = (state) {
                 let left = state.get_variable("left").unwrap();
                 let right = state.get_variable("right").unwrap();
                 Ok(Value::bitwise_op(&left, &right, BitwiseOperation::$bitwise_op)?)
@@ -49,7 +49,7 @@ define_stdfunction!(
             assert_eq(0b1111_1111u8, not(0b0000_0000u8))
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         Ok(Value::bitwise_not(&value)?)
     },
@@ -75,7 +75,7 @@ define_stdfunction!(
             )
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let shift = state.get_variable("shift").unwrap().as_a::<i32>()?;
 
@@ -115,7 +115,7 @@ define_stdfunction!(
             )
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         let shift = state.get_variable("shift").unwrap().as_a::<i32>()?;
 

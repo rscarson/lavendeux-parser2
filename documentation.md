@@ -1,74 +1,207 @@
 # Lavendeux Documentation
 
-This document will provide information on lavendish, a language focused on short, single-line expressions designed to manipulate values.
+Lavendish a language designed to manipulate values with concise, single-line expressions.
 It was created for use in Lavendeux (<https://rscarson.github.io/lavendeux/>).
 
 Inputs are a series of expressions separated by a newline, or a `;`.
-Expressions can optionally end with an @decorator to format the output as a string (see `section 3.2`)
+Expressions can optionally end with an @decorator to format the output as a string
 
-Comments are either `//`, which turns the rest of the line into a comment
-Or a block comment bounded by /* and */
-# Values and Literals
+Key features:
+- Functions ([reference](<#function-assignment>))
+- @Decorators ([reference](<#decorator>))
+- Seamless type conversion ([reference](<#the-type-system>))
 
-All expressions in Lavendeux will return a value of a specific type.
+# The Type System
+
+All expressions in Lavendeux must return a value of a specific type.
 These types can be broadly categorized as `numeric`, `collection`, or `string`.
 
-## Numeric Types
+The type of a given expression is calculated on a hierarchy, based on the 'specificity' of the types involved.
+The hierarchy is as follows (from lowest to highest priority):
+- Bool
+- Int (in order, `u8, i8, u16, i16, u32, i32, u64, i64`)
+- Float
+- Fixed, then Currency
+- Array, then Object
+- String
 
-The first group of types are classified as numeric; they can all freely be cast to each other.
-If a type is downcast to a smaller numeric type, it will be truncated to fit (1.6 becomes 1 for example)
+Note that range is not included, since it can only be compared to itself, or to arrays.
 
-Note; Bool is an outlier here, since any type can be cast to bool:
-Truth is determined by equivalence to 0, or by emptiness, depending on the type.
+So for example, if you add an int to a float, the result will be a float.
+Some types can also be grouped together, like `int` (see aboove), or `numeric` (which includes all numeric types),
+and `collection` (which includes range, string, array and object). 'any' is the implicit type that includes everything.
 
-But expressions will always upgrade both values to the highest-order in this list (currency being the highest, bool, the lowest):
-- Bool: a single-bit truth value [`true`, `false`]
-- Int: One of `U8/I8 / U16/I16 / U32/I32 / U64/I64`
-- Float: A 64bit floating-point number [`1.0`, `.2`, `3e+7`]
-- Fixed: A fixed-point decimal value [`1.22D`, `4D`]
-- Currency: A fixed-point decimal value with a currency symbol [`$1`, `$2.00`, `3￥`]
+The names of the types, for the most part, are self-explanatory, but here's a quick rundown:
+`bool` - A single-bit truth value
+`int` - A signed or unsigned integer of various sizes (`u8` to `i64`)
+`float` - A 64bit floating-point number
+`fixed` - A fixed-point decimal value
+`currency` - A fixed-point decimal value with a currency symbol and set precision
+`array` - An ordered collection of values, indexed by integers
+`object` - An unordered collection of key-value pairs
+`range` - An inclusive range of integers
+`string` - A sequence of characters
+`numeric` - The implicit type that includes all numeric types, and `bool`
+`collection` - The implicit type that includes all collection types
+`any` - The implicit type that includes everything
 
+--------
+
+## bool
+The `bool` type is a single-bit truth value, and can be either `true` or `false`.
+In arithmetic operations, `true` is equivalent to `1`, and `false` is equivalent to `0`; operations are performed as if on a wrapping 1-bit integer.
+
+**Casting:**
+It can be cast from any type; and truth is determined by equivalence to 0, or by emptiness, depending on the type.
+
+**Formatting:**
+When cast to a string, it will be formatted as `true` or `false`.
+
+**Examples:**
+```lavendeux
+1 as bool; // true
+[] as bool; // false
+```
+
+## int
+Covering the types from `u8` to `i64`, `int` is a signed or unsigned integer of various sizes.
 Integers can be written in decimal, binary, octal, or hexadecimal, with an optional suffix to specify the type.
 If no suffix is provided, the type defaults to i64.
 
-Examples:
-- `38_000i32`
-- `0xFFu8`
-- `0o77i16`
-- `077`
-- `0b1010_1010_1010_1010i32`
+**Casting:**
+It can be cast from and to any type, and from any numeric type.
 
-Supported currency symbols:
+**Formatting:**
+When cast to a string, it will be formatted as a decimal number. For other formatting options, see [decorators](<#decorators-functions>).
+
+**Examples:**
+```lavendeux
+0xFFu8; // 255
+0o77i16; // 63
+077; // 63
+0b1010_1010_1010_1010i32; // 43690
+38_000; // 38,000
 ```
+
+## float
+A 64bit floating-point number, `float` can be written in decimal, or in scientific notation.
+
+**Casting:**
+It can be cast from and to any type, and from any numeric type.
+
+**Formatting:**
+When cast to a string, it will be formatted as a decimal number. For other formatting options, see [decorators](<#decorators-functions>).
+
+**Examples:**
+```lavendeux
+1.0; // 1.0
+.2; // 0.2
+3e+7; // 30,000,000
+```
+
+## fixed
+A fixed-point decimal value. Fixed literals are suffixed with `D`.
+
+Note that fixed-point exponentiation is not supported, and will result in an implicit cast to float.
+
+**Casting:**
+It can be cast from and to any type, and from any numeric type.
+
+**Formatting:**
+When cast to a string, it will appear similar to int or float, depending on the decimal precision of the value.
+
+**Examples:**
+```lavendeux
+1.22D; // 1.22
+4D; // 4
+```
+
+## currency
+A fixed-point decimal value with a currency symbol and set precision. Arithmetic operations will maintain the currency symbol only if both operands share the same one, and will use the larger precision.
+
+**Casting:**
+It can be cast from and to any type, and from any numeric type.
+
+**Formatting:**
+When cast to a string, it will appear similar to fixed, but with the currency symbol.
+
+**Examples:**
+```lavendeux
+$1.00 + 1; // $1.00
+$2.00 + £1.000; // 3.000
+3￥; // 3
+```
+
+**Supported currency symbols:**
+
+```lavendeux
 $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
 ￡ | ￥ | ￦
 ```
 
-## Collection Types
+## array
+An ordered collection of values, indexed by integers. Values can be a mix of types.
 
-The second group are collections, which encapsulate a set of values:
-- Array: An ordered collection of values, indexed by integers. Values can be a mix of types.
-- Object: An unordered collection of key-value pairs, where keys are any non-collection type and values can be a mix of types.
-- Range: An inclusive range of integers, with a start and end value. Start and end can be single characters, or any numeric type.
+**Casting:**
+It can be cast from any type; and will result in a single-value array - `A as array` is equivalent to `[A]`.
+When cast to any non-collection type, it will extract the single value, if the array has a length of 1 - `['a'] as int` would result in `a`.
+Casting a larger array to a non-collection type will result in an error.
+Casting array to object will result in an object with integer keys, and the values of the array.
+Casting range to array will result in an array of the range values (very large ranges may result in an error).
 
-Attempting to convert non-compound types into one of these will result in a single-value array or object.
-Range is the exception - no type can be converted into range, and range can only be converted into an array.
+**Formatting:**
+When cast to a string, it will be formatted as a comma-separated list of values, enclosed in square brackets.
 
-For example, `1 as array` would result in `[1]`,
-and `1 as object` would be the equivalent to `[1] as object`, which is `{0: 1}`
-(Non-compound types are first cast to array before being transformed into objects)
+**Examples:**
+```lavendeux
+[1, 2, 3]; // [1, 2, 3]
+[1] as int; // 1
+[1, 2, 3] as object; // {0: 1, 1: 2, 2: 3}
+1..3 as array; // [1, 2, 3]
+```
 
-Attemting to convert a compound value into a non-compound type will only work if the length of the compound value is 1, and will simply extract that value:
-- For example, `['a'] as string` would result in `'a'`
+## object
+An unordered collection of key-value pairs, where keys are any non-collection type and values can be a mix of types.
+Unlike boolean comparison operators (see <#boolean>), key comparison is type-sensitive - `{1: 2} == {'1': 2}` would be false.
 
-## Strings
+**Casting:**
+It can be cast from any type; and will result in a single-value object - `A as object` is equivalent to `{0: A}`.
+This is the same as casting to array, then to object.
+When cast to any non-collection type, it will extract the single value, if the object has a length of 1 - `{0: 'a'} as int` would result in `a`.
+Casting a larger object to a non-collection type will result in an error.
+Casting object to array will result in an array of the object values.
 
-The last value is string, which any value can be cast to in order to get a string representation.
+**Formatting:**
+When cast to a string, it will be formatted as a comma-separated list of key-value pairs, enclosed in curly brackets.
 
-They are Single or double quote enclosed
-With the following supported escape sequences:
+**Examples:**
+```lavendeux
+{1: 2}; // {1: 2}
+{1: 2} as array; // [2]
+{1: 2} as int; // 2
+{1: 2} as string; // "{1: 2}"
+```
+
+## range
+An inclusive range of integers, with a start and end value. Start and end can be single characters, or any numeric type.
+
+**Casting:**
+Ranges cannot be cast from any type, and can only be cast to an array.
+
+**Formatting:**
+When cast to a string, it will be formatted in the form `start..end`.
+
+**Examples:**
+```lavendeux
+1..3 as array; // [1, 2, 3]
+'a'..'c' as array // ['a', 'b', 'c']
+```
+
+## string
+Any value can be cast to a string, to get a string representation of that value. It is encoding as a UTF-8 string.
+It is enclosed in single or double quotes, and supports the following supported escape sequences:
 - `\'` Single-quote
 - `\"` Double-quote
 - `\n` Newline
@@ -76,33 +209,33 @@ With the following supported escape sequences:
 - `\t` Tab
 - `\\` Literal backslash
 
-## Type Conversion
+**Casting:**
+It can be cast from any type, and cast to array or object.
+Casting to array will result in a character array, and casting to object will in a single-value object with the key `0i64`
 
-You can manually convert between types using `<value> as <type>`, so long as that conversion is allowed:
-- Numeric values can always convert to other numeric values [`1 as float`, `true as fixed` or `$1.00 as int` are all valid]
-- Non-compound non-numeric values cannot convert into numeric values [`'test' as int` would be an error]
-- Any type `T` can be converted to an array as `[T]`, or an object as `{0: T}`
-- Conversely, single-element compound values such as `[T]` or `{0: T}` can be freely converted to any type valid for `T`
-- All types can be converted to string or bool
-- Range can become string, bool or array, but no type can become range
+**Formatting:**
+When cast to a string, it will be formatted as a string literal, without enclosing quotes.
+Inside a, array or object, it will be formatted as a string literal, with enclosing quotes.
 
-Comparisons and expressions will always try and cooerce both values to the same type, using these rules, in this order:
-- If either value is a range, compare the values as arrays
-- If either value is an object, compare the values as objects
-- If either value is an array, compare the values as arrays
-- If either value is an string, compare the values as strings
-- If either value is an currency, compare the values as currencies
-- If either value is a fixed-point, compare the values as fixed-points
-- If either value is an float, compare the values as floats
-- If either value is an int, compare the values as ints
-- If either value is a bool, compare the values as bools
+**Examples:**
+```lavendeux
+"test \""
+1 as string // "1"
+[1] as string // "[1]"
+{0: 1} as string // "{0: 1}"
+```
+
+
+
+------------
+
 # Operators and Syntax
 ## Arithmetic
 **[+, -, *, /, %, **]**  
 Performs arithmetic operations on two values.
 All but exponentiation are left-associative.
 
-### Examples
+**Examples:**  
 ```lavendeux
 1 + 2 / 3
 2 ** 3
@@ -114,7 +247,7 @@ Arrays can contain any type of value, including other arrays.
 Arrays are 0-indexed, meaning the first element is at index 0.
 The indexing operator (a[b]) can be used to access elements of an array.
 
-### Examples
+**Examples:**  
 ```lavendeux
 [1, 2, 3, 4, 5]
 ["Hello", "World"]
@@ -128,7 +261,7 @@ If an index is empty, a new value will be appended to the array
 If the target is a destructuring assignment, the value must be a collection of the same length
 If the operator is present, the value will be transformed before assignment
 
-### Examples
+**Examples:**  
 ```lavendeux
 [a, b] = [1, 2]
 a = 1; a += 1
@@ -141,7 +274,7 @@ Values are first converted to integers.
 Shifts are arithmetic for signed integers and logical for unsigned integers.
 A larger set of bitwise operations are available in the 'bitwise' category of the standard library.
 
-### Examples
+**Examples:**  
 ```lavendeux
 5 | 3 & 3
 5 ^ 3
@@ -155,7 +288,7 @@ Result are always a boolean value.
 And and Or are short-circuiting.
 All are left-associative.
 
-### Examples
+**Examples:**  
 ```lavendeux
 true || false
 1 < 2
@@ -166,7 +299,7 @@ Casts a value to a different type.
 The type can be a string or an identifier.
 The operator is right-associative
 
-### Examples
+**Examples:**  
 ```lavendeux
 5 as float
 5 as 'float'
@@ -177,7 +310,7 @@ The operator is right-associative
 A constant value.
 A predefined set of values that are always available.
 
-### Examples
+**Examples:**  
 ```lavendeux
 pi; e; tau
 ```
@@ -186,7 +319,7 @@ pi; e; tau
 Converts a value to a formatted string.
 It calls a function named '@name' with the value as an argument.
 
-### Examples
+**Examples:**  
 ```lavendeux
 assert_eq(
     5 @float,
@@ -200,7 +333,7 @@ Will return the value deleted (or the function signature if a function was delet
 Index can be blank to delete the last value in an array, or negative to count from the end
 Indices can also be a collection to delete multiple values at once
 
-### Examples
+**Examples:**  
 ```lavendeux
 a = 2; del a
 a = [1]; del a[]
@@ -216,7 +349,7 @@ The variable is optional, and if not provided, the loop will not bind a variable
 The expression will return an array of the results of the block.
 Break and skip/continue can be used to exit the loop or skip the current iteration.
 
-### Examples
+**Examples:**  
 ```lavendeux
 for i in 0..10 { i }
 for i in [1, 2, 3] { i }
@@ -236,7 +369,7 @@ Return type or argued types can be specified with `: type`, but are optional.
 Arguments will be cooerced to the specified type if provided, as will the return value.
 Valid type names are: `u[8-64]`, `i[8-64]`, `float`, `int`, `numeric`, `string`, `array`, `object`, `bool`, `any`.
 
-### Examples
+**Examples:**  
 ```lavendeux
 // Decorator taking in a number and returning a string
 @double(x:numeric) = 2*x
@@ -253,7 +386,7 @@ add(3, 4.5)
 Calls a function with the given arguments.
 The help() will list all available functions, and can filter by category or function name.
 
-### Examples
+**Examples:**  
 ```lavendeux
 arr = []
 push(arr, 3)
@@ -266,7 +399,7 @@ help(collections)
 A variable name.
 The value of the variable is looked up in the state.
 
-### Examples
+**Examples:**  
 ```lavendeux
 [a, b, c] = [1, 2, 3]
 a; b; c
@@ -278,7 +411,7 @@ body can be either a block or a single expression. The last expression is return
 Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
 As such, all if expressions must have both a then and an else branch.
 
-### Examples
+**Examples:**  
 ```lavendeux
 a = 6
 if a > 5 { a } else { 5 }
@@ -299,7 +432,7 @@ If the index is a string, it is used to access a character.
 If the index is blank, it is used to access the last element of the collection.
 Negative indices can be used to access elements from the end of the collection.
 
-### Examples
+**Examples:**  
 ```lavendeux
 [1, 2, 3][0]
 [1, 2, 3][0..1]
@@ -311,7 +444,7 @@ A set of left-associative boolean operators comparing a collection with a patter
 'is' is a special case that compares type (`value is string` is equivalent `typeof(value) == 'string'`)
 starts/ends with are not applicable to objects, which are not ordered
 
-### Examples
+**Examples:**  
 ```lavendeux
 {'name': 'test'} contains 'name'
 'hello' matches 'ell'
@@ -326,7 +459,7 @@ Values can contain any type, including other objects.
 Keys can be any non-collection type
 The indexing operator (a[b]) can be used to access elements of an object.
 
-### Examples
+**Examples:**  
 ```lavendeux
 { "name": "John", "age": 25 }
 { "name": "John", "address": { "city": "New York", "state": "NY" } }
@@ -339,7 +472,7 @@ Ranges are inclusive, meaning the start and end values are included in the array
 Start and end values must be of the same type, and start must be <= end.
 Character ranges are inclusive and can only be used with single-character strings.
 
-### Examples
+**Examples:**  
 ```lavendeux
 1..5
 'a'..'z'
@@ -349,7 +482,7 @@ Character ranges are inclusive and can only be used with single-character string
 A right-associative ternary operator.
 The condition is evaluated first, then either the then or else branch is evaluated.
 
-### Examples
+**Examples:**  
 ```lavendeux
 true ? 1 : 2
 ```
@@ -359,7 +492,7 @@ A prefix operator that performs bitwise NOT on a value.
 The value is first converted to an integer.
 A larger set of bitwise operations are available in the 'bitwise' category of the standard library.
 
-### Examples
+**Examples:**  
 ```lavendeux
 ~5
 ```
@@ -368,7 +501,7 @@ A larger set of bitwise operations are available in the 'bitwise' category of th
 Negates a boolean value.
 If the value is not a boolean, it is cooerced to boolean first.
 
-### Examples
+**Examples:**  
 ```lavendeux
 !true == false
 !'test' == false
@@ -377,7 +510,7 @@ If the value is not a boolean, it is cooerced to boolean first.
 ## Unary Increment/Decrement
 **[++, --]**  
 Increments or decrements a variable by 1.
-### Examples
+**Examples:**  
 ```lavendeux
 a = 0
 assert_eq(a++, 0)
@@ -386,7 +519,7 @@ assert_eq(--a, 0)
 ## Unary Negation
 **[-]**  
 Negates a value.
-### Examples
+**Examples:**  
 ```lavendeux
 -1
 ```
@@ -395,7 +528,7 @@ Negates a value.
 A conditional expression that evaluates a value and then one of several cases.
 match blocks must be exhaustive, and therefore must end in a default case
 
-### Examples
+**Examples:**  
 ```lavendeux
 a = 6
 match a {
@@ -404,6 +537,10 @@ match a {
     _ => { 'other' }
 }
 ```
+
+
+------------
+
 # Functions
 ## API Functions
 ### api_add

@@ -18,7 +18,7 @@ pub struct State {
     /// This is used to prevent infinite recursion
     /// while parsing user_functions
     depth: usize,
-    locked: usize,
+    locked: Vec<usize>,
 
     /// The time that the current parse started
     /// This is used to prevent infinite loops
@@ -39,7 +39,7 @@ impl Default for State {
         let stdlib_fns = stdlib::all();
         let mut instance = Self {
             depth: 0,
-            locked: 0,
+            locked: Vec::new(),
             parse_starttime: std::time::Instant::now(),
             timeout: Duration::from_secs(0),
             variables: vec![HashMap::new()],
@@ -107,7 +107,7 @@ impl State {
     /// Sets the depth to 0, and destroys all scopes but the root scope
     pub fn sanitize_scopes(&mut self) {
         self.depth = 0;
-        self.locked = 0;
+        self.locked = Vec::new();
         self.variables.truncate(1);
     }
 
@@ -126,12 +126,21 @@ impl State {
 
     /// Locks the current scope, preventing access to variables in higher scopes
     pub fn lock_scope(&mut self) {
-        self.locked = self.depth;
+        self.locked.push(self.depth)
     }
 
     /// Unlocks the current scope, granting access to variables in higher scopes
     pub fn unlock_scope(&mut self) {
-        self.locked = 0;
+        self.locked.pop();
+    }
+
+    /// Returns the last valid scope
+    fn last_valid_scope(&self) -> usize {
+        if let Some(lock) = self.locked.last() {
+            *lock
+        } else {
+            0
+        }
     }
 
     /// Removes the current scope from this state
@@ -142,7 +151,7 @@ impl State {
         self.depth -= 1;
         self.variables.pop();
 
-        if self.depth < self.locked {
+        if self.depth < self.last_valid_scope() {
             self.unlock_scope();
         }
     }
@@ -154,17 +163,15 @@ impl State {
         self.variables
             .iter()
             .rev()
-            .take(self.depth - self.locked + 1)
+            .take(self.depth - self.last_valid_scope() + 1)
     }
 
     fn get_valid_scopes_mut(
         &mut self,
     ) -> std::iter::Take<std::iter::Rev<std::slice::IterMut<'_, HashMap<String, polyvalue::Value>>>>
     {
-        self.variables
-            .iter_mut()
-            .rev()
-            .take(self.depth - self.locked + 1)
+        let lock = self.last_valid_scope();
+        self.variables.iter_mut().rev().take(self.depth - lock + 1)
     }
 
     /**
@@ -318,6 +325,11 @@ impl State {
         self.functions.get(name)
     }
 
+    /// Returns a function from the state
+    pub fn get_function_mut(&mut self, name: &str) -> Option<&mut Box<dyn ParserFunction>> {
+        self.functions.get_mut(name)
+    }
+
     /// List all functions in the state
     pub fn all_functions(&self) -> &HashMap<String, Box<dyn ParserFunction>> {
         &self.functions
@@ -331,13 +343,9 @@ impl State {
         args: Vec<Value>,
         arg1_references: Option<&str>,
     ) -> Result<Value, Error> {
-        let function = self
-            .get_function(name)
-            .ok_or(ErrorDetails::FunctionName {
-                name: name.to_string(),
-            })?
-            .clone_self();
-
+        let function = self.get_function(name).ok_or(ErrorDetails::FunctionName {
+            name: name.to_string(),
+        })?;
         function.exec(&args, self, arg1_references)
     }
 

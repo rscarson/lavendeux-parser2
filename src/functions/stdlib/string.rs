@@ -21,7 +21,7 @@ define_stdfunction!(
             assert_eq(97u32, ord('a'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("c").unwrap().to_string();
         if input.len() != 1 {
             return oops!(Custom {
@@ -46,7 +46,7 @@ define_stdfunction!(
             assert_eq('a', chr(97))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("i").unwrap().as_a::<u32>()?;
         match std::char::from_u32(input) {
             Some(c) => Ok(Value::from(c.to_string())),
@@ -73,7 +73,7 @@ define_stdfunction!(
             assert_eq('HELLO', uppercase('hello'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(input.to_uppercase().to_string()))
     },
@@ -90,7 +90,7 @@ define_stdfunction!(
             assert_eq('hello', lowercase('HELLO'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(input.to_lowercase().to_string()))
     },
@@ -107,7 +107,7 @@ define_stdfunction!(
             assert_eq('hello', trim('  hello  '))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(input.trim().to_string()))
     },
@@ -124,7 +124,7 @@ define_stdfunction!(
             assert_eq('hello  ', trim_start('  hello  '))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(input.trim_start().to_string()))
     },
@@ -141,7 +141,7 @@ define_stdfunction!(
             assert_eq('  hello', trim_end('  hello  '))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(input.trim_end().to_string()))
     },
@@ -162,7 +162,7 @@ define_stdfunction!(
             assert_eq('hello world', replace('hello there', 'there', 'world'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         let from = state.get_variable("from").unwrap().to_string();
         let to = state.get_variable("to").unwrap().to_string();
@@ -184,10 +184,122 @@ define_stdfunction!(
             assert_eq('hellohellohello', repeat('hello', 3))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         let n = state.get_variable("n").unwrap().as_a::<i32>()?;
         Ok(Value::from(input.repeat(n as usize)))
+    },
+);
+
+define_stdfunction!(
+    chars {
+        s: Standard::String
+    },
+    returns = Array,
+    docs = {
+        category: "String",
+        description: "Splits a string into its individual characters.",
+        ext_description: "This function will handle all Unicode characters.",
+        examples: "
+            assert_eq(['h', 'e', 'l', 'l', 'o'], chars('hello'))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("s").unwrap().to_string();
+        let chars: Vec<Value> = input.chars().map(|c| c.to_string().into()).collect();
+        Ok(Value::from(chars))
+    },
+);
+
+define_stdfunction!(
+    escape {
+        s: Standard::String
+    },
+    returns = String,
+    docs = {
+        category: "String",
+        description: "Escapes special characters in a string.",
+        ext_description: "This function will handle all Unicode characters.",
+        examples: "
+            assert_eq('hello\\\\nworld', escape('hello\nworld'))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("s").unwrap().to_string();
+        let mut output = String::new();
+        for c in input.chars() {
+            match c {
+                '\n' => output.push_str("\\n"),
+                '\r' => output.push_str("\\r"),
+                '\t' => output.push_str("\\t"),
+                '\\' => output.push_str("\\\\"),
+                '"' => output.push_str("\\\""),
+                _ => output.push(c),
+            }
+        }
+        Ok(Value::from(output))
+    },
+);
+
+define_stdfunction!(
+    pad_right {
+        s: Standard::String,
+        length: Standard::I64,
+        pad: Optional::String
+    },
+    returns = String,
+    docs = {
+        category: "String",
+        description: "Pads a string to a specified length with a specified character.",
+        ext_description: "This function will handle all Unicode characters.",
+        examples: "
+            assert_eq('hello!!!!!!', pad_right('hello', 11, '!'))
+            assert_eq('hello      ', pad_right('hello', 11))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("s").unwrap().to_string();
+        let length = state.get_variable("length").unwrap().as_a::<u64>()? as usize;
+        let pad = state.get_variable("pad").unwrap_or(Value::string(" ")).to_string().chars().next().unwrap_or(' ').to_string();
+
+        let padding = length - input.len();
+        if padding <= 0 {
+            Ok(Value::from(input))
+        } else {
+            let pad = pad.repeat(padding);
+            Ok((input + &pad).into())
+        }
+    },
+);
+
+define_stdfunction!(
+    pad_left {
+        s: Standard::String,
+        length: Standard::I64,
+        pad: Optional::String
+    },
+    returns = String,
+    docs = {
+        category: "String",
+        description: "Pads a string to a specified length with a specified character.",
+        ext_description: "This function will handle all Unicode characters.",
+        examples: "
+            assert_eq('!!!!!!hello', pad_left('hello', 11, '!'))
+            assert_eq('      hello', pad_left('hello', 11))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("s").unwrap().to_string();
+        let length = state.get_variable("length").unwrap().as_a::<u64>()? as usize;
+        let pad = state.get_variable("pad").unwrap_or(Value::string(" ")).to_string().chars().next().unwrap_or(' ').to_string();
+
+        let padding = length - input.len();
+        if padding <= 0 {
+            Ok(Value::from(input))
+        } else {
+            let pad = pad.repeat(padding);
+            Ok((pad + &input).into())
+        }
     },
 );
 
@@ -211,7 +323,7 @@ define_stdfunction!(
             assert_eq('hello world', format('hello {}', ['world']))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         let args = state.get_variable("args").unwrap().as_a::<Vec<Value>>()?;
         let args: Vec<String> = args
@@ -244,7 +356,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().as_type(ValueType::Object)?.to_json_string();
         let input = serde_json::from_str::<serde_json::Value>(&input)?;
         Ok(Value::from(serde_json::to_string_pretty(&input)?))
@@ -252,7 +364,7 @@ define_stdfunction!(
 );
 
 define_stdfunction!(
-    concat {
+    join {
         parts: Standard::Array,
         joiner: Optional::String
     },
@@ -265,10 +377,11 @@ define_stdfunction!(
             If a joiner is provided, it will be used to separate the parts.
         ",
         examples: "
-            assert_eq('hello world', concat(['hello', ' ', 'world']))
+            assert_eq('hello world', join(['hello', ' ', 'world']))
+            assert_eq('hello world', ['hello', 'world'].join(' '))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let joiner = state.get_variable("joiner").unwrap_or(Value::string("")).to_string();
         let parts = state.get_variable("parts").unwrap().as_a::<Vec<Value>>()?;
         let parts: Vec<String> = parts
@@ -297,7 +410,7 @@ define_stdfunction!(
             assert_eq('hello%20world', url_encode('hello world'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(urlencoding::encode(&input).into_owned()))
     },
@@ -315,7 +428,7 @@ define_stdfunction!(
             assert_eq('hello world', url_decode('hello%20world'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
         Ok(Value::from(urlencoding::decode(&input)?.into_owned()))
     },
@@ -333,7 +446,7 @@ define_stdfunction!(
             assert_eq('aGVsbG8gd29ybGQ=', base64_encode('hello world'))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
 
         use base64::{engine::general_purpose, Engine as _};
@@ -355,7 +468,7 @@ define_stdfunction!(
             assert_eq('hello world', base64_decode('aGVsbG8gd29ybGQ='))
         "
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let input = state.get_variable("s").unwrap().to_string();
 
         use base64::{engine::general_purpose, Engine as _};
@@ -370,5 +483,46 @@ define_stdfunction!(
                 expected_format: "base64".to_string()
             }
         )
+    },
+);
+
+define_stdfunction!(
+    from_json {
+        s: Standard::String
+    },
+    returns = Any,
+    docs = {
+        category: "String",
+        description: "Parses a JSON string into a value.",
+        ext_description: "This function will handle all Unicode characters.",
+        examples: "
+            assert_eq({\"hello\": \"world\"}, from_json('{\"hello\": \"world\"}'))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("s").unwrap().to_string();
+        let input = serde_json::from_str::<serde_json::Value>(&input)?;
+        Ok(Value::try_from(input)?)
+    },
+);
+
+define_stdfunction!(
+    to_json {
+        v: Standard::Any
+    },
+    returns = String,
+    docs = {
+        category: "String",
+        description: "Converts a value into a JSON string.",
+        ext_description: "
+            Objects will be encoded as (key, value) pairs, due to differences between JSON and lavendeux.
+        ",
+        examples: "
+            assert_eq('{\"hello\":\"world\"}', to_json({'hello': 'world'}))
+        "
+    },
+    handler = (state) {
+        let input = state.get_variable("v").unwrap().to_json_string();
+        Ok(Value::from(input))
     },
 );

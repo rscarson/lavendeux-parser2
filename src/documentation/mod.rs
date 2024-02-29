@@ -22,11 +22,16 @@ impl FunctionsByCategory for State {
     fn functions_by_category(&self) -> HashMap<String, Vec<&Box<dyn ParserFunction>>> {
         let mut categories: HashMap<String, Vec<&Box<dyn ParserFunction>>> = HashMap::new();
         for (_, function) in self.all_functions().iter() {
-            if !categories.contains_key(function.documentation().category) {
-                categories.insert(function.documentation().category.to_string(), Vec::new());
+            if function.name().starts_with("__") {
+                // Skip hidden functions
+                continue;
+            }
+
+            if !categories.contains_key(function.documentation().category()) {
+                categories.insert(function.documentation().category().to_string(), Vec::new());
             }
             categories
-                .get_mut(function.documentation().category)
+                .get_mut(function.documentation().category())
                 .unwrap()
                 .push(function);
         }

@@ -11,7 +11,7 @@ fuzz_target!(|data: &[u8]| {
     if let Ok(s) = std::str::from_utf8(data) {
         let mut parser = Lavendeux::new(Default::default());
         if let Err(e) = parser.parse(s) {
-            if let Error::Internal(msg) = e {
+            if let Error<'i>::Internal(msg) = e {
                 panic!("Internal error: {}", msg);
             }
         }

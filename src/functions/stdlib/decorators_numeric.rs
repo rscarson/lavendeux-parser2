@@ -1,5 +1,5 @@
-use crate::{define_stddecorator, functions::std_function::ParserFunction, Error, State};
-use polyvalue::{operations::ArithmeticOperationExt, types::I64, Value, ValueTrait};
+use crate::{define_stddecorator, functions::std_function::ParserFunction, Error};
+use polyvalue::{operations::ArithmeticOperationExt, types::I64, ValueTrait};
 
 define_stddecorator!(
     roman { input: Numeric },
@@ -13,7 +13,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let mut input = input.as_a::<i64>()?;
         if input > 3999 {
             return oops!(Overflow);
@@ -57,7 +57,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<i64>()?;
         let ordinal = match input % 10 {
             1 => format!("{}st", input),
@@ -81,7 +81,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<I64>()?;
         let input = *I64::arithmetic_op(
             &input,
@@ -117,7 +117,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<f64>()?;
         Ok(format!("{}%", input * 100.0))
     }

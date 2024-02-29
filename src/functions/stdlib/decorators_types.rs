@@ -1,7 +1,7 @@
-use crate::{define_stddecorator, functions::std_function::ParserFunction, Error, State};
+use crate::{define_stddecorator, functions::std_function::ParserFunction, Error};
 use polyvalue::{
     types::{Bool, Float, I64},
-    InnerValue, Value, ValueTrait,
+    InnerValue, ValueTrait,
 };
 
 define_stddecorator!(
@@ -16,7 +16,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         match input.inner() {
             InnerValue::U8(v) => Ok(format!("{:#0x}", v.inner())),
             InnerValue::I8(v) => Ok(format!("{:#0x}", v.inner())),
@@ -45,7 +45,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         match input.inner() {
             InnerValue::U8(v) => Ok(format!("{:#0o}", v.inner())),
             InnerValue::I8(v) => Ok(format!("{:#0o}", v.inner())),
@@ -74,7 +74,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         match input.inner() {
             InnerValue::U8(v) => Ok(format!("{:#0b}", v.inner())),
             InnerValue::I8(v) => Ok(format!("{:#0b}", v.inner())),
@@ -103,7 +103,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<f64>()?;
         Ok(format!("{:e}", input))
     }
@@ -121,7 +121,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Float>()?;
         Ok(input.to_string())
     }
@@ -139,7 +139,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<I64>()?;
         Ok(input.to_string())
     }
@@ -158,7 +158,7 @@ define_stddecorator!(
             )
         "
     },
-    handler = |input: Value| -> Result<String, Error> {
+    handler = (input) {
         let input = input.as_a::<Bool>()?;
         Ok(input.to_string())
     }

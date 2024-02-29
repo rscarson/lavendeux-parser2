@@ -1,6 +1,7 @@
 use crate::{
     define_stdfunction,
     documentation::{DocumentationTemplate, MarkdownFormatter},
+    error::{ErrorDetails, WrapOption},
     functions::std_function::ParserFunction,
     Lavendeux, State,
 };
@@ -33,7 +34,7 @@ define_stdfunction!(
         ",
    },
 
-    handler = |state: &mut State| {
+    handler = (state) {
          let name = state.get_variable("name").unwrap().to_string();
          let args = state.get_variable("args").unwrap().as_a::<Vec<Value>>()?;
 
@@ -60,12 +61,12 @@ define_stdfunction!(
             assert_eq([1, 2, 3], eval('1\\n2\\n3'))
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let expression = state.get_variable("expression").unwrap().to_string();
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&expression, state);
+        let res = Lavendeux::eval(&expression, state)?.get_value(state);
         state.scope_out();
 
         let res = res?;
@@ -92,10 +93,10 @@ define_stdfunction!(
             Returns an empty string in all cases.
         ",
         examples: "
-            include('examples/stdlib_example.lav')
+            include('example_scripts/stdlib.lav')
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let script = state.get_variable("filename").unwrap().to_string();
         let script = std::fs::read_to_string(script)?;
 
@@ -122,14 +123,65 @@ define_stdfunction!(
             generate_documentation()
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         Ok(DocumentationTemplate::new(MarkdownFormatter).render(state).into())
+    },
+);
+
+define_stdfunction!(
+    document_function {
+        name: Standard::String,
+        docs: Standard::Object
+    },
+    returns = String,
+    docs = {
+        category: "System",
+        description: "Adds documentation to a user-defined function",
+        ext_description: "
+            Adds documentation to a function, which will be displayed help()
+            The documentation object should contain the keys 'category', 'description', 'ext_description', and 'examples'.
+        ",
+        examples: "
+            a() = 5
+            document_function('a', {
+                'category': 'System',
+                'description': 'Adds documentation to a function',
+                'ext_description': 'Adds documentation to a function, which will be displayed in the documentation.',
+                'examples': 'document_function(\"document_function\", {\"category\": \"System\", \"description\": \"Adds documentation to a function\", \"ext_description\": \"Adds documentation to a function, which will be displayed in the documentation.\"})'
+            })
+        ",
+    },
+    handler = (state) {
+        let name = state.get_variable("name").unwrap().to_string();
+        let docs = state.get_variable("docs").unwrap().as_a::<Object>()?;
+
+        let function = state.get_function_mut(&name).or_error(ErrorDetails::FunctionName { name: name.clone() })?;
+        if function.is_readonly() {
+            return oops!(Custom {
+                msg: "Cannot modify a readonly function".to_string()
+            })
+        }
+
+        if let Some(category) = docs.get(&"category".into()) {
+            function.documentation_mut().set_category(&category.to_string());
+        }
+
+        let ext_desc: Option<String> = docs.get(&"description".into()).map(|v| v.to_string());
+        function.documentation_mut().set_description(ext_desc.as_deref());
+
+        let ext_desc: Option<String> = docs.get(&"ext_description".into()).map(|v| v.to_string());
+        function.documentation_mut().set_ext_description(ext_desc.as_deref());
+
+        let ext_desc: Option<String> = docs.get(&"examples".into()).map(|v| v.to_string());
+        function.documentation_mut().set_examples(ext_desc.as_deref());
+
+        Ok(state.help(Some(name)).into())
     },
 );
 
 /**********************************************
  *
- * Assertions and Errors
+ * Assertions and Error<'i>s
  *
  *********************************************/
 
@@ -150,7 +202,7 @@ define_stdfunction!(
             assert( would_err('assert(false)') )
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let cond = state.get_variable("condition").unwrap();
         if cond.is_truthy() {
             Ok(cond)
@@ -182,7 +234,7 @@ define_stdfunction!(
             assert_eq( true, would_err('assert_eq(1, true)') )
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let cond = state.get_variable("condition").unwrap();
         let expected = state.get_variable("expected").unwrap();
 
@@ -213,7 +265,7 @@ define_stdfunction!(
             assert_eq( true, would_err('1 + asparagus') )
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let expression = state.get_variable("expression").unwrap().to_string();
         let res = crate::Lavendeux::eval(&expression, state);
         match res {
@@ -239,8 +291,8 @@ define_stdfunction!(
             would_err('error(\"This is an error\")')
         ",
     },
-    handler = |state: &mut State| {
-        let message = state.get_variable("message").unwrap().to_string();
+    handler = (state) {
+        let message = state.get_variable("msg").unwrap().to_string();
         oops!(Custom { msg: message })
     },
 );
@@ -262,8 +314,8 @@ define_stdfunction!(
             debug(\"This is a debug message\")
         ",
     },
-    handler = |state: &mut State| {
-        let message = state.get_variable("message").unwrap().to_string();
+    handler = (state) {
+        let message = state.get_variable("msg").unwrap().to_string();
         println!("{message}");
         Ok(Value::string(message))
     },
@@ -297,7 +349,7 @@ define_stdfunction!(
             assert_eq(5, x)
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let name = state.get_variable("name").unwrap().to_string();
         let value = state.get_variable("value").unwrap();
         state.set_variable_in_offset(1, &name, value.clone());
@@ -327,10 +379,36 @@ define_stdfunction!(
             assert_eq(6, x)
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let name = state.get_variable("name").unwrap().to_string();
         let value = state.get_variable("value").unwrap();
         state.global_assign_variable(&name, value.clone());
+        Ok(value)
+    },
+);
+
+define_stdfunction!(
+    global {
+        name: Standard::String
+    },
+    returns = Any,
+
+    docs = {
+        category: "System",
+        description: "Returns a variable from the top-level scope",
+        ext_description: "
+            Searches for the variable in the top-level scope only
+        ",
+        examples: "
+            assign_global('x', 6)
+            assert_eq(6, global('x'))
+        ",
+    },
+    handler = (state) {
+        let name = state.get_variable("name").unwrap().to_string();
+        let value = state.global_get_variable(&name).or_error(ErrorDetails::VariableName {
+            name
+        })?;
         Ok(value)
     },
 );
@@ -352,7 +430,7 @@ define_stdfunction!(
             assert_eq(6, state['y'])
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let obj = Object::try_from(
             state
                 .all_variables_unscoped()
@@ -383,7 +461,7 @@ define_stdfunction!(
             assert_eq('object', typeof({}))
         ",
     },
-    handler = |state: &mut State| {
+    handler = (state) {
         let value = state.get_variable("value").unwrap();
         Ok(Value::string(value.own_type().to_string()))
     },

@@ -1,5 +1,5 @@
-//! Error handling module.
-//! Defines the Error/ErrorDetails types, and associated traits and macros.
+//! Error<'i> handling module.
+//! Defines the Error<'i>/ErrorDetails types, and associated traits and macros.
 
 #[macro_use]
 mod macros;

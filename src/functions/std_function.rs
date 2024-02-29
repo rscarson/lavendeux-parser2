@@ -1,37 +1,39 @@
 use crate::{Error, State};
 use polyvalue::{Value, ValueType};
 
+use super::FunctionDocumentation;
+
+/// A function argument type
 #[derive(Debug, Copy, Clone)]
 pub enum FunctionArgumentType {
+    /// Normal argument
     Standard,
+    /// 0-or-more of
     Plural,
+    /// 0-or-1 of
     Optional,
 }
 
+/// A function argument
 #[derive(Debug, Copy, Clone)]
 pub struct FunctionArgument {
+    /// Type condition to enforce
     pub expected_type: ValueType,
+
+    /// How to parse the argument
     pub meta: FunctionArgumentType,
 }
 
 impl FunctionArgument {
+    /// Returns true if the argument can be skipped on type errors or missing values
     pub fn is_optional(&self) -> bool {
         !matches!(self.meta, FunctionArgumentType::Standard)
     }
 
+    /// Returns true if the argument should consume 0 or more args until a non-matching type is found
     pub fn is_plural(&self) -> bool {
         matches!(self.meta, FunctionArgumentType::Plural)
     }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct FunctionDocumentation {
-    pub category: &'static str,
-
-    pub description: Option<&'static str>,
-
-    pub ext_description: Option<&'static str>,
-    pub examples: Option<&'static str>,
 }
 
 pub trait ManageArguments {
@@ -119,14 +121,21 @@ impl ManageArguments for Vec<(&str, FunctionArgument)> {
     }
 }
 
+/// Object trait used for parser functions
 pub trait ParserFunction
 where
     Self: Send + Sync + std::fmt::Debug,
 {
-    fn name<'a>(&'a self) -> &'a str;
-    fn return_type(&self) -> ValueType;
-    fn expected_arguments<'a>(&'a self) -> Vec<(&'a str, FunctionArgument)>;
+    /// Name of the function
+    fn name(&self) -> &str;
 
+    /// Return type of the function
+    fn return_type(&self) -> ValueType;
+
+    /// Expected arguments for the function
+    fn expected_arguments(&self) -> Vec<(&str, FunctionArgument)>;
+
+    /// Clones the function
     fn clone_self(&self) -> Box<dyn ParserFunction>;
 
     /// Identifies system functions that should not be overridden by user functions
@@ -134,10 +143,16 @@ where
         false
     }
 
-    fn documentation(&self) -> &FunctionDocumentation;
+    /// Documentation for the function
+    fn documentation(&self) -> &dyn FunctionDocumentation;
 
+    /// Mutable version of documentation
+    fn documentation_mut(&mut self) -> &mut dyn FunctionDocumentation;
+
+    /// Call the function's handler - use exec instead to map arguments first
     fn call(&self, state: &mut State) -> Result<Value, Error>;
 
+    /// Loads the arguments into the state
     fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error> {
         match self
             .expected_arguments()
@@ -151,6 +166,7 @@ where
         }
     }
 
+    /// Returns the function signature
     fn signature(&self) -> String {
         format!(
             "{}({}) -> {}",
@@ -175,6 +191,9 @@ where
         )
     }
 
+    /// Executes the function with the given values
+    /// Values are checked mapped into the state into a new scope
+    /// arg1_references is used to add a pass-by-reference flag to the first argument
     fn exec(
         &self,
         values: &[Value],

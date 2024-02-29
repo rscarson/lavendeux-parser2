@@ -62,7 +62,8 @@ EXPR = {
         POSTFIX_EMPTYINDEX = {(l_bracket ~ EOL* ~ "]")}
             l_bracket = {"["}
         POSTFIX_INDEX = {(("[" ~ EOL* ~ EXPR ~ EOL* ~ "]") | POSTFIX_EMPTYINDEX)+}
-        POSTFIX_CALL = {("." ~ EOL* ~ identifier ~ EOL*)? ~ "(" ~ (EOL* ~ (EXPR ~ EOL* ~ "," ~ EOL*)* ~ EXPR ~ EOL* ~ ","?)? ~ EOL* ~ ")"}
+        POSTFIX_CALL = {POSTFIX_OBJECTMODE? ~ "(" ~ (EOL* ~ (EXPR ~ EOL* ~ "," ~ EOL*)* ~ EXPR ~ EOL* ~ ","?)? ~ EOL* ~ ")"}
+            POSTFIX_OBJECTMODE = {"." ~ EOL* ~ identifier}
         postfix_arith = _{POSTFIX_INC | POSTFIX_DEC}
             POSTFIX_INC = {"++"}
             POSTFIX_DEC = {"--"}
@@ -185,7 +186,8 @@ KEYWORD_EXPRESSION = _ {
 
     RETURN_EXPRESSION = { "return" ~ EOL* ~ BLOCK }
 
-    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &"{") ~ EOL* ~ BLOCK }
+    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &"{") ~ EOL* ~ BLOCK ~ (EOL* ~ for_conditional)? }
+        for_conditional = {"if" ~ EOL* ~ EXPR}
 
     SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ "{" ~ EOL* ~ (switch_case ~ EOL* ~ "," ~ EOL*)* ~ switch_case ~ EOL* ~ ","? ~ EOL* ~ "}" }
         switch_case = _{ ATOMIC_VALUE ~ EOL* ~ "=>" ~ EOL* ~ BLOCK }
@@ -211,7 +213,8 @@ ATOMIC_VALUE = _{
     | currency_literal | fixed_literal
     | sci_literal | float_literal
     | int_literal
-    | bool_literal | string_literal | regex_literal
+    | bool_literal | string_literal
+    | regex_literal
     | identifier
     | const_literal
 }
@@ -244,7 +247,7 @@ ATOMIC_VALUE = _{
     sci_literal = @{(float_literal | dec_literal) ~ ^"e" ~ ("+"|"-")? ~ ASCII_DIGIT+}
     float_literal = @{dec_literal? ~ "." ~ ASCII_DIGIT+}
 
-    const_literal = @{"pi" | "e" | "tau"}
+    const_literal = @{"pi" | "e" | "tau" | "nil"}
 
     // Integer literals
     int_literal = {(hex_literal | bin_literal | oct_literal | dec_literal) ~ sized_literal_suffix?}
@@ -271,7 +274,7 @@ ATOMIC_VALUE = _{
 
     identifier = @{!reserved_words ~ (ASCII_ALPHA|"_") ~ (ASCII_ALPHANUMERIC|"_")*}
         reserved_words = {
-            ("pi" | "e" | "tau" | "true" | "false"
+            ("pi" | "e" | "tau" | "nil" | "true" | "false"
             | "if" | "then" | "else" | "for" | "in" | "do" | "match"
             | "return"
             | prefix_op | infix_op

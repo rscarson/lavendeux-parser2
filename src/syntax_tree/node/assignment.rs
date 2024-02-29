@@ -2,7 +2,6 @@ use super::*;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
     pest::Rule,
-    State,
 };
 use polyvalue::{
     operations::{
@@ -13,13 +12,13 @@ use polyvalue::{
 };
 
 #[derive(Debug)]
-pub enum AssignmentTarget {
+pub enum AssignmentTarget<'i> {
     Identifier(String),
-    Index(String, Vec<Option<Node>>), // None = last-entry index
+    Index(String, Vec<Option<Node<'i>>>), // None = last-entry index
     Destructure(Vec<String>),
 }
 
-impl std::fmt::Display for AssignmentTarget {
+impl std::fmt::Display for AssignmentTarget<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Identifier(id) => write!(f, "{}", id),
@@ -45,9 +44,9 @@ impl std::fmt::Display for AssignmentTarget {
     }
 }
 
-impl AssignmentTarget {
+impl AssignmentTarget<'_> {
     /// Consumes a pair, returning an `AssignmentTarget` if it's valid
-    pub fn from_pair(input: PrattPair) -> Result<Self, Error> {
+    pub fn from_pair<'i>(input: PrattPair<'i>) -> Result<Self, Error<'i>> {
         match input.as_rule() {
             Rule::identifier => Ok(Self::Identifier(input.first_pair().as_str().to_string())),
 
@@ -64,7 +63,7 @@ impl AssignmentTarget {
 
                 let indices = indices
                     .map(|c| {
-                        Ok::<_, Error>(if c.as_rule() == Rule::POSTFIX_EMPTYINDEX {
+                        Ok::<_, Error<'i>>(if c.as_rule() == Rule::POSTFIX_EMPTYINDEX {
                             None
                         } else {
                             Some(c.to_ast_node()?)
@@ -102,10 +101,10 @@ impl AssignmentTarget {
 
 define_prattnode!(
     DeleteExpression {
-        target: AssignmentTarget
+        target: AssignmentTarget<'i>
     },
     rules = [PREFIX_DEL],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
         let is_decorator = children
@@ -137,7 +136,7 @@ define_prattnode!(
 
         Ok(Self { target, token }.boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         match &this.target {
             AssignmentTarget::Identifier(id) => {
                 if let Some(function) = state.unregister_function(id)? {
@@ -159,7 +158,7 @@ define_prattnode!(
                 let mut indices = idx
                     .iter()
                     .map(|i| {
-                        Ok::<_, Error>(if let Some(v) = i {
+                        Ok::<_, Error<'i>>(if let Some(v) = i {
                             Some(v.get_value(state)?)
                         } else {
                             None
@@ -265,9 +264,9 @@ impl From<Rule> for AssignmentOperation {
 
 define_prattnode!(
     InfixAssignment {
-        target: AssignmentTarget,
+        target: AssignmentTarget<'i>,
         op: AssignmentOperation,
-        value: Node
+        value: Node<'i>
     },
     rules = [
         OP_ASSIGN_ADD,
@@ -285,7 +284,7 @@ define_prattnode!(
         OP_BASSIGN_OR,
         OP_ASSIGN
     ],
-    new = |input: PrattPair| {
+    new = (input) {
         let token = input.as_token();
         let mut children = input.into_inner();
 
@@ -303,7 +302,7 @@ define_prattnode!(
         }
         .boxed())
     },
-    value = |this: &Self, state: &mut State| {
+    value = (this, state) {
         let rhs = this.value.get_value(state)?;
         match &this.target {
             AssignmentTarget::Identifier(ref id) => {
@@ -349,7 +348,7 @@ define_prattnode!(
 
             AssignmentTarget::Index(ref base, indices) => {
                 // The last index is the one that will be used to set the value
-                let mut indices = indices.iter().map(|i| i.clone()).collect::<Vec<_>>();
+                let mut indices = indices.iter().map(|i| i).collect::<Vec<_>>();
 
                 // Move through the indices to get the final pointer
                 let mut dst = state
@@ -410,11 +409,11 @@ define_prattnode!(
     }
 );
 
-fn apply_assignment_transform(
+fn apply_assignment_transform<'i>(
     lhs: &Value,
     rhs: &Value,
     op: AssignmentOperation,
-) -> Result<Value, Error> {
+) -> Result<Value, Error<'i>> {
     Ok(match op {
         AssignmentOperation::Add => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Add)?,
         AssignmentOperation::Sub => Value::arithmetic_op(lhs, rhs, ArithmeticOperation::Subtract)?,

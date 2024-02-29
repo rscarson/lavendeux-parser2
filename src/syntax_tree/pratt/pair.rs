@@ -26,11 +26,11 @@ impl<'a> PrattPair<'a> {
         .into_iter()
     }
 
-    pub fn first_pair(&self) -> Pair<Rule> {
+    pub fn first_pair(&self) -> &Pair<'_, Rule> {
         match self {
-            PrattPair::Primary(p) => p.clone(),
+            PrattPair::Primary(p) => p,
             PrattPair::Infix(l, _, _) => l.first_pair(),
-            PrattPair::Prefix(o, _) => o.clone(),
+            PrattPair::Prefix(o, _) => o,
             PrattPair::Postfix(l, _) => l.first_pair(),
         }
     }
@@ -51,34 +51,34 @@ impl<'a> PrattPair<'a> {
                 let mut token = l.as_token();
                 let op_token = o.to_token();
                 token.rule = op_token.rule;
-                token.input = format!(
-                    "{} {} {}",
-                    l.as_token().input,
-                    op_token.input,
-                    r.as_token().input
-                );
+                token.input = op_token.input; /*format!(
+                                                  "{} {} {}",
+                                                  l.as_token().input,
+                                                  op_token.input,
+                                                  r.as_token().input
+                                              );*/
                 token
             }
             PrattPair::Prefix(o, r) => {
                 let mut token = o.to_token();
-                token.input = format!("{} {}", token.input, r.as_token().input);
+                //  token.input = format!("{} {}", token.input, r.as_token().input);
                 token
             }
             PrattPair::Postfix(l, o) => {
-                let mut token = l.as_token();
+                //   let mut token = l.as_token();
                 let op_token = o.to_token();
-                token.rule = op_token.rule;
-                token.input = format!("{}{}", l.as_token().input, op_token.input);
-                token
+                //     token.rule = op_token.rule;
+                //      token.input = format!("{}{}", l.as_token().input, op_token.input);
+                op_token
             }
         }
     }
 }
 
-impl ToAstNode for PrattPair<'_> {
+impl<'i> ToAstNode<'i> for PrattPair<'i> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(self) -> Result<Box<dyn AstNode>, Error> {
+    fn to_ast_node(&self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
         resolver::handle_pratt(self)
     }
 }

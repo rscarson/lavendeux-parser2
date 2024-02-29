@@ -1,22 +1,22 @@
 use crate::{error::ErrorDetails, Token};
 
-/// Error type for the Lavendeux parser
+/// Error<'i> type for the Lavendeux parser
 /// Can have optional context [Token], and parent error
 #[derive(Debug)]
-pub struct Error {
+pub struct Error<'i> {
     /// details: The specific error that occurred - see [ErrorDetails]
     pub details: ErrorDetails,
 
     /// context: The [Token] that caused the error, or was being parsed when the error occurred
-    pub context: Option<Token>,
+    pub context: Option<Token<'i>>,
 
     /// source: A parent error, if one exists - errors during a function call, for example
-    pub source: Option<Box<Error>>,
+    pub source: Option<Box<Error<'i>>>,
 }
 
-impl Error {
+impl<'i> Error<'i> {
     /// Add context to this error, in the form a [Token]
-    pub fn with_context(self, context: Token) -> Self {
+    pub fn with_context(self, context: Token<'i>) -> Self {
         Error {
             context: Some(context),
             ..self
@@ -24,7 +24,7 @@ impl Error {
     }
 
     /// Link the parent error to this error
-    pub fn with_source(self, source: Error) -> Self {
+    pub fn with_source(self, source: Error<'i>) -> Self {
         Error {
             source: Some(Box::new(source)),
             ..self
@@ -61,7 +61,7 @@ impl Error {
     }
 }
 
-impl<T> From<T> for Error
+impl<'i, T> From<T> for Error<'i>
 where
     T: std::convert::Into<ErrorDetails>,
 {
@@ -74,8 +74,8 @@ where
     }
 }
 
-impl std::error::Error for Error {}
-impl std::fmt::Display for Error {
+impl std::error::Error for Error<'_> {}
+impl std::fmt::Display for Error<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let token_part = if let Some(context) = &self.context {
             format!("| {}\n= ", context)
