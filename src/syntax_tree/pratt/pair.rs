@@ -78,7 +78,7 @@ impl<'a> PrattPair<'a> {
 impl<'i> ToAstNode<'i> for PrattPair<'i> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(&self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
+    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
         resolver::handle_pratt(self)
     }
 }

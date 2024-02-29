@@ -1,4 +1,5 @@
 use super::pratt::PrattPair;
+use crate::error::WrapExternalError;
 use crate::{error::Error, AstNode, ToAstNode};
 
 macro_rules! define_node {
@@ -51,7 +52,7 @@ macro_rules! define_node {
 
             fn get_value(&'i self, $get_hndstate: &mut crate::State) -> Result<crate::Value, crate::Error<'i>> {
                 let $get_hndself = self;
-                $get_hndstate.check_timer()?;
+                $get_hndstate.check_timer().without_context()?;
                 $get_hnd
             }
 
@@ -83,10 +84,10 @@ macro_rules! define_node {
             #[allow(non_camel_case_types)]
             pub struct [<_noderesolver_$name>];
             impl crate::syntax_tree::resolver::NodeResolver for [<_noderesolver_$name>] {
-                fn handle<'i>(&self, pair: &pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle<'i>(&self, pair: &'i pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pair(pair)
                 }
-                fn handle_pratt<'i>(&self, pair: &crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle_pratt<'i>(&self, pair: &'i crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pratt(pair)
                 }
                 fn rules(&self) -> &'static [crate::Rule] {
@@ -177,10 +178,10 @@ macro_rules! define_node {
             #[allow(non_camel_case_types)]
             pub struct [<_noderesolver_$name>];
             impl crate::syntax_tree::resolver::NodeResolver for [<_noderesolver_$name>] {
-                fn handle<'i>(&self, pair: &pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle<'i>(&self, pair: &'i pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pair(pair)
                 }
-                fn handle_pratt<'i>(&self, pair: &crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle_pratt<'i>(&self, pair: &'i crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pratt(pair)
                 }
                 fn rules(&self) -> &'static [crate::Rule] {

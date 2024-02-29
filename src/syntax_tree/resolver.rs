@@ -10,8 +10,8 @@ use crate::{
 use std::collections::HashMap;
 
 pub trait NodeResolver: Sync {
-    fn handle<'i>(&self, pair: &Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>;
-    fn handle_pratt<'i>(&self, pair: &PrattPair<'i>) -> Result<Node<'i>, Error<'i>>;
+    fn handle<'i>(&self, pair: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>;
+    fn handle_pratt<'i>(&self, pair: &'i PrattPair<'i>) -> Result<Node<'i>, Error<'i>>;
     fn rules(&self) -> &'static [Rule];
 }
 inventory::collect!(&'static dyn NodeResolver);

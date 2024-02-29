@@ -25,10 +25,10 @@ macro_rules! define_prattnode {
         }
 
         impl<'i> crate::AstNode<'i> for $name<'i> {
-            fn from_pair(input: &::pest::iterators::Pair<crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
-                crate::syntax_tree::pratt::Parser::parse(input.into_inner())
+            fn from_pair(input: &'i ::pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                crate::syntax_tree::pratt::Parser::parse(&input.into_inner())
             }
-            fn from_pratt($new_hndvar: &crate::syntax_tree::pratt::PrattPair) -> Result<crate::Node<'i>, crate::Error<'i>> $new_hnd
+            fn from_pratt($new_hndvar: &'i crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> $new_hnd
 
             fn get_value(&self, $get_hndstate: &mut crate::State) -> Result<crate::Value, crate::Error<'i>> {
                 let $get_hndself = self;
@@ -64,10 +64,10 @@ macro_rules! define_prattnode {
             #[allow(non_camel_case_types)]
             pub struct [<_noderesolver_$name>];
             impl crate::syntax_tree::resolver::NodeResolver for [<_noderesolver_$name>] {
-                fn handle<'i>(&self, pair: &pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle<'i>(&self, pair: &'i pest::iterators::Pair<'i, crate::pest::Rule>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pair(pair)
                 }
-                fn handle_pratt<'i>(&self, pair: &crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
+                fn handle_pratt<'i>(&self, pair: &'i crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> {
                     $name::from_pratt(pair)
                 }
                 fn rules(&self) -> &'static [crate::Rule] {
