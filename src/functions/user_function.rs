@@ -10,18 +10,17 @@ use super::{
 /// A user-defined function
 /// This is a function defined in lavendish, and is not a part of the standard library
 #[derive(Debug)]
-pub struct UserDefinedFunction<'i> {
+pub struct UserDefinedFunction {
     name: String,
     args: Vec<(String, ValueType)>,
     returns: ValueType,
     src: Vec<String>,
-    body: Vec<Node<'i>>,
-
+    // body: Vec<Node<'i>>,
     src_line_offset: usize,
 
     own_docs: UserFunctionDocumentation,
 }
-impl<'i> ParserFunction for UserDefinedFunction<'i> {
+impl<'i> ParserFunction for UserDefinedFunction {
     fn name(&self) -> &str {
         &self.name
     }
@@ -60,18 +59,18 @@ impl<'i> ParserFunction for UserDefinedFunction<'i> {
             args: self.args.clone(),
             returns: self.returns,
             src: self.src.clone(),
-            body: Self::compile(&self.src).unwrap(),
-
+            // body: Self::compile(&self.src).unwrap(),
             src_line_offset: self.src_line_offset,
 
             own_docs: self.own_docs.clone(),
         })
     }
 
-    fn call(&self, state: &mut State) -> Result<Value, Error<'i>> {
+    fn call(&self, state: &mut State) -> Result<Value, Error<'_>> {
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
-        for node in self.body.iter().take(self.body.len() - 1) {
+        let body = Self::compile(&self.src)?;
+        for node in body.iter().take(body.len() - 1) {
             match node.get_value(state) {
                 Ok(_) => {}
                 Err(e) if matches!(e.details, ErrorDetails::Return { .. }) => {
@@ -87,7 +86,6 @@ impl<'i> ParserFunction for UserDefinedFunction<'i> {
         }
 
         // Execute the last node
-        let body = &self.body;
         let body = body.iter().last().unwrap();
         match body.get_value(state) {
             Ok(v) => Ok(v.as_type(self.returns)?),
@@ -99,24 +97,22 @@ impl<'i> ParserFunction for UserDefinedFunction<'i> {
     }
 }
 
-impl<'i> UserDefinedFunction<'i> {
+impl<'i> UserDefinedFunction {
     /// Create a new user-defined function
-    pub fn new(name: &str, src: Vec<String>) -> Result<Self, Error<'i>> {
+    pub fn new(name: &'i str, src: Vec<String>) -> Result<Self, Error<'i>> {
         // Check that the function is valid
         if src.is_empty() {
-            /* Should be caught by the grammar */
             return oops!(Internal {
-                msg: "User function must have at least one line".to_string()
+                msg: "Functions must have at least one line".to_string()
             });
         }
 
-        let body = Self::compile(&src)?;
-
+        Self::compile(&src)?;
         Ok(UserDefinedFunction {
             name: name.to_string(),
             args: vec![],
             returns: ValueType::Any,
-            body,
+            //    body,
             src,
             src_line_offset: 0,
             own_docs: UserFunctionDocumentation {
@@ -128,7 +124,7 @@ impl<'i> UserDefinedFunction<'i> {
         })
     }
 
-    pub fn compile(src: &Vec<String>) -> Result<Vec<Node<'i>>, Error<'i>> {
+    pub fn compile(src: &'i Vec<String>) -> Result<Vec<Node<'i>>, Error<'i>> {
         src.iter()
             .map(|l| crate::pest::parse_input(l, Rule::EXPR))
             .collect::<Result<Vec<_>, _>>()

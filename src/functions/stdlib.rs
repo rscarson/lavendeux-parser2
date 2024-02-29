@@ -42,7 +42,7 @@ mod test {
 
         let mut errors = vec![];
 
-        for (name, function) in stdlib {
+        for (name, function) in &stdlib {
             let examples = function.documentation().examples().unwrap();
             let skip_example = examples.starts_with("#skip");
             let examples = examples.trim_start_matches("#skip").trim();

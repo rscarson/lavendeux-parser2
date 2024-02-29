@@ -52,8 +52,7 @@ define_prattnode!(
             right,
             operator,
             token: token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         // Short-circuit evaluation

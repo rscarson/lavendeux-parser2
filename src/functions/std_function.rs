@@ -43,7 +43,7 @@ pub trait ManageArguments {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error<'_>>;
+    ) -> Result<(), Error<'static>>;
 }
 impl ManageArguments for Vec<(&str, FunctionArgument)> {
     fn arg_count_span(&self) -> (usize, usize) {
@@ -62,7 +62,7 @@ impl ManageArguments for Vec<(&str, FunctionArgument)> {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error<'_>> {
+    ) -> Result<(), Error<'static>> {
         let mut values = values.into_iter().peekable();
 
         for (i, (name, arg)) in self.iter().enumerate() {
@@ -153,7 +153,7 @@ where
     fn call(&self, state: &mut State) -> Result<Value, Error<'_>>;
 
     /// Loads the arguments into the state
-    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error<'_>> {
+    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error<'static>> {
         match self
             .expected_arguments()
             .map_arguments(values, state, self.signature())

@@ -85,8 +85,7 @@ define_node!(
                 then_branch,
                 else_branch,
                 token: token.clone(),
-            }
-            .boxed();
+            }.boxed();
         }
 
         Ok(else_branch)
@@ -166,8 +165,7 @@ define_node!(
             match_on,
             cases,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
 
     value = (this, state) {
@@ -372,8 +370,7 @@ define_prattnode!(
             then_branch,
             else_branch,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let condition = this.condition.get_value(state)?;

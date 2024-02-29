@@ -77,11 +77,15 @@ define_stdfunction!(
                     },
                     Ok(res) => Ok(Value::from(res)),
 
-                    Err(e) => Err(e),
+                    Err(e) => {
+                        let e: crate::Error<'static> = e;
+                        Err(e)
+                    },
                 }
             },
 
             Err(e) => {
+                let e: crate::Error<'static> = e;
                 state.scope_out();
                 Err(e)
             }

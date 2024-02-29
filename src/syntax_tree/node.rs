@@ -49,7 +49,7 @@ macro_rules! define_node {
                 Self::from_pair($new_hndvar)
             }
 
-            fn get_value<'state>(&self, $get_hndstate: &'state mut crate::State) -> Result<crate::Value, crate::Error<'state>> {
+            fn get_value(&self, $get_hndstate: &mut crate::State) -> Result<crate::Value, crate::Error<'i>> {
                 let $get_hndself = self;
                 $get_hndstate.check_timer()?;
                 $get_hnd
@@ -135,7 +135,7 @@ macro_rules! define_node {
                 Self::from_pair($new_hndvar)
             }
 
-            fn get_value<'state>(&self, $get_hndstate: &'state mut crate::State) -> Result<crate::Value, crate::Error<'state>> {
+            fn get_value(&self, $get_hndstate: &mut crate::State) -> Result<crate::Value, crate::Error<'i>> {
                 let $get_hndself = self;
                 $get_hndstate.check_timer()?;
                 $get_hnd

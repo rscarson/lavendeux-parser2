@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
     pest::Rule,
+    token::ToToken,
 };
 use polyvalue::{
     operations::{
@@ -74,27 +75,18 @@ impl AssignmentTarget<'_> {
             }
 
             Rule::ARRAY_TERM => {
-                todo!(); /*
-                         let array = collections::Array::from_pair(input.first_pair())?;
-                         let array = array
-                             .as_any()
-                             .downcast_ref::<collections::Array<'_>>()
-                             .unwrap();
-                         if array
-                             .elements
-                             .iter()
-                             .any(|e| e.token().rule != Rule::identifier)
-                         {
-                             return oops!(ConstantValue, input.as_token());
-                         } else if array.elements.is_empty() {
-                             return oops!(ArrayEmpty, input.as_token());
-                         }
-                         let ids = array
-                             .elements
-                             .iter()
-                             .map(|e| e.token().input.trim().to_string())
-                             .collect::<Vec<_>>();
-                         Ok(Self::Destructure(ids)) */
+                let ids = input
+                    .first_pair()
+                    .into_inner()
+                    .map(|e| {
+                        if e.as_rule() != Rule::identifier {
+                            oops!(ConstantValue, e.to_token())
+                        } else {
+                            Ok(e.as_str().to_string())
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Self::Destructure(ids))
             }
             _ => {
                 return oops!(ConstantValue, input.as_token());
@@ -303,8 +295,7 @@ define_prattnode!(
             op,
             value,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let rhs = this.value.get_value(state)?;

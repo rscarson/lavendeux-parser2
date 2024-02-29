@@ -46,8 +46,7 @@ define_prattnode!(
             right,
             operator,
             token: token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let left = this.left.get_value(state)?;

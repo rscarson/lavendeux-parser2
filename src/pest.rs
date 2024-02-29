@@ -105,17 +105,17 @@ macro_rules! assert_tree_error {
 /// The trait is used to build the AST, and to evaluate it by getting the
 /// value of each node
 pub trait AstNode<'i>: std::fmt::Display + std::fmt::Debug + Send + Sync {
-    fn from_pair(input: Pair<'i, Rule>) -> Result<Node<'i>, Error<'_>>
+    fn from_pair(input: Pair<'i, Rule>) -> Result<Box<dyn AstNode<'i>>, Error<'_>>
     where
         Self: Sized;
 
     fn from_pratt(
         input: crate::syntax_tree::pratt::PrattPair<'i>,
-    ) -> Result<crate::Node<'i>, crate::Error<'_>>
+    ) -> Result<Box<dyn AstNode<'i>>, crate::Error<'_>>
     where
         Self: Sized;
 
-    fn get_value<'state>(&self, state: &'state mut State) -> Result<Value, Error<'state>>;
+    fn get_value(&self, state: &mut State) -> Result<Value, Error<'i>>;
     fn token(&self) -> &Token<'i>;
     fn token_offsetline(&mut self, offset: usize);
     fn boxed(self) -> Node<'i>

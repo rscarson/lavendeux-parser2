@@ -85,7 +85,7 @@ impl State {
     }
 
     /// Checks the timeout of the parser
-    pub fn check_timer(&self) -> Result<(), Error<'_>> {
+    pub fn check_timer(&self) -> Result<(), Error<'static>> {
         if !self.timeout.is_zero() && self.parse_starttime.elapsed() > self.timeout {
             Err(ErrorDetails::Timeout.into())
         } else {
@@ -114,7 +114,7 @@ impl State {
     /// Creates a new scope from this state
     /// A limit is placed on the depth of scopes that can be created
     /// This is to prevent infinite recursion
-    pub fn scope_into(&mut self) -> Result<(), Error<'_>> {
+    pub fn scope_into(&mut self) -> Result<(), Error<'static>> {
         if self.depth >= Self::MAX_DEPTH {
             return Err(ErrorDetails::StackOverflow.into());
         }
@@ -293,7 +293,10 @@ impl State {
 
     /// Registers a function in the state
     /// See [crate::define_stdfunction] for an example of how to define a function
-    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error<'_>> {
+    pub fn register_function(
+        &mut self,
+        function: impl ParserFunction,
+    ) -> Result<(), Error<'static>> {
         let name = function.name();
         if self.is_system_function(name) {
             return oops!(ReadOnlyFunction {
@@ -310,7 +313,7 @@ impl State {
     pub fn unregister_function(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<dyn ParserFunction>>, Error<'_>> {
+    ) -> Result<Option<Box<dyn ParserFunction>>, Error<'static>> {
         if self.is_system_function(name) {
             oops!(ReadOnlyFunction {
                 name: name.to_string()

@@ -27,8 +27,7 @@ define_prattnode!(
             expression,
             decorator,
             token: token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let value = this.expression.get_value(state)?;
@@ -69,8 +68,7 @@ define_prattnode!(
             expression,
             target,
             token: token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let value = this.expression.get_value(state)?;
@@ -175,6 +173,11 @@ define_node!(
         ",
     }
 );
+impl ConstantValue<'_> {
+    pub fn new<'i>(value: Value, token: crate::Token<'i>) -> Node<'i> {
+        Self { value, token }.boxed()
+    }
+}
 
 define_node!(
     ValueLiteral { value: Value },

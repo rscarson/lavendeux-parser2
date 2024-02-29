@@ -41,8 +41,7 @@ define_prattnode!(
             right,
             operator,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         Value::arithmetic_op(
@@ -113,8 +112,7 @@ define_prattnode!(
             is_postfix,
             is_increment,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         let value = state.get_variable(&this.base).unwrap_or(Value::i64(0));

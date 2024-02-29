@@ -40,8 +40,7 @@ define_prattnode!(
             right,
             operator,
             token,
-        }
-        .boxed())
+        }.boxed())
     },
     value = (this, state) {
         Value::bitwise_op(

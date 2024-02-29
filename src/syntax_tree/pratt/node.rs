@@ -30,7 +30,7 @@ macro_rules! define_prattnode {
             }
             fn from_pratt($new_hndvar: crate::syntax_tree::pratt::PrattPair<'i>) -> Result<crate::Node<'i>, crate::Error<'i>> $new_hnd
 
-            fn get_value<'state>(&self, $get_hndstate: &'state mut crate::State) -> Result<crate::Value, crate::Error<'state>> {
+            fn get_value(&self, $get_hndstate: &mut crate::State) -> Result<crate::Value, crate::Error<'i>> {
                 let $get_hndself = self;
                 $get_hndstate.check_timer()?;
                 $get_hnd

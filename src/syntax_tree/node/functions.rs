@@ -125,14 +125,39 @@ define_prattnode!(
         let rhs = children.next().unwrap();
         let mut rhs = rhs.first_pair().into_inner();
 
-        let mut name = lhs.first_pair().as_str().to_string();
         let mut arguments = Vec::new();
 
         // Check if the function is called in object mode
+        let mut name = Option::<String>::None;
         if let Some(node) = rhs.peek() {
             if node.as_rule() == Rule::POSTFIX_OBJECTMODE {
-                name = rhs.next().unwrap().into_inner().next().unwrap().as_str().to_string();
-                arguments.push(lhs.to_ast_node()?);
+                name = Some(rhs.next().unwrap().into_inner().next().unwrap().as_str().to_string());
+
+                if name.as_deref() == Some("help") && lhs.as_rule() == Rule::identifier {
+                    let _token = lhs.as_token();
+                    arguments.push(
+                        literals::ConstantValue::new(
+                            Value::from(lhs.first_pair().as_str().to_string()),
+                            _token
+                        )
+                    );
+                } else {
+                    arguments.push(lhs.to_ast_node()?);
+                }
+            }
+        } else if name.is_none() {
+            name = Some(lhs.first_pair().as_str().to_string());
+            if let Some(next) = rhs.next() {
+                if name.as_deref() == Some("help") && next.as_rule() == Rule::identifier {
+                    arguments.push(
+                        literals::ConstantValue::new(
+                            Value::from(next.as_str().to_string()),
+                            next.to_token()
+                        )
+                    );
+                } else {
+                    arguments.push(next.to_ast_node()?);
+                }
             }
         }
 
@@ -146,7 +171,7 @@ define_prattnode!(
         token.references = arguments.first().and_then(|c| c.token().references.clone());
 
         Ok(Self {
-            name,
+            name: name.unwrap(),
             arguments,
             token,
         }.boxed())
@@ -154,19 +179,12 @@ define_prattnode!(
 
     value = (this, state) {
         if &this.name == "help" {
-            let filter = this.arguments.get(0);
-            // Try to get filter as an identifier
-            let filter_text = None/*if let Some(filter) = filter {
-                if let Some(id) = filter.as_any().downcast_ref::<literals::Identifier<'_>>() {
-                    Some(id.name.clone())
-                } else {
-                    Some(filter.get_value(state)?.to_string())
-                }
-            } else {
-                None
-            }*/;
+            let filter = match this.arguments.get(0) {
+                Some(n) => Some(n.get_value(state)?.to_string()),
+                None => None
+            };
 
-            let help_text = state.help(filter_text);
+            let help_text = state.help(filter);
             return Ok(Value::from(help_text));
         }
 

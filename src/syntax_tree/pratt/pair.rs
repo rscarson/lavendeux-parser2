@@ -13,8 +13,8 @@ pub enum PrattPair<'i> {
     Prefix(Pair<'i, Rule>, Box<PrattPair<'i>>),
     Postfix(Box<PrattPair<'i>>, Pair<'i, Rule>),
 }
-impl<'a> PrattPair<'a> {
-    pub fn into_inner(self) -> std::vec::IntoIter<PrattPair<'a>> {
+impl<'i> PrattPair<'i> {
+    pub fn into_inner(self) -> std::vec::IntoIter<PrattPair<'i>> {
         match self {
             PrattPair::Primary(p) => vec![PrattPair::Primary(p)],
             PrattPair::Infix(l, o, r) => {
@@ -26,7 +26,7 @@ impl<'a> PrattPair<'a> {
         .into_iter()
     }
 
-    pub fn first_pair(self) -> Pair<'a, Rule> {
+    pub fn first_pair(self) -> Pair<'i, Rule> {
         match self {
             PrattPair::Primary(p) => p,
             PrattPair::Infix(l, _, _) => l.first_pair(),
@@ -44,7 +44,7 @@ impl<'a> PrattPair<'a> {
         }
     }
 
-    pub fn as_token(&self) -> Token<'a> {
+    pub fn as_token(&self) -> Token<'i> {
         match self {
             PrattPair::Primary(p) => p.to_token(),
             PrattPair::Infix(l, o, r) => {
