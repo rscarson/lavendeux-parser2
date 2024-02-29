@@ -53,7 +53,7 @@ define_stdfunction!(
         let file = std::fs::File::open(file)?;
         let lines = std::io::BufReader::new(file)
             .lines()
-            .map(|f| Ok::<Value, Error>(Value::from(f?)))
+            .map(|f| Ok::<Value, Error<'_>>(Value::from(f?)))
             .collect::<Result<Vec<_>, _>>()?;
 
         // return last n

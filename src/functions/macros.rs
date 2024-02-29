@@ -99,7 +99,7 @@ macro_rules! define_stdfunction {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, $hndstate: &mut State) -> Result<polyvalue::Value, $crate::Error> $handler
+                fn call(&self, $hndstate: &mut State) -> Result<polyvalue::Value, $crate::Error<'_>> $handler
             }
 
             inventory::submit! {
@@ -203,9 +203,9 @@ macro_rules! define_stddecorator {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut $crate::State) -> Result<polyvalue::Value, $crate::Error> {
+                fn call(&self, state: &mut $crate::State) -> Result<polyvalue::Value, $crate::Error<'_>> {
                     let $hndval = state.get_variable(stringify!($aname)).unwrap();
-                    let value: Result<String, Error> = $handler;
+                    let value: Result<String, Error<'_>> = $handler;
                     Ok(value?.into())
                 }
             }

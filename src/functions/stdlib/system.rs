@@ -66,15 +66,25 @@ define_stdfunction!(
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&expression, state)?.get_value(state);
-        state.scope_out();
+        match Lavendeux::eval(&expression, state) {
+            Ok(res) => {
+                let res = res.get_value(state);
+                state.scope_out();
+                match res {
+                    Ok(res) if res.len() == 1 => {
+                        let res = res.as_a::<Vec<Value>>().unwrap();
+                        Ok(Value::from(res[0].clone()))
+                    },
+                    Ok(res) => Ok(Value::from(res)),
 
-        let res = res?;
-        if res.len() == 1 {
-            let res = res.as_a::<Vec<Value>>().unwrap();
-            Ok(Value::from(res[0].clone()))
-        } else {
-            Ok(Value::from(res))
+                    Err(e) => Err(e),
+                }
+            },
+
+            Err(e) => {
+                state.scope_out();
+                Err(e)
+            }
         }
     },
 );

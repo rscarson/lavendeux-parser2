@@ -3,10 +3,10 @@ use crate::{error::ErrorDetails, pest::Rule, Error, Token};
 /// Wraps a syntax error into an Error<'i>.
 pub trait WrapSyntaxError<'i, T, R> {
     /// Turns a pest error into an Error<'i>.
-    fn wrap_syntax_error(self, input: &str) -> Result<T, Error<'i>>;
+    fn wrap_syntax_error(self, input: &'i str) -> Result<T, Error<'i>>;
 }
 impl<'i, T> WrapSyntaxError<'i, T, Rule> for Result<T, pest::error::Error<Rule>> {
-    fn wrap_syntax_error(self, input: &str) -> Result<T, Error<'i>> {
+    fn wrap_syntax_error(self, input: &'i str) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -14,7 +14,7 @@ impl<'i, T> WrapSyntaxError<'i, T, Rule> for Result<T, pest::error::Error<Rule>>
                     pest::error::InputLocation::Pos(pos) => pos..(input.len()),
                     pest::error::InputLocation::Span(span) => span.0..span.1,
                 };
-                let span = input[span].to_string();
+                let span = &input[span];
 
                 let line = match e.line_col {
                     pest::error::LineColLocation::Pos((line, _)) => line,
@@ -37,7 +37,7 @@ impl<'i, T> WrapSyntaxError<'i, T, Rule> for Result<T, pest::error::Error<Rule>>
 /// Wrap a 3rd party error into an Error<'i>.
 pub trait WrapExternalError<'i, T> {
     /// Adds a context [Token]
-    fn with_context(self, context: &Token) -> Result<T, Error<'i>>;
+    fn with_context(self, context: &Token<'i>) -> Result<T, Error<'i>>;
 
     /// Adds a source [Error<'i>]
     fn with_source(self, source: Error<'i>) -> Result<T, Error<'i>>;
@@ -50,7 +50,7 @@ impl<'i, T, E> WrapExternalError<'i, T> for Result<T, E>
 where
     E: Into<Error<'i>>,
 {
-    fn with_context(self, context: &Token) -> Result<T, Error<'i>> {
+    fn with_context(self, context: &Token<'i>) -> Result<T, Error<'i>> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into().with_context(context.clone())),

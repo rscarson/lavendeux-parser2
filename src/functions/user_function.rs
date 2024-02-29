@@ -21,7 +21,7 @@ pub struct UserDefinedFunction<'i> {
 
     own_docs: UserFunctionDocumentation,
 }
-impl ParserFunction for UserDefinedFunction<'_> {
+impl<'i> ParserFunction for UserDefinedFunction<'i> {
     fn name(&self) -> &str {
         &self.name
     }
@@ -68,7 +68,7 @@ impl ParserFunction for UserDefinedFunction<'_> {
         })
     }
 
-    fn call(&self, state: &mut State) -> Result<Value, Error> {
+    fn call(&self, state: &mut State) -> Result<Value, Error<'i>> {
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
         for node in self.body.iter().take(self.body.len() - 1) {
@@ -99,9 +99,9 @@ impl ParserFunction for UserDefinedFunction<'_> {
     }
 }
 
-impl UserDefinedFunction<'_> {
+impl<'i> UserDefinedFunction<'i> {
     /// Create a new user-defined function
-    pub fn new(name: &str, src: Vec<String>) -> Result<Self, Error> {
+    pub fn new(name: &str, src: Vec<String>) -> Result<Self, Error<'i>> {
         // Check that the function is valid
         if src.is_empty() {
             /* Should be caught by the grammar */
@@ -128,7 +128,7 @@ impl UserDefinedFunction<'_> {
         })
     }
 
-    pub fn compile(src: &Vec<String>) -> Result<Vec<Node>, Error> {
+    pub fn compile(src: &Vec<String>) -> Result<Vec<Node<'i>>, Error<'i>> {
         src.iter()
             .map(|l| crate::pest::parse_input(l, Rule::EXPR))
             .collect::<Result<Vec<_>, _>>()

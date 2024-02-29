@@ -20,7 +20,7 @@ impl Parser {
         pratt
     }
 
-    pub fn parse<'i>(input: &'i Pairs<'i, Rule>) -> Result<Node<'i>, Error<'i>> {
+    pub fn parse<'i>(input: Pairs<'i, Rule>) -> Result<Node<'i>, Error<'i>> {
         let pratt = Self::get_pratt_parser();
         let mut pratt = pratt
             .map_primary(|primary| PrattPair::Primary(primary))

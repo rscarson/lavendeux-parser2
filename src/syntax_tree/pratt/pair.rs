@@ -26,7 +26,7 @@ impl<'a> PrattPair<'a> {
         .into_iter()
     }
 
-    pub fn first_pair(&self) -> &Pair<'_, Rule> {
+    pub fn first_pair(self) -> Pair<'a, Rule> {
         match self {
             PrattPair::Primary(p) => p,
             PrattPair::Infix(l, _, _) => l.first_pair(),
@@ -44,7 +44,7 @@ impl<'a> PrattPair<'a> {
         }
     }
 
-    pub fn as_token(&self) -> Token {
+    pub fn as_token(&self) -> Token<'a> {
         match self {
             PrattPair::Primary(p) => p.to_token(),
             PrattPair::Infix(l, o, r) => {
@@ -78,7 +78,7 @@ impl<'a> PrattPair<'a> {
 impl<'i> ToAstNode<'i> for PrattPair<'i> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
+    fn to_ast_node(self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
         resolver::handle_pratt(self)
     }
 }

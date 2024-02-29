@@ -74,23 +74,27 @@ impl AssignmentTarget<'_> {
             }
 
             Rule::ARRAY_TERM => {
-                let array = collections::Array::from_pair(input.first_pair())?;
-                let array = array.as_any().downcast_ref::<collections::Array>().unwrap();
-                if array
-                    .elements
-                    .iter()
-                    .any(|e| e.token().rule != Rule::identifier)
-                {
-                    return oops!(ConstantValue, input.as_token());
-                } else if array.elements.is_empty() {
-                    return oops!(ArrayEmpty, input.as_token());
-                }
-                let ids = array
-                    .elements
-                    .iter()
-                    .map(|e| e.token().input.trim().to_string())
-                    .collect::<Vec<_>>();
-                Ok(Self::Destructure(ids))
+                todo!(); /*
+                         let array = collections::Array::from_pair(input.first_pair())?;
+                         let array = array
+                             .as_any()
+                             .downcast_ref::<collections::Array<'_>>()
+                             .unwrap();
+                         if array
+                             .elements
+                             .iter()
+                             .any(|e| e.token().rule != Rule::identifier)
+                         {
+                             return oops!(ConstantValue, input.as_token());
+                         } else if array.elements.is_empty() {
+                             return oops!(ArrayEmpty, input.as_token());
+                         }
+                         let ids = array
+                             .elements
+                             .iter()
+                             .map(|e| e.token().input.trim().to_string())
+                             .collect::<Vec<_>>();
+                         Ok(Self::Destructure(ids)) */
             }
             _ => {
                 return oops!(ConstantValue, input.as_token());

@@ -10,8 +10,8 @@ use crate::{
 use std::collections::HashMap;
 
 pub trait NodeResolver: Sync {
-    fn handle<'i>(&self, pair: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>;
-    fn handle_pratt<'i>(&self, pair: &'i PrattPair<'i>) -> Result<Node<'i>, Error<'i>>;
+    fn handle<'i>(&self, pair: Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>;
+    fn handle_pratt<'i>(&self, pair: PrattPair<'i>) -> Result<Node<'i>, Error<'i>>;
     fn rules(&self) -> &'static [Rule];
 }
 inventory::collect!(&'static dyn NodeResolver);
@@ -28,7 +28,7 @@ lazy_static! {
     pub static ref NODES: HashMap<Rule, &'static dyn NodeResolver> = all();
 }
 
-pub fn handle_pair<'i>(pair: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>> {
+pub fn handle_pair<'i>(pair: Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>> {
     NODES
         .get(&pair.as_rule())
         .or_error(ErrorDetails::Internal {
@@ -37,7 +37,7 @@ pub fn handle_pair<'i>(pair: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>> 
         .handle(pair)
 }
 
-pub fn handle_pratt<'i>(pair: &'i PrattPair<'i>) -> Result<Node<'i>, Error<'i>> {
+pub fn handle_pratt<'i>(pair: PrattPair<'i>) -> Result<Node<'i>, Error<'i>> {
     NODES
         .get(&pair.as_rule())
         .or_error(ErrorDetails::Internal {

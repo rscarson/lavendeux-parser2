@@ -63,7 +63,7 @@ define_node!(
         if input.len() == 1 {
             return input.next().unwrap().to_ast_node();
         } else {
-            pratt::Parser::parse(&input)
+            pratt::Parser::parse(input)
         }
     },
     value = (this, state) {

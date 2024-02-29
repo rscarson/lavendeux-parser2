@@ -76,7 +76,7 @@ where
 
 impl std::error::Error for Error<'_> {}
 impl std::fmt::Display for Error<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let token_part = if let Some(context) = &self.context {
             format!("| {}\n= ", context)
         } else {

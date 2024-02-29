@@ -156,15 +156,15 @@ define_prattnode!(
         if &this.name == "help" {
             let filter = this.arguments.get(0);
             // Try to get filter as an identifier
-            let filter_text = if let Some(filter) = filter {
-                if let Some(id) = filter.as_any().downcast_ref::<literals::Identifier>() {
+            let filter_text = None/*if let Some(filter) = filter {
+                if let Some(id) = filter.as_any().downcast_ref::<literals::Identifier<'_>>() {
                     Some(id.name.clone())
                 } else {
                     Some(filter.get_value(state)?.to_string())
                 }
             } else {
                 None
-            };
+            }*/;
 
             let help_text = state.help(filter_text);
             return Ok(Value::from(help_text));

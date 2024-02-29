@@ -105,36 +105,33 @@ macro_rules! assert_tree_error {
 /// The trait is used to build the AST, and to evaluate it by getting the
 /// value of each node
 pub trait AstNode<'i>: std::fmt::Display + std::fmt::Debug + Send + Sync {
-    fn from_pair(input: &'i Pair<'i, Rule>) -> Result<Node<'i>, Error<'i>>
+    fn from_pair(input: Pair<'i, Rule>) -> Result<Node<'i>, Error<'_>>
     where
         Self: Sized;
 
     fn from_pratt(
-        input: &'i crate::syntax_tree::pratt::PrattPair<'i>,
-    ) -> Result<crate::Node<'i>, crate::Error<'i>>
+        input: crate::syntax_tree::pratt::PrattPair<'i>,
+    ) -> Result<crate::Node<'i>, crate::Error<'_>>
     where
         Self: Sized;
 
-    fn get_value(&'i self, state: &mut State) -> Result<Value, Error<'i>>;
-    fn token(&self) -> &Token;
+    fn get_value<'state>(&self, state: &'state mut State) -> Result<Value, Error<'state>>;
+    fn token(&self) -> &Token<'i>;
     fn token_offsetline(&mut self, offset: usize);
     fn boxed(self) -> Node<'i>
     where
         Self: Sized + 'static;
-
-    fn as_any(&'i self) -> &'i dyn std::any::Any;
-    fn as_any_mut(&'i mut self) -> &'i mut dyn std::any::Any;
 }
 
 /// A trait used to convert a pest pair into an AST node
 /// This is used to build the AST
 pub trait ToAstNode<'i> {
-    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>>;
+    fn to_ast_node(self) -> Result<Box<dyn AstNode<'i>>, Error<'i>>;
 }
 impl<'i> ToAstNode<'i> for Pair<'i, Rule> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(&'i self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
+    fn to_ast_node(self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
         resolver::handle_pair(self)
     }
 }

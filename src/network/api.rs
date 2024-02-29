@@ -18,7 +18,7 @@ impl ApiDefinition {
         endpoint: Option<&str>,
         body: Option<String>,
         mut headers: HashMap<String, String>,
-    ) -> Result<Value, Error> {
+    ) -> Result<Value, Error<'static>> {
         let endpoint = endpoint.unwrap_or_default().trim_start_matches("/");
         let target = format!("{}/{}", &self.base_url, endpoint);
         if let Some(auth_key) = &self.auth_key {

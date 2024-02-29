@@ -1,5 +1,6 @@
 //! test
 #![warn(missing_docs)]
+#![deny(rust_2018_idioms)]
 
 // Language documentation
 // Regenerate this using:

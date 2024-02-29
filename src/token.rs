@@ -36,10 +36,10 @@ impl Token<'_> {
 
 /// A trait used to convert a pest pair into a token
 pub trait ToToken<'i> {
-    fn to_token(&'i self) -> Token<'i>;
+    fn to_token(&self) -> Token<'i>;
 }
-impl<'i> ToToken<'i> for Pair<'_, Rule> {
-    fn to_token(&'i self) -> Token<'i> {
+impl<'i> ToToken<'i> for Pair<'i, Rule> {
+    fn to_token(&self) -> Token<'i> {
         Token {
             line: self.as_span().start_pos().line_col().0,
             rule: self.as_rule(),

@@ -43,7 +43,7 @@ pub trait ManageArguments {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error>;
+    ) -> Result<(), Error<'_>>;
 }
 impl ManageArguments for Vec<(&str, FunctionArgument)> {
     fn arg_count_span(&self) -> (usize, usize) {
@@ -62,7 +62,7 @@ impl ManageArguments for Vec<(&str, FunctionArgument)> {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), Error<'_>> {
         let mut values = values.into_iter().peekable();
 
         for (i, (name, arg)) in self.iter().enumerate() {
@@ -150,10 +150,10 @@ where
     fn documentation_mut(&mut self) -> &mut dyn FunctionDocumentation;
 
     /// Call the function's handler - use exec instead to map arguments first
-    fn call(&self, state: &mut State) -> Result<Value, Error>;
+    fn call(&self, state: &mut State) -> Result<Value, Error<'_>>;
 
     /// Loads the arguments into the state
-    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error> {
+    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error<'_>> {
         match self
             .expected_arguments()
             .map_arguments(values, state, self.signature())
@@ -199,7 +199,7 @@ where
         values: &[Value],
         state: &mut State,
         arg1_references: Option<&str>,
-    ) -> Result<Value, Error> {
+    ) -> Result<Value, Error<'_>> {
         state.scope_into()?;
         state.lock_scope();
         self.load_arguments(values, state)?;

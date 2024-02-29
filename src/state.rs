@@ -85,7 +85,7 @@ impl State {
     }
 
     /// Checks the timeout of the parser
-    pub fn check_timer(&self) -> Result<(), Error> {
+    pub fn check_timer(&self) -> Result<(), Error<'_>> {
         if !self.timeout.is_zero() && self.parse_starttime.elapsed() > self.timeout {
             Err(ErrorDetails::Timeout.into())
         } else {
@@ -114,7 +114,7 @@ impl State {
     /// Creates a new scope from this state
     /// A limit is placed on the depth of scopes that can be created
     /// This is to prevent infinite recursion
-    pub fn scope_into(&mut self) -> Result<(), Error> {
+    pub fn scope_into(&mut self) -> Result<(), Error<'_>> {
         if self.depth >= Self::MAX_DEPTH {
             return Err(ErrorDetails::StackOverflow.into());
         }
@@ -293,7 +293,7 @@ impl State {
 
     /// Registers a function in the state
     /// See [crate::define_stdfunction] for an example of how to define a function
-    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
+    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error<'_>> {
         let name = function.name();
         if self.is_system_function(name) {
             return oops!(ReadOnlyFunction {
@@ -310,7 +310,7 @@ impl State {
     pub fn unregister_function(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<dyn ParserFunction>>, Error> {
+    ) -> Result<Option<Box<dyn ParserFunction>>, Error<'_>> {
         if self.is_system_function(name) {
             oops!(ReadOnlyFunction {
                 name: name.to_string()
@@ -342,7 +342,7 @@ impl State {
         name: &str,
         args: Vec<Value>,
         arg1_references: Option<&str>,
-    ) -> Result<Value, Error> {
+    ) -> Result<Value, Error<'_>> {
         let function = self.get_function(name).ok_or(ErrorDetails::FunctionName {
             name: name.to_string(),
         })?;
@@ -350,7 +350,7 @@ impl State {
     }
 
     /// Calls a decorator function
-    pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error> {
+    pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error<'_>> {
         let name = format!("@{name}");
         match self.call_function(&name, vec![value], None) {
             Ok(value) => Ok(value.to_string()),

@@ -49,7 +49,7 @@ define_node!(
         let token = input.to_token();
         let mut children = input.into_inner();
 
-        let mut pairs: Vec<(Node, Node)> = Vec::new();
+        let mut pairs: Vec<(Node<'i>, Node<'i>)> = Vec::new();
         while children.peek().is_some() {
             let key = children.next().unwrap().to_ast_node()?;
             let value = children.next().unwrap().to_ast_node()?;

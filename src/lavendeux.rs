@@ -52,7 +52,7 @@ impl Lavendeux {
     }
 
     /// Register a function with the parser
-    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
+    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error<'_>> {
         self.state.register_function(function)
     }
 
@@ -78,7 +78,7 @@ impl Lavendeux {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
 
-        let value = std::thread::scope(|s| -> Result<Value, Error> {
+        let value = std::thread::scope(|s| -> Result<Value, Error<'i>> {
             let handle = std::thread::Builder::new()
                 .stack_size(self.options.stack_size)
                 .name("lavendeux-parser".to_string())
