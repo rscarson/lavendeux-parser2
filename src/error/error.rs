@@ -61,7 +61,7 @@ impl<'i> Error {
     }
 }
 
-impl<'i, T> From<T> for Error
+impl<T> From<T> for Error
 where
     T: std::convert::Into<ErrorDetails>,
 {

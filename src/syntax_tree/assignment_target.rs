@@ -73,7 +73,7 @@ impl IntoOwned for AssignmentTarget<'_> {
 }
 
 impl<'i> AssignmentTarget<'i> {
-    pub fn get_index_handle<'v>(base: Value, indices: &[Option<Value>]) -> Result<Value, Error> {
+    pub fn get_index_handle(base: Value, indices: &[Option<Value>]) -> Result<Value, Error> {
         let mut base = base;
         for index in indices {
             let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
@@ -182,7 +182,7 @@ impl<'i> AssignmentTarget<'i> {
             Self::Identifier(id) => {
                 state.set_variable(id, value);
                 Ok(())
-            },
+            }
             Self::Index(base, indices) => {
                 let mut idx = vec![];
                 for index in indices {
@@ -227,7 +227,7 @@ impl<'i> AssignmentTarget<'i> {
             Self::Identifier(id) => {
                 state.set_variable_as_parent(id, value);
                 Ok(())
-            },
+            }
             Self::Index(base, indices) => {
                 let mut idx = vec![];
                 for index in indices {
