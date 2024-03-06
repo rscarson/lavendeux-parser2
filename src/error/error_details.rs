@@ -1,6 +1,8 @@
 use polyvalue::{Value, ValueType};
 use thiserror::Error;
 
+use super::RuleCategory;
+
 const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issues/new?assignees=&labels=&template=bug_report.md&title=";
 
 /// Inner error type for Lavendeux
@@ -28,8 +30,18 @@ pub enum ErrorDetails {
     EmptyBlock,
 
     /// An error caused by a problem with the syntax of the script
-    #[error("Syntax error; unexpected token")]
-    Syntax,
+    #[error("Syntax error{}", if expected.len() == 1 {
+        format!("; Expected {}", expected[0])
+    } else if !expected.is_empty() {
+        format!("; Expected one of: {}", RuleCategory::fmt(expected))
+    } else {
+        "".to_string()
+    }
+    )]
+    Syntax {
+        /// List of expected rule categories
+        expected: Vec<RuleCategory>
+    },
 
     /// Error causing the parser thread to panic
     #[error("Fatal error: {msg}")]
@@ -276,7 +288,7 @@ pub enum ErrorDetails {
     },
 
     /// An error caused by calling a decorator that does not exist
-    #[error("No decorator named @{name}")]
+    #[error("No decorator named {name}")]
     DecoratorName {
         /// Name of the decorator being referred to
         name: String,

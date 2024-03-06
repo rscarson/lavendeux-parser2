@@ -1,8 +1,6 @@
 use crate::{
     define_stdfunction,
     error::{ErrorDetails, WrapExternalError},
-    functions::std_function::ParserFunction,
-    State,
 };
 use polyvalue::{
     operations::{IndexingMutationExt, IndexingOperationExt},
@@ -34,8 +32,8 @@ define_stdfunction!(
             assert_eq(len(38),           1);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input);
         Ok(Value::i64(input.len() as i64))
     },
 );
@@ -58,8 +56,8 @@ define_stdfunction!(
         assert_eq(is_empty(38),     false);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input);
         Ok(Value::bool(input.len() == 0))
     },
 );
@@ -81,8 +79,8 @@ define_stdfunction!(
             would_err('first([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?;
         input.first().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
     },
 );
@@ -104,8 +102,8 @@ define_stdfunction!(
             would_err('last([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?;
         input.last().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
     },
 );
@@ -136,16 +134,16 @@ define_stdfunction!(
             assert_eq(a, []);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
         let value = input.pop().ok_or(ErrorDetails::ArrayEmpty).without_context()?;
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -172,18 +170,18 @@ define_stdfunction!(
         assert_eq(a, [1, 2]);
     ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
-        let value = state.get_variable("value").unwrap().clone();
+        let value = required_arg!(state::value).clone();
 
         input.push(value);
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.clone().into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -211,18 +209,18 @@ define_stdfunction!(
             assert_eq(a, [2, 1])
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
-        let value = state.get_variable("value").unwrap().clone();
+        let value = required_arg!(state::value).clone();
 
         input.insert(0, value);
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.clone().into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -251,16 +249,16 @@ define_stdfunction!(
             assert_eq(a, [2]);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
         let value = input.remove(0).ok_or(ErrorDetails::ArrayEmpty).without_context()?;
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.clone().into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -295,20 +293,20 @@ define_stdfunction!(
             assert_eq(a, [1, 4, 2, 3]);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
 
-        let index = state.get_variable("index").unwrap();
-        let value = state.get_variable("value").unwrap();
+        let index = required_arg!(state::index);
+        let value = required_arg!(state::value);
 
-        input.insert_at(&index, value)?;
+        input.insert_at(&index, value.clone())?;
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.clone().into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -342,19 +340,19 @@ define_stdfunction!(
             assert_eq(a, [1, 3]);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap();
+    handler = (state, reference) {
+        let input = required_arg!(state::input);
         let input_type = input.own_type();
         let mut input = input.as_a::<Array>()?.clone();
 
-        let index = state.get_variable("index").unwrap();
+        let index = required_arg!(state::index);
 
         let removed = input.delete_index(&index)?;
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), input.clone().into());
+                reference.update_value_in_parent(state, input.clone().into())?;
             }
         };
 
@@ -383,8 +381,8 @@ define_stdfunction!(
             assert_eq(keys({}), []);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Object>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Object>()?;
         Ok(Value::from(
             input.keys().iter().cloned().cloned().collect::<Vec<_>>()
         ))
@@ -406,8 +404,8 @@ define_stdfunction!(
             assert_eq(values({}), []);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Object>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Object>()?;
         Ok(Value::from(
             input.values().iter().cloned().cloned().collect::<Vec<_>>()
         ))
@@ -436,8 +434,8 @@ define_stdfunction!(
             assert_eq(all([]), true);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?;
         Ok(Value::bool(input.iter().all(|v| v.is_truthy())))
     },
 );
@@ -458,8 +456,8 @@ define_stdfunction!(
             assert_eq(any([]), false);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?;
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?;
         Ok(Value::bool(input.iter().any(|v| v.is_truthy())))
     },
 );
@@ -493,9 +491,9 @@ define_stdfunction!(
             would_err('split([1, 2, 3, 4], 5)') // Index out of bounds
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
-        let index = state.get_variable("index").unwrap().as_a::<i64>()?.clone();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?.clone();
+        let index = required_arg!(state::index).as_a::<i64>()?.clone();
 
         let left = Value::range(0i64 ..= (index - 1i64));
         let left = input.get_indices(&left)?;
@@ -526,9 +524,9 @@ define_stdfunction!(
             assert_eq(merge([1, 2], []), [1, 2]);
         ",
     },
-    handler = (state) {
-        let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
-        let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let left = required_arg!(state::left).as_a::<Array>()?.clone();
+        let right = required_arg!(state::right).as_a::<Array>()?.clone();
         Ok(Value::from(left.iter().chain(right.iter()).cloned().collect::<Vec<_>>()))
     },
 );
@@ -556,18 +554,18 @@ define_stdfunction!(
             assert_eq(a, [1, 2, 3, 4]);
         ",
     },
-    handler = (state) {
-        let left = state.get_variable("left").unwrap();
+    handler = (state, reference) {
+        let left = required_arg!(state::left);
         let input_type = left.own_type();
         let mut left = left.as_a::<Array>()?.clone();
-        let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
+        let right = required_arg!(state::right).as_a::<Array>()?.clone();
 
         left.extend(right.iter().cloned());
 
         // Update the array if it references a variable containing an array
-        if let Some(reference) = state.get_variable("__flag_arg1_reference") {
+        if let Some(reference) = reference {
             if input_type == ValueType::Array {
-                state.set_variable_as_parent(&reference.to_string(), left.clone().into());
+                reference.update_value_in_parent(state, left.clone().into())?;
             }
         };
 
@@ -594,9 +592,9 @@ define_stdfunction!(
             assert_eq(chunks([1, 2, 3, 4, 5], 5), [[1, 2, 3, 4, 5]]);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
-        let size = state.get_variable("size").unwrap().as_a::<i64>()?.clone();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?.clone();
+        let size = required_arg!(state::size).as_a::<i64>()?.clone();
 
         let result = input.chunks(size as usize).map(|c| Value::from(c.to_vec())).collect::<Vec<_>>();
         Ok(Value::from(result))
@@ -619,8 +617,8 @@ define_stdfunction!(
             assert_eq(flatten([[], []]), []);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let result = input.iter().flat_map(|v| v.clone().as_a::<Array>().unwrap().iter().cloned().collect::<Vec<_>>()).collect::<Vec<_>>();
         Ok(Value::from(result))
     },
@@ -645,9 +643,9 @@ define_stdfunction!(
             assert_eq(zip([1, 2, 3], [4, 5]), [[1, 4], [2, 5]]);
         ",
     },
-    handler = (state) {
-        let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
-        let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let left = required_arg!(state::left).as_a::<Array>()?.clone();
+        let right = required_arg!(state::right).as_a::<Array>()?.clone();
 
         let result = left.iter().zip(right.iter()).map(|(l, r)| Value::from(vec![l.clone(), r.clone()])).collect::<Vec<_>>();
         Ok(Value::from(result))
@@ -672,9 +670,9 @@ define_stdfunction!(
             assert_eq(zop(['a', 'b', 'c'], [1, 2, 3]), {'a': 1, 'b': 2, 'c': 3});
         ",
     },
-    handler = (state) {
-        let left = state.get_variable("left").unwrap().as_a::<Array>()?.clone();
-        let right = state.get_variable("right").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let left = required_arg!(state::left).as_a::<Array>()?.clone();
+        let right = required_arg!(state::right).as_a::<Array>()?.clone();
 
         let result = left.iter().zip(right.iter()).map(|(l, r)| (l.clone(), r.clone())).collect::<Vec<(_,_)>>();
         let result = Object::try_from(result)?;
@@ -697,8 +695,8 @@ define_stdfunction!(
             assert_eq(sort(['c', 'a', 'b']), ['a', 'b', 'c']);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.sort();
         Ok(result.into())
@@ -720,8 +718,8 @@ define_stdfunction!(
             assert_eq(reverse(['a', 'b', 'c']), ['c', 'b', 'a']);
         ",
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().as_a::<Array>()?.clone();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.reverse();
         Ok(result.into())

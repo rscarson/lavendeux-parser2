@@ -3,6 +3,7 @@ use crate::{
     error::ErrorDetails,
     functions::{stdlib, ParserFunction},
     network::ApiRegistry,
+    syntax_tree::Reference,
     Error, Value,
 };
 use std::{
@@ -85,7 +86,7 @@ impl State {
     }
 
     /// Checks the timeout of the parser
-    pub fn check_timer(&self) -> Result<(), Error<'static>> {
+    pub fn check_timer(&self) -> Result<(), Error> {
         if !self.timeout.is_zero() && self.parse_starttime.elapsed() > self.timeout {
             Err(ErrorDetails::Timeout.into())
         } else {
@@ -114,7 +115,7 @@ impl State {
     /// Creates a new scope from this state
     /// A limit is placed on the depth of scopes that can be created
     /// This is to prevent infinite recursion
-    pub fn scope_into(&mut self) -> Result<(), Error<'static>> {
+    pub fn scope_into(&mut self) -> Result<(), Error> {
         if self.depth >= Self::MAX_DEPTH {
             return Err(ErrorDetails::StackOverflow.into());
         }
@@ -186,8 +187,8 @@ impl State {
     }
 
     /// Gets a variable from the root scope
-    pub fn global_get_variable(&self, name: &str) -> Option<Value> {
-        self.variables[0].get(name).cloned()
+    pub fn global_get_variable(&self, name: &str) -> Option<&Value> {
+        self.variables[0].get(name)
     }
 
     /// Sets a variable in the a scope offset levels from the current scope
@@ -236,10 +237,44 @@ impl State {
     }
 
     /// Returns the value of a variable
-    pub fn get_variable(&self, name: &str) -> Option<Value> {
+    pub fn get_variable(&self, name: &str) -> Option<&Value> {
         for scope in self.get_valid_scopes() {
             if let Some(value) = scope.get(name) {
-                return Some(value.clone());
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable, mutably
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut Value> {
+        for scope in self.get_valid_scopes_mut() {
+            if let Some(value) = scope.get_mut(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable from the parent scope
+    pub fn get_variable_as_parent(&self, name: &str) -> Option<&Value> {
+        let mut scopes = self.get_valid_scopes();
+        scopes.next();
+        for scope in scopes {
+            if let Some(value) = scope.get(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable, mutably from the parent scope
+    pub fn get_variable_mut_as_parent(&mut self, name: &str) -> Option<&mut Value> {
+        let mut scopes = self.get_valid_scopes_mut();
+        scopes.next();
+        for scope in scopes {
+            if let Some(value) = scope.get_mut(name) {
+                return Some(value);
             }
         }
         None
@@ -256,10 +291,10 @@ impl State {
     }
 
     /// Returns all variables in the state
-    pub fn all_variables(&self) -> HashMap<String, Value> {
+    pub fn all_variables(&self) -> HashMap<&str, &Value> {
         let mut variables = HashMap::new();
         for scope in self.get_valid_scopes() {
-            variables.extend(scope.iter().map(|(k, v)| (k.clone(), v.clone())));
+            variables.extend(scope.iter().map(|(k, v)| (k.as_str(), v)));
         }
 
         variables
@@ -267,10 +302,10 @@ impl State {
 
     /// Returns all variables in the state
     /// Ignores the scope lock
-    pub fn all_variables_unscoped(&self) -> HashMap<String, Value> {
+    pub fn all_variables_unscoped(&self) -> HashMap<&str, &Value> {
         let mut variables = HashMap::new();
         for scope in self.variables.iter().rev() {
-            variables.extend(scope.iter().map(|(k, v)| (k.clone(), v.clone())));
+            variables.extend(scope.iter().map(|(k, v)| (k.as_str(), v)));
         }
 
         variables
@@ -293,10 +328,7 @@ impl State {
 
     /// Registers a function in the state
     /// See [crate::define_stdfunction] for an example of how to define a function
-    pub fn register_function(
-        &mut self,
-        function: impl ParserFunction,
-    ) -> Result<(), Error<'static>> {
+    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
         let name = function.name();
         if self.is_system_function(name) {
             return oops!(ReadOnlyFunction {
@@ -313,7 +345,7 @@ impl State {
     pub fn unregister_function(
         &mut self,
         name: &str,
-    ) -> Result<Option<Box<dyn ParserFunction>>, Error<'static>> {
+    ) -> Result<Option<Box<dyn ParserFunction>>, Error> {
         if self.is_system_function(name) {
             oops!(ReadOnlyFunction {
                 name: name.to_string()
@@ -344,16 +376,17 @@ impl State {
         &mut self,
         name: &str,
         args: Vec<Value>,
-        arg1_references: Option<&str>,
-    ) -> Result<Value, Error<'_>> {
+        reference: Option<&Reference>,
+    ) -> Result<Value, Error> {
         let function = self.get_function(name).ok_or(ErrorDetails::FunctionName {
             name: name.to_string(),
         })?;
-        function.exec(&args, self, arg1_references)
+        let function = function.clone_self();
+        function.exec(&args, self, reference)
     }
 
     /// Calls a decorator function
-    pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error<'_>> {
+    pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error> {
         let name = format!("@{name}");
         match self.call_function(&name, vec![value], None) {
             Ok(value) => Ok(value.to_string()),
@@ -393,7 +426,7 @@ mod test {
         assert_eq!(state.current_depth(), 0);
 
         assert_eq!(state.get_variable("a"), None);
-        assert_eq!(state.get_variable("b"), Some(Value::from(2.0)));
+        assert_eq!(state.get_variable("b"), Some(&Value::from(2.0)));
 
         state.depth = State::MAX_DEPTH;
         assert!(matches!(

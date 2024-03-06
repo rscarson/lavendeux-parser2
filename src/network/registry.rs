@@ -24,6 +24,7 @@ impl ApiRegistry {
     pub fn raw(state: &State) -> Value {
         state
             .global_get_variable(Self::STORE_NAME)
+            .cloned()
             .unwrap_or(Object::default().into())
     }
 

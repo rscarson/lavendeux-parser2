@@ -1,4 +1,6 @@
-use crate::{Error, State};
+use std::borrow::Cow;
+
+use crate::{syntax_tree::Reference, Error, State};
 use polyvalue::{Value, ValueType};
 
 use super::FunctionDocumentation;
@@ -43,9 +45,9 @@ pub trait ManageArguments {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error<'static>>;
+    ) -> Result<(), Error>;
 }
-impl ManageArguments for Vec<(&str, FunctionArgument)> {
+impl ManageArguments for Vec<(Cow<'_, str>, FunctionArgument)> {
     fn arg_count_span(&self) -> (usize, usize) {
         let (mut min, mut max) = (0, 0);
         for (_, arg) in self.iter() {
@@ -62,7 +64,7 @@ impl ManageArguments for Vec<(&str, FunctionArgument)> {
         values: &[Value],
         state: &mut State,
         function_signature: String,
-    ) -> Result<(), Error<'static>> {
+    ) -> Result<(), Error> {
         let mut values = values.into_iter().peekable();
 
         for (i, (name, arg)) in self.iter().enumerate() {
@@ -133,7 +135,7 @@ where
     fn return_type(&self) -> ValueType;
 
     /// Expected arguments for the function
-    fn expected_arguments(&self) -> Vec<(&str, FunctionArgument)>;
+    fn expected_arguments(&self) -> Vec<(Cow<'static, str>, FunctionArgument)>;
 
     /// Clones the function
     fn clone_self(&self) -> Box<dyn ParserFunction>;
@@ -150,10 +152,10 @@ where
     fn documentation_mut(&mut self) -> &mut dyn FunctionDocumentation;
 
     /// Call the function's handler - use exec instead to map arguments first
-    fn call(&self, state: &mut State) -> Result<Value, Error<'_>>;
+    fn call(&self, state: &mut State, reference: Option<&Reference>) -> Result<Value, Error>;
 
     /// Loads the arguments into the state
-    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error<'static>> {
+    fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error> {
         match self
             .expected_arguments()
             .map_arguments(values, state, self.signature())
@@ -198,18 +200,13 @@ where
         &self,
         values: &[Value],
         state: &mut State,
-        arg1_references: Option<&str>,
-    ) -> Result<Value, Error<'_>> {
+        reference: Option<&Reference>,
+    ) -> Result<Value, Error> {
         state.scope_into()?;
         state.lock_scope();
         self.load_arguments(values, state)?;
 
-        // Mostly for array functions
-        if let Some(reference) = arg1_references {
-            state.set_variable("__flag_arg1_reference", Value::string(reference))
-        }
-
-        let result = self.call(state);
+        let result = self.call(state, reference);
         state.scope_out();
 
         result

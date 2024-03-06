@@ -10,7 +10,7 @@ thread_local! {
     static USER_FUNCTION_CACHE: OnceCell<RefCell<HashMap<String, Rc<Node>>>> = OnceCell::new();
 }
 
-pub fn cached_fn_compile(src: &'i str, line_offset: usize) -> Result<Rc<Node<'i>>, Error<'i>> {
+pub fn cached_fn_compile(src: &'i str, line_offset: usize) -> Result<Rc<Node<'i>>, Error> {
     USER_FUNCTION_CACHE.with(|once_lock| {
         let rt_mut = once_lock.get_or_init(|| RefCell::new(HashMap::new()));
         let mut cache = rt_mut.borrow_mut();

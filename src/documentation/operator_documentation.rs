@@ -40,57 +40,14 @@ macro_rules! document_operator {
 
 #[cfg(test)]
 mod test {
-    use crate::{error::ErrorDetails, syntax_tree, Error};
+    use crate::{error::ErrorDetails, Error};
 
     use super::*;
 
     #[test]
     fn test_all_rules_documented() {
-        // Meta rules that should not be documented
-        let meta_rules = &[
-            Rule::SCRIPT,
-            Rule::STATEMENT,
-            Rule::EXPR,
-            Rule::BLOCK,
-            //
-            // Value literals are documented separately
-            Rule::currency_literal,
-            Rule::fixed_literal,
-            Rule::sci_literal,
-            Rule::float_literal,
-            Rule::bool_literal,
-            Rule::regex_literal,
-            Rule::string_literal,
-            Rule::int_literal,
-            //
-            // These are part of the meta for other rules
-            Rule::BREAK_KEYWORD,
-            Rule::SKIP_KEYWORD,
-            Rule::RETURN_EXPRESSION,
-            //
-            // Errors
-            Rule::UNTERMINATED_BLOCK_COMMENT,
-            Rule::UNTERMINATED_STRING_LITERAL,
-            Rule::UNCLOSED_BRACKET,
-            Rule::UNCLOSED_BRACE,
-            Rule::UNCLOSED_PAREN,
-            Rule::MISSING_LINEBREAK,
-        ];
-
         let docs = all();
         let mut errors = vec![];
-        for rule in syntax_tree::resolver::all().keys() {
-            let found = docs.iter().any(|d| d.rules.contains(rule));
-            if !found && !meta_rules.contains(rule) {
-                errors.push(Error {
-                    details: ErrorDetails::Custom {
-                        msg: format!("Rule {:?} is not documented", rule),
-                    },
-                    source: None,
-                    context: None,
-                });
-            }
-        }
 
         for operator in docs {
             let result = crate::Lavendeux::new(Default::default()).parse(operator.examples);

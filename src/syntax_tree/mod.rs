@@ -1,8 +1,11 @@
 #[macro_use]
-pub mod pratt;
+mod macros;
 
-#[macro_use]
-pub mod node;
+mod assignment_target;
+pub mod nodes;
+mod pair;
+mod pratt;
+pub mod traits;
 
-pub use node::Node;
-pub mod resolver;
+pub use nodes::Node;
+pub use nodes::Reference;

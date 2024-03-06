@@ -1,8 +1,6 @@
 #![allow(missing_docs)]
-use crate::error::WrapSyntaxError;
-use crate::syntax_tree::resolver;
-use crate::{Error, Node, State, Token, Value};
-use pest::{iterators::Pair, Parser};
+use crate::{error::WrapSyntaxError, syntax_tree::Node, Error, State};
+use pest::Parser;
 use pest_derive::Parser;
 
 /// Lavendeux's parser
@@ -10,7 +8,20 @@ use pest_derive::Parser;
 /// parse the input into a syntax tree
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
-struct LavendeuxParser;
+pub struct LavendeuxParser;
+impl LavendeuxParser {
+    pub fn build_ast<'i>(input: &'i str, rule: Rule, state: &mut State) -> Result<Node<'i>, Error> {
+        let pairs = LavendeuxParser::parse(rule, input).wrap_syntax_error(input)?;
+        if let Some(pair) = pairs.flatten().next() {
+            Node::from_pair(pair, state)
+        } else {
+            oops!(Internal {
+                msg: format!("No instance of rule {:?} found in input", rule)
+            })
+        }
+    }
+}
+/*
 
 /// A macro to assert that the given input parses into the expected AST node
 /// # Arguments
@@ -36,7 +47,7 @@ macro_rules! assert_tree {
         $tree
             .as_any_mut()
             .downcast_mut::<$expected>()
-            .ok_or(Error<'i>::Internal(format!(
+            .ok_or(Error::Internal(format!(
                 "Could not downcast to requested type"
             )))
             .and_then(|tree| {
@@ -86,14 +97,14 @@ macro_rules! assert_tree_error {
                 match tree.get_value(&mut $crate::State::new()) {
                     Ok(_) => panic!("Expected error"),
                     Err(err) => {
-                        if !matches!(err, Error<'i>::$err { .. }) {
+                        if !matches!(err, Error::$err { .. }) {
                             panic!("Expected error {:?} but got {:?}", stringify!($err), err);
                         }
                     }
                 }
             }
             Err(err) => {
-                if !matches!(err, Error<'i>::$err { .. }) {
+                if !matches!(err, Error::$err { .. }) {
                     panic!("Expected error {:?} but got {:?}", stringify!($err), err);
                 }
             }
@@ -105,39 +116,55 @@ macro_rules! assert_tree_error {
 /// The trait is used to build the AST, and to evaluate it by getting the
 /// value of each node
 pub trait AstNode<'i>: std::fmt::Display + std::fmt::Debug + Send + Sync {
-    fn from_pair(input: Pair<'i, Rule>) -> Result<Box<dyn AstNode<'i>>, Error<'_>>
+    fn from_pair(input: Pair<'i, Rule>) -> Result<Node<'i>, Error>
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        crate::syntax_tree::pratt::Parser::parse(input.into_inner())
+    }
 
     fn from_pratt(
         input: crate::syntax_tree::pratt::PrattPair<'i>,
-    ) -> Result<Box<dyn AstNode<'i>>, crate::Error<'_>>
+    ) -> Result<crate::Node<'i>, crate::Error>
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        let first_pair = input.first_pair();
+        Self::from_pair(first_pair)
+    }
 
-    fn get_value(&self, state: &mut State) -> Result<Value, Error<'i>>;
+    fn get_value(&self, state: &mut State) -> Result<Value, Error>;
     fn token(&self) -> &Token<'i>;
     fn token_offsetline(&mut self, offset: usize);
+
     fn boxed(self) -> Node<'i>
     where
-        Self: Sized + 'static;
+        Self: Sized + 'i,
+    {
+        Box::new(self)
+    }
+
+    fn clone_self(&self) -> Node<'i>;
+    fn into_owned(&self) -> Self
+    where
+        Self: Sized;
 }
 
 /// A trait used to convert a pest pair into an AST node
 /// This is used to build the AST
 pub trait ToAstNode<'i> {
-    fn to_ast_node(self) -> Result<Box<dyn AstNode<'i>>, Error<'i>>;
+    fn to_ast_node(self) -> Result<Node<'i>, Error>;
 }
 impl<'i> ToAstNode<'i> for Pair<'i, Rule> {
     /// Convert a pest pair into an AST node
     /// This maps all the rules to AST Node structures
-    fn to_ast_node(self) -> Result<Box<dyn AstNode<'i>>, Error<'i>> {
+    fn to_ast_node(self) -> Result<Node<'i>, Error> {
         resolver::handle_pair(self)
     }
 }
 
 /// Main function to parse the input into a syntax tree
-pub fn parse_input<'i>(input: &'i str, rule: Rule) -> Result<Node<'i>, Error<'i>> {
+pub fn parse_input<'i>(input: &'i str, rule: Rule) -> Result<Node<'i>, Error> {
     let pairs = LavendeuxParser::parse(rule, input).wrap_syntax_error(input)?;
     if let Some(pair) = pairs.flatten().next() {
         pair.to_ast_node()
@@ -147,3 +174,4 @@ pub fn parse_input<'i>(input: &'i str, rule: Rule) -> Result<Node<'i>, Error<'i>
         })
     }
 }
+*/

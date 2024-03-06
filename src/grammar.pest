@@ -32,19 +32,19 @@ STATEMENT = _{
     | EXPR
 }
 
-function_name = @{"@"? ~ identifier}
+function_name = @{symbol_at? ~ identifier}
 FUNCTION_ASSIGNMENT_STATEMENT = {
     | EOL* ~ function_name ~ EOL* ~ 
-        "(" ~ EOL* ~ 
-            (function_argument ~ EOL* ~ ("," ~ EOL* ~ function_argument ~ EOL*)* ~ ","? ~ EOL*)? ~ 
-        ")" ~ (EOL* ~ function_typespec)? ~ EOL* ~ 
-        "=" ~ EOL* ~ BLOCK
+        symbol_openround ~ EOL* ~ 
+            (function_argument ~ EOL* ~ (symbol_comma ~ EOL* ~ function_argument ~ EOL*)* ~ symbol_comma? ~ EOL*)? ~ 
+        symbol_closeround ~ (EOL* ~ function_typespec)? ~ EOL* ~ 
+        symbol_eq ~ EOL* ~ BLOCK
 }
-	function_typespec = {":" ~ EOL* ~ identifier}
-	function_argument = {identifier ~ EOL* ~ (":" ~ EOL* ~ identifier)?}
+	function_typespec = {symbol_colon ~ EOL* ~ identifier}
+	function_argument = {identifier ~ EOL* ~ (symbol_colon ~ EOL* ~ identifier)?}
 
 BLOCK = {
-    | "{" ~ LINE* ~ (STATEMENT)? ~ EOL? ~ "}"
+    | symbol_opencurly ~ LINE* ~ (STATEMENT)? ~ EOL? ~ symbol_closecurly
     | EXPR
 }
 
@@ -59,11 +59,12 @@ EXPR = {
     // Postfix
     postfix_operation = _{POSTFIX_DECORATE | POSTFIX_INDEX | POSTFIX_CALL | postfix_arith}
         POSTFIX_DECORATE = {"@" ~ EOL* ~ identifier}
-        POSTFIX_EMPTYINDEX = {(l_bracket ~ EOL* ~ "]")}
-            l_bracket = {"["}
-        POSTFIX_INDEX = {(("[" ~ EOL* ~ EXPR ~ EOL* ~ "]") | POSTFIX_EMPTYINDEX)+}
-        POSTFIX_CALL = {POSTFIX_OBJECTMODE? ~ "(" ~ (EOL* ~ (EXPR ~ EOL* ~ "," ~ EOL*)* ~ EXPR ~ EOL* ~ ","?)? ~ EOL* ~ ")"}
-            POSTFIX_OBJECTMODE = {"." ~ EOL* ~ identifier}
+        POSTFIX_EMPTYINDEX = {(symbol_opensquare ~ EOL* ~ symbol_closesquare)}
+        POSTFIX_INDEX = {((symbol_opensquare ~ EOL* ~ EXPR ~ EOL* ~ symbol_closesquare) | POSTFIX_EMPTYINDEX)+}
+        POSTFIX_CALL = {POSTFIX_NORMALMODE | POSTFIX_OBJECTMODE}
+            postfixcall_args = _{(EXPR ~ EOL* ~ symbol_comma ~ EOL*)* ~ EXPR ~ EOL* ~ symbol_comma?}
+            POSTFIX_NORMALMODE = {symbol_openround ~ EOL* ~ postfixcall_args? ~ EOL* ~ symbol_closeround}
+            POSTFIX_OBJECTMODE = {"." ~ EOL* ~ identifier ~ EOL* ~ POSTFIX_NORMALMODE}
         postfix_arith = _{POSTFIX_INC | POSTFIX_DEC}
             POSTFIX_INC = {"++"}
             POSTFIX_DEC = {"--"}
@@ -71,7 +72,7 @@ EXPR = {
     //
     // Prefix
     prefix_op = _{PREFIX_DEL | prefix_arith | PREFIX_BOOL_NOT | PREFIX_BIT_NOT}
-        PREFIX_DEL = @{del_keyword ~ WHITESPACE* ~ "@"?}
+        PREFIX_DEL = @{del_keyword ~ WHITESPACE* ~ symbol_at?}
             del_keyword = @{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
         PREFIX_BOOL_NOT = {"!" ~ !"="}
         PREFIX_BIT_NOT = {"~" ~ !"="}
@@ -149,7 +150,7 @@ EXPR = {
         // Other
         OP_RANGE = {".."}
         OP_CAST = @{"as" ~ !ASCII_ALPHA}
-        OP_TERNARY = {"?" ~ EOL* ~ EXPR ~ EOL* ~ ":"}
+        OP_TERNARY = {symbol_questionmark ~ EOL* ~ EXPR ~ EOL* ~ symbol_colon}
 
 //
 // Term
@@ -158,7 +159,7 @@ EXPR = {
 
 TERM = _{
     // These can be identified by the first character
-    | "(" ~ EXPR ~ ")"
+    | symbol_openround ~ EXPR ~ symbol_closeround
     | ARRAY_TERM
     | OBJECT_TERM
 
@@ -186,23 +187,22 @@ KEYWORD_EXPRESSION = _ {
 
     RETURN_EXPRESSION = { "return" ~ EOL* ~ BLOCK }
 
-    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &"{") ~ EOL* ~ BLOCK ~ (EOL* ~ for_conditional)? }
+    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ (EOL* ~ for_conditional)? }
         for_conditional = {"if" ~ EOL* ~ EXPR}
 
-    SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ "{" ~ EOL* ~ (switch_case ~ EOL* ~ "," ~ EOL*)* ~ switch_case ~ EOL* ~ ","? ~ EOL* ~ "}" }
-        switch_case = _{ ATOMIC_VALUE ~ EOL* ~ "=>" ~ EOL* ~ BLOCK }
+    SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ symbol_opencurly ~ EOL* ~ (switch_case ~ EOL* ~ symbol_comma ~ EOL*)* ~ switch_case ~ EOL* ~ symbol_comma? ~ EOL* ~ symbol_closecurly }
+        switch_case = _{ ATOMIC_VALUE ~ EOL* ~ symbol_arrow ~ EOL* ~ BLOCK }
 
     IF_EXPRESSION = { if_block ~ ("else" ~ EOL* ~ if_block ~ EOL*)* ~ ("else" ~ EOL* ~ BLOCK)? }
-        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &"{") ~ EOL* ~ BLOCK ~ EOL* }
+        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ EOL* }
 
-    ARRAY_TERM = { open_bracket ~ EOL* ~ ((EXPR) ~ (EOL* ~ "," ~ EOL* ~ (EXPR) ~ EOL*)* ~ ","? ~ EOL*)? ~"]" }
-        open_bracket = {"["}
-
+    ARRAY_TERM = { array_symbol_opensquare ~ EOL* ~ ((EXPR) ~ (EOL* ~ symbol_comma ~ EOL* ~ (EXPR) ~ EOL*)* ~ symbol_comma? ~ EOL*)? ~ symbol_closesquare }
+        array_symbol_opensquare = {"["}
     OBJECT_TERM = {
-        "{" ~ EOL* ~ ((object_keyvalue_pair ~ EOL* ~ "," ~ EOL*)* ~ object_keyvalue_pair ~ EOL*)? ~ ","? ~ EOL* ~ "}"
-        | "{" ~ EOL* ~ "}"
+        symbol_opencurly ~ EOL* ~ ((object_keyvalue_pair ~ EOL* ~ symbol_comma ~ EOL*)* ~ object_keyvalue_pair ~ EOL*)? ~ symbol_comma? ~ EOL* ~ symbol_closecurly
+        | symbol_opencurly ~ EOL* ~ symbol_closecurly
     }
-        object_keyvalue_pair = _{(EXPR) ~ ":" ~ (EXPR)}
+        object_keyvalue_pair = _{(EXPR) ~ symbol_colon ~ (EXPR)}
 
 //
 // Value Literals
@@ -297,7 +297,25 @@ ERROR = _{
 
 UNTERMINATED_BLOCK_COMMENT = @{"/*" ~ (!"*/" ~ ANY)*}
 UNTERMINATED_STRING_LITERAL = @{"\"" ~ (!EOL ~ ANY)*}
-UNCLOSED_BRACKET = @{"[" ~ (!"]" ~ ANY)*}
-UNCLOSED_BRACE = @{"{" ~ (!"}" ~ ANY)*}
-UNCLOSED_PAREN = @{"(" ~ (!")" ~ ANY)*}
+UNCLOSED_BRACKET = @{"[" ~ (!symbol_closesquare ~ ANY)*}
+UNCLOSED_BRACE = @{symbol_opencurly ~ (!symbol_closecurly ~ ANY)*}
+UNCLOSED_PAREN = @{symbol_openround ~ (!symbol_closeround ~ ANY)*}
 MISSING_LINEBREAK = @{"\\" ~ !EOL}
+
+//
+// Symbols
+//
+
+symbol_questionmark = {"?"}
+symbol_colon = {":"}
+symbol_comma = {","}
+symbol_arrow = {"=>"}
+symbol_at = {"@"}
+symbol_eq = {"="}
+
+symbol_opencurly = {"{"}
+symbol_closecurly = {"}"}
+symbol_opensquare = {"["}
+symbol_closesquare = {"]"}
+symbol_openround = {"("}
+symbol_closeround = {")"}

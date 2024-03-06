@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, Error, State};
+use crate::{define_stdfunction, Error};
 use polyvalue::Value;
 use std::io::BufRead;
 
@@ -17,7 +17,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (_state) {
+    handler = (_state, _reference) {
         Ok(Value::from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -46,14 +46,14 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let n = state.get_variable("lines").unwrap_or(1.into()).as_a::<i64>()?;
-        let file = state.get_variable("file").unwrap().to_string();
+    handler = (state, _reference) {
+        let n = optional_arg!(state::lines).unwrap_or(1.into()).as_a::<i64>()?;
+        let file = required_arg!(state::file).to_string();
 
         let file = std::fs::File::open(file)?;
         let lines = std::io::BufReader::new(file)
             .lines()
-            .map(|f| Ok::<Value, Error<'_>>(Value::from(f?)))
+            .map(|f| Ok::<Value, Error>(Value::from(f?)))
             .collect::<Result<Vec<_>, _>>()?;
 
         // return last n

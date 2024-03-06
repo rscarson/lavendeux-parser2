@@ -1,5 +1,6 @@
 use crate::Rule;
-use pest::iterators::Pair;
+use pest::iterators::{Pair, Pairs};
+use std::borrow::Cow;
 
 /// A struct representing a token in the syntax tree
 /// It stores metadata about the token, such as the rule it was parsed from,
@@ -14,37 +15,65 @@ pub struct Token<'i> {
     pub rule: Rule,
 
     /// The input that this token was parsed from
-    pub input: &'i str,
-
-    /// An optional variable reference, for pass-by-ref
-    /// Used by a handful of stdlib functions, like push, insert, etc
-    pub references: Option<String>,
+    pub input: Cow<'i, str>,
 }
 
 impl Token<'_> {
-    #[cfg(test)]
-    /// Create a dummy token
+    /// Creates a new root token from the input
     pub fn dummy() -> Self {
-        Self {
+        Token {
             line: 0,
             rule: Rule::SCRIPT,
-            input: "",
-            references: None,
+            input: Cow::Borrowed(""),
+        }
+    }
+
+    /// Check if this token is a symbol
+    pub fn is_symbol(rule: Rule) -> bool {
+        match rule {
+            Rule::symbol_questionmark
+            | Rule::symbol_colon
+            | Rule::symbol_comma
+            | Rule::symbol_arrow
+            | Rule::symbol_at
+            | Rule::symbol_eq
+            | Rule::symbol_opencurly
+            | Rule::symbol_closecurly
+            | Rule::symbol_opensquare
+            | Rule::symbol_closesquare
+            | Rule::symbol_openround
+            | Rule::symbol_closeround => true,
+
+            _ => false,
+        }
+    }
+
+    /// Remove lifetime restrictions from this token
+    pub fn into_owned(self) -> Token<'static> {
+        Token {
+            line: self.line,
+            rule: self.rule,
+            input: Cow::Owned(self.input.into_owned()),
         }
     }
 }
 
-/// A trait used to convert a pest pair into a token
-pub trait ToToken<'i> {
-    fn to_token(&self) -> Token<'i>;
-}
-impl<'i> ToToken<'i> for Pair<'i, Rule> {
-    fn to_token(&self) -> Token<'i> {
+impl<'i> From<&Pair<'i, Rule>> for Token<'i> {
+    fn from(pair: &Pair<'i, Rule>) -> Token<'i> {
         Token {
-            line: self.as_span().start_pos().line_col().0,
-            rule: self.as_rule(),
-            input: self.as_str(),
-            references: None,
+            line: pair.line_col().0,
+            rule: pair.as_rule(),
+            input: Cow::Borrowed(pair.as_str().trim()),
+        }
+    }
+}
+
+impl<'i> From<&Pairs<'i, Rule>> for Token<'i> {
+    fn from(pairs: &Pairs<'i, Rule>) -> Token<'i> {
+        if let Some(pair) = pairs.peek() {
+            Token::from(&pair)
+        } else {
+            Token::dummy()
         }
     }
 }

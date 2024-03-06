@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
+use crate::define_stdfunction;
 use polyvalue::{types::Range, Value, ValueTrait};
 
 define_stdfunction!(
@@ -17,8 +17,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().to_string();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).to_string();
 
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
@@ -45,8 +45,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().to_string();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).to_string();
 
         use sha2::{Digest, Sha512};
         let mut hasher = Sha512::new();
@@ -73,8 +73,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let input = state.get_variable("input").unwrap().to_string();
+    handler = (state, _reference) {
+        let input = required_arg!(state::input).to_string();
 
         use md5::{Digest, Md5};
         let mut hasher = Md5::new();
@@ -101,8 +101,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
+    handler = (state, _reference) {
+        let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty);
         }
@@ -132,10 +132,10 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         use rand::Rng;
 
-        if let Some(range) = state.get_variable("range") {
+        if let Some(range) = optional_arg!(state::range) {
             let range = range.as_a::<Range>()?.inner().clone();
             Ok(rand::thread_rng().gen_range(range).into())
         } else {

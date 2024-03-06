@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use crate::Error;
 
-pub fn resolve(hostname: &str) -> Result<Value, Error<'static>> {
+pub fn resolve(hostname: &str) -> Result<Value, Error> {
     match (hostname, 0).to_socket_addrs() {
         Ok(mut addresses) => {
             let address = addresses.next().unwrap().to_string();
@@ -43,7 +43,7 @@ pub fn request(
     url: &str,
     body: Option<String>,
     headers: HashMap<String, String>,
-) -> Result<Value, Error<'static>> {
+) -> Result<Value, Error> {
     match reqwest::blocking::Client::builder()
         .timeout(Duration::from_millis(1500))
         .build()

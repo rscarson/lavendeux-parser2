@@ -1,30 +1,30 @@
 use crate::{error::ErrorDetails, Token};
 
-/// Error<'i> type for the Lavendeux parser
+/// Error type for the Lavendeux parser
 /// Can have optional context [Token], and parent error
 #[derive(Debug)]
-pub struct Error<'i> {
+pub struct Error {
     /// details: The specific error that occurred - see [ErrorDetails]
     pub details: ErrorDetails,
 
     /// context: The [Token] that caused the error, or was being parsed when the error occurred
-    pub context: Option<Token<'i>>,
+    pub context: Option<Token<'static>>,
 
     /// source: A parent error, if one exists - errors during a function call, for example
-    pub source: Option<Box<Error<'i>>>,
+    pub source: Option<Box<Error>>,
 }
 
-impl<'i> Error<'i> {
+impl<'i> Error {
     /// Add context to this error, in the form a [Token]
     pub fn with_context(self, context: Token<'i>) -> Self {
         Error {
-            context: Some(context),
+            context: Some(context.into_owned()),
             ..self
         }
     }
 
     /// Link the parent error to this error
-    pub fn with_source(self, source: Error<'i>) -> Self {
+    pub fn with_source(self, source: Error) -> Self {
         Error {
             source: Some(Box::new(source)),
             ..self
@@ -61,7 +61,7 @@ impl<'i> Error<'i> {
     }
 }
 
-impl<'i, T> From<T> for Error<'i>
+impl<'i, T> From<T> for Error
 where
     T: std::convert::Into<ErrorDetails>,
 {
@@ -74,11 +74,17 @@ where
     }
 }
 
-impl std::error::Error for Error<'_> {}
-impl std::fmt::Display for Error<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl std::error::Error for Error {}
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let token_part = if let Some(context) = &self.context {
-            format!("| {}\n= ", context)
+            let lines = context
+                .input
+                .split('\n')
+                .map(|l| format!("| {l}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("{lines}\n= ")
         } else {
             "".to_string()
         };

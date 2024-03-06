@@ -1,4 +1,4 @@
-use lavendeux_parser::{Error, Lavendeux, ParserOptions};
+use lavendeux_parser::{Lavendeux, ParserOptions};
 use std::collections::VecDeque;
 use std::env;
 use std::io::{stdin, stdout, Write};
@@ -22,7 +22,7 @@ fn next_command() -> String {
     return input.trim().to_string();
 }
 
-fn main() -> Result<(), Error<'i>> {
+fn main() {
     let mut lavendeux = Lavendeux::new(ParserOptions {
         timeout: Duration::from_secs(30),
         pest_call_limit: 25000000,
@@ -30,12 +30,9 @@ fn main() -> Result<(), Error<'i>> {
     });
 
     // Load example scripts
-    lavendeux.parse("include('example_scripts/zarbans_grotto.lav')")?;
-
-    // Load extensions
-    //  Lavendeux::load_extension("example_extensions/simple_extension.js")?;
-    //  Lavendeux::load_extension("example_extensions/zarbans_grotto.js")?;
-    // Lavendeux::load_extension("example_extensions/lavendeux-colour.js")?;
+    //lavendeux
+    //    .parse("include('example_scripts/zarbans_grotto.lav')")
+    //    .expect("Could not load example scripts");
 
     // Preload command stack from arguments
     let mut stack: VecDeque<String> = env::args().skip(1).collect();
@@ -58,16 +55,16 @@ fn main() -> Result<(), Error<'i>> {
             break;
         } else {
             // Process the commands
+            let t = std::time::Instant::now();
             match lavendeux.parse(&cmd) {
                 Ok(values) => {
+                    println!("Parsed in {}ms", t.elapsed().as_millis());
                     for value in values {
                         println!("{}", value);
                     }
                 }
-                Err(e) => println!("Error<'i>:\n{}", e),
+                Err(e) => println!("Error:\n{}", e),
             }
         }
     }
-
-    Ok(())
 }

@@ -1,4 +1,14 @@
-use crate::{error::ErrorDetails, syntax_tree::Node, Error, Rule, State};
+use std::borrow::Cow;
+
+use crate::{
+    error::ErrorDetails,
+    pest::LavendeuxParser,
+    syntax_tree::{
+        traits::{IntoOwned, NodeExt},
+        Node, Reference,
+    },
+    Error, Rule, State,
+};
 use polyvalue::{Value, ValueType};
 
 use super::{
@@ -9,18 +19,19 @@ use super::{
 
 /// A user-defined function
 /// This is a function defined in lavendish, and is not a part of the standard library
-#[derive(Debug)]
-pub struct UserDefinedFunction {
+#[derive(Debug, Clone)]
+pub struct UserDefinedFunction<'i> {
     name: String,
     args: Vec<(String, ValueType)>,
     returns: ValueType,
     src: Vec<String>,
-    // body: Vec<Node<'i>>,
+    body: Vec<Node<'i>>,
+
     src_line_offset: usize,
 
     own_docs: UserFunctionDocumentation,
 }
-impl<'i> ParserFunction for UserDefinedFunction {
+impl ParserFunction for UserDefinedFunction<'_> {
     fn name(&self) -> &str {
         &self.name
     }
@@ -37,41 +48,41 @@ impl<'i> ParserFunction for UserDefinedFunction {
         self.returns
     }
 
-    fn expected_arguments(&self) -> Vec<(&str, FunctionArgument)> {
+    fn expected_arguments(&self) -> Vec<(Cow<'static, str>, FunctionArgument)> {
         // map self.args to FunctionArgument Standard/All
         self.args
             .iter()
             .map(|(name, expects)| {
                 (
-                    name.as_str(),
+                    Cow::Owned(name.clone()),
                     FunctionArgument {
                         expected_type: *expects,
                         meta: FunctionArgumentType::Standard,
                     },
                 )
             })
-            .collect::<Vec<(&str, FunctionArgument)>>()
+            .collect()
     }
 
     fn clone_self(&self) -> Box<dyn ParserFunction> {
-        Box::new(Self {
+        Box::new(UserDefinedFunction {
             name: self.name.clone(),
             args: self.args.clone(),
             returns: self.returns,
             src: self.src.clone(),
-            // body: Self::compile(&self.src).unwrap(),
+            body: UserDefinedFunction::compile(&self.src, &mut Default::default()).unwrap(),
+
             src_line_offset: self.src_line_offset,
 
             own_docs: self.own_docs.clone(),
         })
     }
 
-    fn call(&self, state: &mut State) -> Result<Value, Error<'_>> {
+    fn call(&self, state: &mut State, _: Option<&Reference>) -> Result<Value, Error> {
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
-        let body = Self::compile(&self.src)?;
-        for node in body.iter().take(body.len() - 1) {
-            match node.get_value(state) {
+        for node in self.body.iter().take(self.body.len() - 1) {
+            match node.evaluate(state) {
                 Ok(_) => {}
                 Err(e) if matches!(e.details, ErrorDetails::Return { .. }) => {
                     if let ErrorDetails::Return { value } = e.details {
@@ -86,8 +97,9 @@ impl<'i> ParserFunction for UserDefinedFunction {
         }
 
         // Execute the last node
+        let body = &self.body;
         let body = body.iter().last().unwrap();
-        match body.get_value(state) {
+        match body.evaluate(state) {
             Ok(v) => Ok(v.as_type(self.returns)?),
             Err(e) => {
                 let e = e.offset_linecount(self.src_line_offset);
@@ -97,22 +109,26 @@ impl<'i> ParserFunction for UserDefinedFunction {
     }
 }
 
-impl<'i> UserDefinedFunction {
+impl UserDefinedFunction<'_> {
     /// Create a new user-defined function
-    pub fn new(name: &'i str, src: Vec<String>) -> Result<Self, Error<'i>> {
+    pub fn new<'i>(name: &'i str, src: Vec<String>, state: &mut State) -> Result<Self, Error> {
         // Check that the function is valid
         if src.is_empty() {
+            /* Should be caught by the grammar */
             return oops!(Internal {
-                msg: "Functions must have at least one line".to_string()
+                msg: "User function must have at least one line".to_string()
             });
         }
 
-        Self::compile(&src)?;
+        // to get rid of this, there needs to be a way to get a Node that owns its text,
+        // or maybe something yoke-y
+        let body = Self::compile(&src, state)?;
+
         Ok(UserDefinedFunction {
             name: name.to_string(),
             args: vec![],
             returns: ValueType::Any,
-            //    body,
+            body,
             src,
             src_line_offset: 0,
             own_docs: UserFunctionDocumentation {
@@ -124,10 +140,12 @@ impl<'i> UserDefinedFunction {
         })
     }
 
-    pub fn compile(src: &'i Vec<String>) -> Result<Vec<Node<'i>>, Error<'i>> {
+    fn compile(src: &[String], state: &mut State) -> Result<Vec<Node<'static>>, Error> {
         src.iter()
-            .map(|l| crate::pest::parse_input(l, Rule::EXPR))
-            .collect::<Result<Vec<_>, _>>()
+            .map(|l| {
+                LavendeuxParser::build_ast(l, Rule::EXPR, state).and_then(|n| Ok(n.into_owned()))
+            })
+            .collect()
     }
 
     /// Add a required argument to the function
@@ -143,5 +161,23 @@ impl<'i> UserDefinedFunction {
     /// Offset the location in source-code for errors
     pub fn set_src_line_offset(&mut self, offset: usize) {
         self.src_line_offset = offset;
+    }
+
+    /// Get the source code of the function
+    pub fn src(&self) -> &Vec<String> {
+        &self.src
+    }
+
+    /// Remove the lifetime from the function
+    pub fn into_owned(self) -> UserDefinedFunction<'static> {
+        UserDefinedFunction {
+            name: self.name,
+            args: self.args,
+            returns: self.returns,
+            body: self.body.into_iter().map(|n| n.into_owned()).collect(),
+            src: self.src,
+            src_line_offset: self.src_line_offset,
+            own_docs: self.own_docs,
+        }
     }
 }

@@ -83,9 +83,7 @@ define_stddecorator!(
     },
     handler = (input) {
         let input = input.as_a::<I64>()?;
-        let input = *I64::arithmetic_op(
-            &input,
-            &I64::new(1000),
+        let input = *input.arithmetic_op(I64::new(1000),
             polyvalue::operations::ArithmeticOperation::Multiply,
         )?.inner();
 

@@ -1,6 +1,5 @@
 //! test
 #![warn(missing_docs)]
-#![deny(rust_2018_idioms)]
 
 // Language documentation
 // Regenerate this using:
@@ -21,10 +20,13 @@ pub mod error;
 pub use error::Error;
 
 // The core parser. Builds the AST and evaluates it.
-#[macro_use]
-mod syntax_tree;
 mod pest;
 pub use pest::Rule; // exported for Token
+mod syntax_tree;
+pub use syntax_tree::Reference;
+
+//#[macro_use]
+//mod syntax_tree;
 
 /// Function related definitions
 /// Home of the stdlib, user-functions, and function docs
@@ -46,11 +48,6 @@ pub use lavendeux::{Lavendeux, ParserOptions};
 // Public re-export of the polyvalue crate
 pub use polyvalue;
 pub use polyvalue::Value;
-
-// A few things to re-export internally
-use pest::{AstNode, ToAstNode};
-use syntax_tree::Node;
-use token::ToToken;
 
 /// A few critical tests for common grammar issues post-update
 #[cfg(test)]

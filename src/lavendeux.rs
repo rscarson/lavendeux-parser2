@@ -1,8 +1,9 @@
 use crate::documentation::{DocumentationTemplate, MarkdownFormatter};
 use crate::functions::ParserFunction;
-use crate::pest::{parse_input, Rule};
+use crate::pest::LavendeuxParser;
+use crate::syntax_tree::traits::NodeExt;
 use crate::syntax_tree::Node;
-use crate::{Error, State, Value};
+use crate::{Error, Rule, State, Value};
 use polyvalue::types::Array;
 use polyvalue::ValueTrait;
 use std::num::NonZeroUsize;
@@ -52,7 +53,7 @@ impl Lavendeux {
     }
 
     /// Register a function with the parser
-    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error<'_>> {
+    pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
         self.state.register_function(function)
     }
 
@@ -68,23 +69,23 @@ impl Lavendeux {
 
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
-    pub fn eval<'i>(input: &'i str, state: &mut State) -> Result<Node<'i>, Error<'i>> {
-        parse_input(input, Rule::SCRIPT)
+    pub fn eval<'i>(input: &'i str, state: &mut State) -> Result<Node<'i>, Error> {
+        LavendeuxParser::build_ast(input, Rule::SCRIPT, state)
     }
 
     /// Parses the given input
     /// Returns an array of values, one for each line in the input
-    pub fn parse<'i>(&mut self, input: &'i str) -> Result<Vec<Value>, Error<'i>> {
+    pub fn parse<'i>(&mut self, input: &'i str) -> Result<Vec<Value>, Error> {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
 
-        let value = std::thread::scope(|s| -> Result<Value, Error<'i>> {
+        let value = std::thread::scope(|s| -> Result<Value, Error> {
             let handle = std::thread::Builder::new()
                 .stack_size(self.options.stack_size)
                 .name("lavendeux-parser".to_string())
                 .spawn_scoped(s, || {
                     self.state.start_timer();
-                    Self::eval(input, &mut self.state)?.get_value(&mut self.state)
+                    Self::eval(input, &mut self.state)?.evaluate(&mut self.state)
                 })
                 .or(oops!(Fatal {
                     msg: "Failed to spawn parser thread".to_string()

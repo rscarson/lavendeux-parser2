@@ -1,8 +1,8 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
+use crate::define_stdfunction;
 use polyvalue::{
     operations::{BitwiseOperation, BitwiseOperationExt},
     types::I64,
-    InnerValue, Value,
+    InnerValue,
 };
 
 macro_rules! define_standard_bitwise_fn {
@@ -21,10 +21,10 @@ macro_rules! define_standard_bitwise_fn {
                 ",
                 examples: $examples,
             },
-            handler = (state) {
-                let left = state.get_variable("left").unwrap();
-                let right = state.get_variable("right").unwrap();
-                Ok(Value::bitwise_op(&left, &right, BitwiseOperation::$bitwise_op)?)
+            handler = (state, _reference) {
+                let left = required_arg!(state::left);
+                let right = required_arg!(state::right);
+                Ok(left.bitwise_op(right, BitwiseOperation::$bitwise_op)?)
             },
         );
     };
@@ -49,9 +49,9 @@ define_stdfunction!(
             assert_eq(0b1111_1111u8, not(0b0000_0000u8))
         ",
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
-        Ok(Value::bitwise_not(&value)?)
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
+        Ok(value.bitwise_not()?)
     },
 );
 
@@ -75,9 +75,9 @@ define_stdfunction!(
             )
         ",
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
-        let shift = state.get_variable("shift").unwrap().as_a::<i32>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
+        let shift = required_arg!(state::shift).as_a::<i32>()?;
 
         Ok(match value.inner() {
             InnerValue::U8(v) => v.logical_lshift(shift)?.into(),
@@ -115,9 +115,9 @@ define_stdfunction!(
             )
         ",
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
-        let shift = state.get_variable("shift").unwrap().as_a::<i32>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
+        let shift = required_arg!(state::shift).as_a::<i32>()?;
 
         Ok(match value.inner() {
             InnerValue::U8(v) => v.logical_rshift(shift)?.into(),

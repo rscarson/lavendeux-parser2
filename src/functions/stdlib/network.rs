@@ -1,9 +1,7 @@
 use crate::{
     define_stdfunction,
     error::{ErrorDetails, WrapExternalError, WrapOption},
-    functions::std_function::ParserFunction,
     network::{request, resolve, ApiDefinition, ApiRegistry},
-    State,
 };
 use polyvalue::{types::Object, Value};
 use serde_json::json;
@@ -31,8 +29,8 @@ define_stdfunction!(
             resolve('example.com')
         "
     },
-    handler = (state) {
-        let hostname = state.get_variable("hostname").unwrap().to_string();
+    handler = (state, _reference) {
+        let hostname = required_arg!(state::hostname).to_string();
         Ok(resolve(&hostname).unwrap())
     }
 );
@@ -59,9 +57,9 @@ define_stdfunction!(
             assert(obj_out is array)
         "
     },
-    handler = (state) {
-        let url = state.get_variable("url").unwrap().to_string();
-        let headers = state.get_variable("headers").unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
+    handler = (state, _reference) {
+        let url = required_arg!(state::url).to_string();
+        let headers = optional_arg!(state::headers).unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
         let headers = headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<_, _>>();
         request(&url, None, headers).without_context()
     }
@@ -89,10 +87,10 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let url = state.get_variable("url").unwrap().to_string();
-        let body = state.get_variable("body").unwrap().to_string();
-        let headers = state.get_variable("headers").unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
+    handler = (state, _reference) {
+        let url = required_arg!(state::url).to_string();
+        let body = required_arg!(state::body).to_string();
+        let headers = optional_arg!(state::headers).unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
         let headers = headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<_, _>>();
         request(&url, Some(body), headers).without_context()
     }
@@ -123,11 +121,11 @@ define_stdfunction!(
             assert( api_list() contains 'ipify' )
         "
     },
-    handler = (state) {
-        let name = state.get_variable("name").unwrap().to_string();
-        let endpoint = state.get_variable("endpoint").unwrap();
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
+        let endpoint = required_arg!(state::endpoint);
 
-        let api = ApiDefinition::try_from(endpoint)?;
+        let api = ApiDefinition::try_from(endpoint.clone())?;
 
         ApiRegistry::new(state).add(state, &name, api);
         Ok(Value::from(name))
@@ -149,8 +147,8 @@ define_stdfunction!(
             assert( !(api_list() contains 'ipify') )
         "
     },
-    handler = (state) {
-        let name = state.get_variable("name").unwrap().to_string();
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
         ApiRegistry::new(state).remove(state, &name);
         Ok(Value::from(name))
     }
@@ -169,7 +167,7 @@ define_stdfunction!(
             api_all()['chatgpt']['base_url']
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         Ok(ApiRegistry::raw(state))
     }
 );
@@ -187,7 +185,7 @@ define_stdfunction!(
             assert( api_list() contains 'chatgpt' )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         Ok(ApiRegistry::new(state).all().keys().cloned().map(Value::from).collect::<Vec<_>>().into())
     }
 );
@@ -210,9 +208,9 @@ define_stdfunction!(
             api_get('ipify', '/?format=json')
         "
     },
-    handler = (state) {
-        let name = state.get_variable("name").unwrap().to_string();
-        let path = state.get_variable("path").map(|v| v.to_string());
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
+        let path = optional_arg!(state::path).map(|v| v.to_string());
 
         let registry = ApiRegistry::new(state);
         let api = registry.get(&name).or_error(ErrorDetails::Custom {
@@ -241,10 +239,10 @@ define_stdfunction!(
             api_post('ipify', '{\"name\"=\"john\"}', 'format=json')
         "
     },
-    handler = (state) {
-        let name = state.get_variable("name").unwrap().to_string();
-        let path = state.get_variable("path").map(|v| v.to_string());
-        let body = state.get_variable("body").unwrap().to_string();
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
+        let path = optional_arg!(state::path).map(|v| v.to_string());
+        let body = required_arg!(state::body).to_string();
 
         let registry = ApiRegistry::new(state);
         let api = registry.get(&name).or_error(ErrorDetails::Custom {
@@ -273,9 +271,9 @@ define_stdfunction!(
             assert_eq( api_all()['chatgpt']['auth_key'], 'my_super_secret_api_key' )
         "
     },
-    handler = (state) {
-        let name = state.get_variable("name").unwrap().to_string();
-        let auth_key = state.get_variable("auth_key").unwrap().to_string();
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
+        let auth_key = required_arg!(state::auth_key).to_string();
 
         let mut registry = ApiRegistry::new(state);
         let mut api = registry.get(&name).or_error(ErrorDetails::Custom {
@@ -304,8 +302,8 @@ define_stdfunction!(
             chatgpt('What is the meaning of life?')
         "
     },
-    handler = (state) {
-        let prompt = state.get_variable("prompt").unwrap().to_string();
+    handler = (state, _reference) {
+        let prompt = required_arg!(state::prompt).to_string();
         let registry = ApiRegistry::new(state);
         let api = registry.get("chatgpt").or_error(ErrorDetails::Custom {
             msg: "API 'chatgpt' not found".to_string(),

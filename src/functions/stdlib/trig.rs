@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
+use crate::define_stdfunction;
 use polyvalue::Value;
 
 macro_rules! define_trigfunction {
@@ -17,8 +17,8 @@ macro_rules! define_trigfunction {
                 ",
                 examples: $examples,
             },
-            handler = (state) {
-                let n = state.get_variable("n").unwrap().as_a::<f64>()?;
+            handler = (state, _reference) {
+                let n = required_arg!(state::n).as_a::<f64>()?;
                 Ok(Value::from(n.$name()))
             }
         );

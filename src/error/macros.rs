@@ -1,4 +1,4 @@
-/// Matches the error details of an error against a pattern.
+/// Matches an error to the type of ErrorDetails it contains
 /// # Arguments
 /// * `err` - The error to match
 /// * `pat` - The pattern to match against
@@ -10,11 +10,11 @@
 /// # use lavendeux_parser::error_matches;
 ///
 /// let err = Error {
-///     details: ErrorDetails::Syntax,
+///     details: ErrorDetails::ArrayEmpty,
 ///     context: None,
 ///     source: None,
 /// };
-/// assert!(error_matches!(err, Syntax));
+/// assert!(error_matches!(err, ArrayEmpty));
 /// ```
 #[macro_export]
 macro_rules! error_matches {
@@ -27,14 +27,14 @@ macro_rules! oops {
     ($variant:ident, token = $context:expr, src = $src:expr) => {
         Err($crate::error::Error {
             details: $crate::error::ErrorDetails::$variant,
-            context: Some($context),
+            context: Some($context.into_owned()),
             source: Some(Box::new($src)),
         })
     };
     ($variant:ident, $context:expr) => {
         Err($crate::error::Error {
             details: $crate::error::ErrorDetails::$variant,
-            context: Some($context),
+            context: Some($context.into_owned()),
             source: None,
         })
     };
@@ -56,14 +56,14 @@ macro_rules! oops {
     ($variant:ident { $($n:ident:$v:expr),+ }, token = $context:expr, src = $src:expr) => {
         Err($crate::error::Error {
             details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
-            context: Some($context),
+            context: Some($context.into_owned()),
             source: Some(Box::new($src)),
         })
     };
     ($variant:ident { $($n:ident:$v:expr),+ }, $context:expr) => {
         Err($crate::error::Error {
             details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
-            context: Some($context),
+            context: Some($context.into_owned()),
             source: None,
         })
     };

@@ -18,7 +18,7 @@
 ///             )
 ///         "
 ///     },
-///     handler = (state) -> Result<polyvalue::Value, Error<'i>> {
+///     handler = (state, reference) {
 ///         let a = state.get_variable("a").unwrap().as_a::<i64>()?;
 ///         let b = state.get_variable("b").unwrap().as_a::<i64>()?;
 ///         Ok((a + b).into())
@@ -43,7 +43,7 @@ macro_rules! define_stdfunction {
             ext_description: $ext_description:literal,
             examples: $examples:literal$(,)?
         },
-        handler = ($hndstate:ident) $handler:block$(,)?
+        handler = ($hndstate:ident, $hndref:ident) $handler:block$(,)?
     ) => {
         paste::paste! {
             #[allow(non_camel_case_types)]
@@ -70,7 +70,7 @@ macro_rules! define_stdfunction {
                 }
             }
 
-            impl ParserFunction for [<_stdlibfn_$name>] {
+            impl $crate::functions::std_function::ParserFunction for [<_stdlibfn_$name>] {
                 fn name(&self) -> &str {
                     Self::NAME
                 }
@@ -91,19 +91,23 @@ macro_rules! define_stdfunction {
                     polyvalue::ValueType::$return
                 }
 
-                fn expected_arguments(&self) -> Vec<(&str, $crate::functions::FunctionArgument)> {
-                    Self::ARGUMENTS.to_vec()
+                fn expected_arguments(&self) -> Vec<(std::borrow::Cow<'static, str>, $crate::functions::FunctionArgument)> {
+                    Self::ARGUMENTS
+                        .iter()
+                        .copied()
+                        .map(|(name, arg)| (std::borrow::Cow::Borrowed(name), arg))
+                        .collect()
                 }
 
-                fn clone_self(&self) -> Box<dyn ParserFunction> {
+                fn clone_self(&self) -> Box<dyn $crate::functions::std_function::ParserFunction> {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, $hndstate: &mut State) -> Result<polyvalue::Value, $crate::Error<'_>> $handler
+                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::Reference>) -> Result<polyvalue::Value, $crate::Error> $handler
             }
 
             inventory::submit! {
-                &[<_stdlibfn_$name>] as &'static dyn ParserFunction
+                &[<_stdlibfn_$name>] as &'static dyn $crate::functions::std_function::ParserFunction
             }
         }
     };
@@ -127,7 +131,7 @@ macro_rules! define_stdfunction {
 ///             )
 ///         "
 ///     },
-///     handler = |input: polyvalue::Value| -> Result<String, Error<'i>> {
+///     handler = (input) {
 ///         Ok(input.as_a::<String>()?.to_uppercase())
 ///     }
 /// );
@@ -195,17 +199,21 @@ macro_rules! define_stddecorator {
                     polyvalue::ValueType::String
                 }
 
-                fn expected_arguments(&self) -> Vec<(&str, $crate::functions::FunctionArgument)> {
-                    Self::ARGUMENTS.to_vec()
+                fn expected_arguments(&self) -> Vec<(std::borrow::Cow<'static, str>, $crate::functions::FunctionArgument)> {
+                    Self::ARGUMENTS
+                        .iter()
+                        .copied()
+                        .map(|(name, arg)| (std::borrow::Cow::Borrowed(name), arg))
+                        .collect()
                 }
 
                 fn clone_self(&self) -> Box<dyn $crate::functions::ParserFunction> {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut $crate::State) -> Result<polyvalue::Value, $crate::Error<'_>> {
-                    let $hndval = state.get_variable(stringify!($aname)).unwrap();
-                    let value: Result<String, Error<'_>> = $handler;
+                fn call(&self, state: &mut $crate::State, _: Option<&crate::syntax_tree::Reference>) -> Result<polyvalue::Value, $crate::Error> {
+                    let $hndval = required_arg!(state::$aname);
+                    let value: Result<String, Error> = $handler;
                     Ok(value?.into())
                 }
             }
@@ -214,5 +222,24 @@ macro_rules! define_stddecorator {
                 &[<_stdlibfn_dec_$name>] as &'static dyn $crate::functions::ParserFunction
             }
         }
+    };
+}
+
+macro_rules! required_arg {
+    ($state:ident :: $name:ident) => {
+        match optional_arg!($state::$name) {
+            Some(v) => v,
+            None => {
+                return oops!(Internal {
+                    msg: format!("Missing required argument: {}", stringify!($name))
+                })
+            }
+        }
+    };
+}
+
+macro_rules! optional_arg {
+    ($state:ident :: $name:ident) => {
+        $state.get_variable(stringify!($name)).cloned()
     };
 }

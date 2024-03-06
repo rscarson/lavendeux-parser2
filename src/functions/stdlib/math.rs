@@ -1,4 +1,4 @@
-use crate::{define_stdfunction, functions::std_function::ParserFunction, State};
+use crate::define_stdfunction;
 use polyvalue::{fpdec::Round, types::CurrencyInner, InnerValue, Value, ValueTrait};
 
 define_stdfunction!(
@@ -20,8 +20,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
+    handler = (state, _reference) {
+        let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty)
         }
@@ -49,8 +49,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let options = state.get_variable("options").unwrap().as_a::<Vec<Value>>()?;
+    handler = (state, _reference) {
+        let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty)
         }
@@ -78,8 +78,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap().as_a::<f64>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.ceil().into())
     }
 );
@@ -103,8 +103,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap().as_a::<f64>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.floor().into())
     }
 );
@@ -127,8 +127,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
         match value.inner() {
             InnerValue::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
             InnerValue::Currency(n) => {
@@ -180,9 +180,9 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
-        let precision = state.get_variable("precision").unwrap_or(0.into()).as_a::<i64>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
+        let precision = optional_arg!(state::precision).unwrap_or(0.into()).as_a::<i64>()?;
 
         match value.inner() {
             InnerValue::Fixed(n) => Ok(Value::from(n.inner().clone().round(precision as i8))),
@@ -225,8 +225,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
         Ok(Value::from(value.log2()).as_type(type_name)?)
@@ -249,8 +249,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<i64>()?;
         Ok(Value::from(value.ilog2()).as_type(type_name)?)
@@ -273,8 +273,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
         Ok(Value::from(value.log10()).as_type(type_name)?)
@@ -297,8 +297,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap();
+    handler = (state, _reference) {
+        let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
         Ok(Value::from(value.ln()).as_type(type_name)?)
@@ -322,9 +322,9 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap().as_a::<f64>()?;
-        let base = state.get_variable("base").unwrap_or(10.into()).as_a::<f64>()?;
+    handler = (state, __reference) {
+        let value = required_arg!(state::value).as_a::<f64>()?;
+        let base = optional_arg!(state::base).unwrap_or(10.into()).as_a::<f64>()?;
         Ok(value.log(base).into())
     }
 );
@@ -345,8 +345,8 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap().as_a::<f64>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.sqrt().into())
     }
 );
@@ -368,9 +368,9 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
-        let value = state.get_variable("value").unwrap().as_a::<f64>()?;
-        let root = state.get_variable("root").unwrap().as_a::<f64>()?;
+    handler = (state, _reference) {
+        let value = required_arg!(state::value).as_a::<f64>()?;
+        let root = required_arg!(state::root).as_a::<f64>()?;
         Ok(value.powf(1.0 / root).into())
     }
 );
