@@ -14,7 +14,7 @@ fn next_command() -> String {
         stdin()
             .read_line(&mut input)
             .expect("error: unable to read user input");
-        if !input.trim().ends_with("\\") || input.trim().ends_with("\\\\") {
+        if !input.trim().ends_with('\\') || input.trim().ends_with("\\\\") {
             break;
         }
     }
@@ -49,7 +49,7 @@ fn main() {
         }
         let cmd = stack.pop_front().unwrap();
 
-        if cmd.len() == 0 {
+        if cmd.is_empty() {
             continue;
         } else if ["exit", "quit"].contains(&cmd.as_str()) {
             break;

@@ -19,7 +19,5 @@ fn main() {
     let parser = Lavendeux::new(Default::default());
     let docs = parser.generate_documentation();
     std::fs::write("documentation.md", docs).expect("Failed to write documentation.md");
-    run_command(&format!(
-        "rustdoc documentation.md --o ./ --html-before-content=src/bin/generate_docs/documentation_template.html"
-    ))
+    run_command("rustdoc documentation.md --o ./ --html-before-content=src/bin/generate_docs/documentation_template.html")
 }
