@@ -22,8 +22,8 @@ The hierarchy is as follows (from lowest to highest priority):
 - Int (in order, `u8, i8, u16, i16, u32, i32, u64, i64`)
 - Float
 - Fixed, then Currency
-- Array, then Object
 - String
+- Array, then Object
 
 Note that range is not included, since it can only be compared to itself, or to arrays.
 
@@ -134,7 +134,7 @@ $2.00 + £1.000; // 3.000
 
 **Supported currency symbols:**
 
-```lavendeux
+```
 $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
@@ -230,7 +230,7 @@ Inside a, array or object, it will be formatted as a string literal, with enclos
 ------------
 
 # Operators and Syntax
-## Arithmetic
+## Arithmetic Expression
 **[+, -, *, /, %, **]**  
 Performs arithmetic operations on two values.
 All but exponentiation are left-associative.
@@ -280,6 +280,19 @@ A larger set of bitwise operations are available in the 'bitwise' category of th
 5 ^ 3
 5 << 3 >> 3
 ```
+## Block
+**[{ <statements> }]**  
+A series of expressions that are executed in order, and are separated by semicolons or linebreaks.
+The last statement's value is returned.
+A block must return a value, and thus cannot be empty.
+If a block doesn't need to return a value (side-effect `if`s for example), use `nil`
+
+**Examples:**  
+```lavendeux
+if true {
+    1; 2
+} else nil
+```
 ## Boolean
 **[or, and, ==, !=, <=, >=, <, >]**  
 Performs an infix boolean comparison between two values.
@@ -293,6 +306,13 @@ All are left-associative.
 true || false
 1 < 2
 ```
+## Break
+**[break]**  
+Breaks out of a loop
+**Examples:**  
+```lavendeux
+for i in 0..10 { if i == 5 { break } else {i} }
+```
 ## Cast
 **[as]**  
 Casts a value to a different type.
@@ -305,14 +325,26 @@ The operator is right-associative
 5 as 'float'
 5 as i8
 ```
-## Constant
-**[pi, e, tau]**  
+## Constants
+**[pi, e, tau, nil]**  
 A constant value.
 A predefined set of values that are always available.
 
+- `pi` - The mathematical constant π
+- `e` - The mathematical constant e
+- `tau` - The mathematical constant τ
+- `nil` - The nil value - used to represent nothing or an empty value, especially in the context of a side-effect conditional
+
 **Examples:**  
 ```lavendeux
-pi; e; tau
+pi; e; tau; nil
+```
+## Continue
+**[continue]**  
+Skips the current iteration of a loop
+**Examples:**  
+```lavendeux
+for i in 0..10 { if i == 5 { continue } else {i} }
 ```
 ## Decorator
 **[@name]**  
@@ -338,22 +370,27 @@ Indices can also be a collection to delete multiple values at once
 a = 2; del a
 a = [1]; del a[]
 a = {'test': 1}; del a['test']
+a=1;b=2; del [a,b]
 
 @dec(x) = 2
 del @dec
 ```
 ## For
-**[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block>]**  
-A loop that iterates over a range, array, or object.
+**[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block> [if <condition>]]**  
+For loops are finite value iterators. This means they map over a range, array, or object, 
+and return a new array of values.
 The variable is optional, and if not provided, the loop will not bind a variable.
 The expression will return an array of the results of the block.
 Break and skip/continue can be used to exit the loop or skip the current iteration.
+A condition can be provided to filter the loop.
 
 **Examples:**  
 ```lavendeux
 for i in 0..10 { i }
 for i in [1, 2, 3] { i }
 for i in {'a': 1, 'b': 2} { i }
+
+for a in 0..10 do a if a % 2 == 0
 
 for 0..10 do '!'
 ```
@@ -410,6 +447,7 @@ A conditional expression that evaluates a condition and then one of two branches
 body can be either a block or a single expression. The last expression is returned from a block.
 Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
 As such, all if expressions must have both a then and an else branch.
+If a condition doesn't need to return a value (side-effect `if`s for example), use `nil`
 
 **Examples:**  
 ```lavendeux
@@ -419,9 +457,7 @@ if a == 4 {
     a
 } else if a == 5 {
     5
-} else {
-    6
-}
+} else nil
 ```
 ## Indexing
 **[a[b], a[]]**  
@@ -477,6 +513,28 @@ Character ranges are inclusive and can only be used with single-character string
 1..5
 'a'..'z'
 ```
+## Return
+**[return <value>]**  
+Returns a value from a function.
+By default, the last expression is returned, unless a return statement is used.
+
+**Examples:**  
+```lavendeux
+a() = { return 5 ; 2 }
+b() = { 5 ; 2 }
+
+assert_eq( a(), 5 )
+assert_eq( b(), 2 )
+```
+## Script
+**[<statement> [ ; | \n ] <statement>]**  
+A series of expressions or function definitions that are executed in order, and are separated by semicolons or linebreaks.
+
+**Examples:**  
+```lavendeux
+1 + 2 ; 3 @hex
+min([1, 2, 3])
+```
 ## Ternary
 **[condition ? then : else]**  
 A right-associative ternary operator.
@@ -506,15 +564,6 @@ If the value is not a boolean, it is cooerced to boolean first.
 !true == false
 !'test' == false
 !0 == true
-```
-## Unary Increment/Decrement
-**[++, --]**  
-Increments or decrements a variable by 1.
-**Examples:**  
-```lavendeux
-a = 0
-assert_eq(a++, 0)
-assert_eq(--a, 0)
 ```
 ## Unary Negation
 **[-]**  
@@ -1840,6 +1889,18 @@ assert_eq('aGVsbG8gd29ybGQ=', base64_encode('hello world'))
 ```
 
 ------------
+### chars
+```lavendeux
+chars(s:string) -> array
+```
+Splits a string into its individual characters.
+This function will handle all Unicode characters.  
+**Examples:**  
+```lavendeux
+assert_eq(['h', 'e', 'l', 'l', 'o'], chars('hello'))
+```
+
+------------
 ### chr
 ```lavendeux
 chr(i:i64) -> string
@@ -1853,17 +1914,16 @@ assert_eq('a', chr(97))
 ```
 
 ------------
-### concat
+### escape
 ```lavendeux
-concat(parts:array, [joiner:string]) -> string
+escape(s:string) -> string
 ```
-Concatenates an array of values into a single string.
-Converts all its arguments to strings and then concatenates them.  
-If a joiner is provided, it will be used to separate the parts.  
-  
+Escapes special characters in a string.
+This function will handle all Unicode characters.  
 **Examples:**  
 ```lavendeux
-assert_eq('hello world', concat(['hello', ' ', 'world']))
+assert_eq('hello\\nworld', escape('hello
+world'))
 ```
 
 ------------
@@ -1876,6 +1936,33 @@ The 2nd argument is an array of values to be consumed in order
 **Examples:**  
 ```lavendeux
 assert_eq('hello world', format('hello {}', ['world']))
+```
+
+------------
+### from_json
+```lavendeux
+from_json(s:string) -> any
+```
+Parses a JSON string into a value.
+This function will handle all Unicode characters.  
+**Examples:**  
+```lavendeux
+assert_eq({"hello": "world"}, from_json('{"hello": "world"}'))
+```
+
+------------
+### join
+```lavendeux
+join(parts:array, [joiner:string]) -> string
+```
+Concatenates an array of values into a single string.
+Converts all its arguments to strings and then concatenates them.  
+If a joiner is provided, it will be used to separate the parts.  
+  
+**Examples:**  
+```lavendeux
+assert_eq('hello world', join(['hello', ' ', 'world']))
+assert_eq('hello world', ['hello', 'world'].join(' '))
 ```
 
 ------------
@@ -1902,6 +1989,32 @@ This is the complement of chr(); Output from one is valid input for the other.
 **Examples:**  
 ```lavendeux
 assert_eq(97u32, ord('a'))
+```
+
+------------
+### pad_left
+```lavendeux
+pad_left(s:string, length:i64, [pad:string]) -> string
+```
+Pads a string to a specified length with a specified character.
+This function will handle all Unicode characters.  
+**Examples:**  
+```lavendeux
+assert_eq('!!!!!!hello', pad_left('hello', 11, '!'))
+assert_eq('      hello', pad_left('hello', 11))
+```
+
+------------
+### pad_right
+```lavendeux
+pad_right(s:string, length:i64, [pad:string]) -> string
+```
+Pads a string to a specified length with a specified character.
+This function will handle all Unicode characters.  
+**Examples:**  
+```lavendeux
+assert_eq('hello!!!!!!', pad_right('hello', 11, '!'))
+assert_eq('hello      ', pad_right('hello', 11))
 ```
 
 ------------
@@ -1943,6 +2056,19 @@ This function is locale-insensitive and will handle all Unicode characters.
 **Examples:**  
 ```lavendeux
 assert_eq('hello world', replace('hello there', 'there', 'world'))
+```
+
+------------
+### to_json
+```lavendeux
+to_json(v) -> string
+```
+Converts a value into a JSON string.
+Objects will be encoded as (key, value) pairs, due to differences between JSON and lavendeux.  
+  
+**Examples:**  
+```lavendeux
+assert_eq('{"hello":"world"}', to_json({'hello': 'world'}))
 ```
 
 ------------
@@ -2024,6 +2150,7 @@ assert(condition) -> any
 ```
 Throws an error if the condition is false
 Does a weak-comparison to boolean, so 0, '', [], etc. are all considered false.  
+Returns the value otherwise  
   
 **Examples:**  
 ```lavendeux
@@ -2091,7 +2218,7 @@ call_function(name:string, args:array) -> any
 Calls a function or @decorator by name with the given arguments
 If the name begins with '@', it will be treated as a decorator.  
 Maps the given object to the function's arguments and calls the function.  
-Important note: Functions that take in a reference, such as pop/push etc, will act by-value and not modify the original object.  
+Important note: Functions that take in a _reference, such as pop/push etc, will act by-value and not modify the original object.  
   
 **Examples:**  
 ```lavendeux
@@ -2111,6 +2238,26 @@ If the parser is not attached to a console, it will not be visible.
 **Examples:**  
 ```lavendeux
 debug("This is a debug message")
+```
+
+------------
+### document_function
+```lavendeux
+document_function(name:string, docs:object) -> string
+```
+Adds documentation to a user-defined function
+Adds documentation to a function, which will be displayed help()  
+The documentation object should contain the keys 'category', 'description', 'ext_description', and 'examples'.  
+  
+**Examples:**  
+```lavendeux
+a() = 5
+document_function('a', {
+    'category': 'System',
+    'description': 'Adds documentation to a function',
+    'ext_description': 'Adds documentation to a function, which will be displayed in the documentation.',
+    'examples': 'document_function("document_function", {"category": "System", "description": "Adds documentation to a function", "ext_description": "Adds documentation to a function, which will be displayed in the documentation."})'
+})
 ```
 
 ------------
@@ -2156,6 +2303,20 @@ generate_documentation()
 ```
 
 ------------
+### global
+```lavendeux
+global(name:string) -> any
+```
+Returns a variable from the top-level scope
+Searches for the variable in the top-level scope only  
+  
+**Examples:**  
+```lavendeux
+assign_global('x', 6)
+assert_eq(6, global('x'))
+```
+
+------------
 ### include
 ```lavendeux
 include(filename:string) -> any
@@ -2166,7 +2327,7 @@ Returns an empty string in all cases.
   
 **Examples:**  
 ```lavendeux
-include('examples/stdlib_example.lav')
+include('example_scripts/stdlib.lav')
 ```
 
 ------------
