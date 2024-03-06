@@ -63,7 +63,7 @@ define_ast!(
 
                 Ok(Self {
                     lhs: Box::new(lhs),
-                    op: op.into(),
+                    op,
                     rhs: Box::new(rhs),
                     token,
                 }

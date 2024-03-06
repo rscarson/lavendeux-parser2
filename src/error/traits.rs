@@ -38,7 +38,7 @@ impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
                     Vec::new()
                 };
 
-                oops!(Syntax { expected: expected }, token)
+                oops!(Syntax { expected }, token)
             }
         }
     }

@@ -16,7 +16,7 @@ define_ast!(
             },
             eval = (this, state) {
                 let value = this.value.evaluate(state).with_context(this.token())?;
-                oops!(Return { value: value}, this.token().clone())
+                oops!(Return { value }, this.token().clone())
             },
             owned = (this) {
                 Self::Owned {
