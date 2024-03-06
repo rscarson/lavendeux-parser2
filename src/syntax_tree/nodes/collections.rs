@@ -138,7 +138,7 @@ define_ast!(
                         Ok(Value::from(array))
                     }
 
-                    ValueType::Bool | _ if start.is_a(ValueType::Int) => {
+                    _ if start.is_a(ValueType::Int) => {
                         let start = start.as_a::<i64>().unwrap();
                         let end = end.as_a::<i64>().unwrap();
 
