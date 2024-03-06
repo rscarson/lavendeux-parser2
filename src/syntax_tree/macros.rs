@@ -24,6 +24,7 @@ macro_rules! define_astnode {
             }
         )?
 
+        #[allow(missing_docs)]
         #[derive(Debug, Clone)]
         pub struct $name<'i> {
             $($(pub $param: $param_t,)*)?

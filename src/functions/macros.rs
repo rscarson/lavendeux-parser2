@@ -3,7 +3,7 @@
 ///
 /// # Usage
 /// ```rust
-/// use lavendeux_parser::{define_stdfunction, polyvalue, Error, functions::ParserFunction, State};
+/// use lavendeux_parser::{define_stdfunction, required_arg};
 /// define_stdfunction!(
 ///     add { a: Standard::Numeric, b: Standard::Numeric },
 ///     returns = Numeric,
@@ -19,8 +19,8 @@
 ///         "
 ///     },
 ///     handler = (state, reference) {
-///         let a = state.get_variable("a").unwrap().as_a::<i64>()?;
-///         let b = state.get_variable("b").unwrap().as_a::<i64>()?;
+///         let a = required_arg!(state::a).as_a::<i64>()?;
+///         let b = required_arg!(state::b).as_a::<i64>()?;
 ///         Ok((a + b).into())
 ///     }
 /// );
@@ -60,7 +60,7 @@ macro_rules! define_stdfunction {
                 };
                 const ARGUMENTS: &'static [(&'static str, $crate::functions::FunctionArgument)] = &[$(
                     (stringify!($aname), $crate::functions::FunctionArgument {
-                        expected_type: polyvalue::ValueType::$atype,
+                        expected_type: $crate::polyvalue::ValueType::$atype,
                         meta: $crate::functions::FunctionArgumentType::$meta
                     })
                 ),*];
@@ -70,7 +70,7 @@ macro_rules! define_stdfunction {
                 }
             }
 
-            impl $crate::functions::std_function::ParserFunction for [<_stdlibfn_$name>] {
+            impl $crate::functions::ParserFunction for [<_stdlibfn_$name>] {
                 fn name(&self) -> &str {
                     Self::NAME
                 }
@@ -87,8 +87,8 @@ macro_rules! define_stdfunction {
                     unimplemented!()
                 }
 
-                fn return_type(&self) -> polyvalue::ValueType {
-                    polyvalue::ValueType::$return
+                fn return_type(&self) -> $crate::polyvalue::ValueType {
+                    $crate::polyvalue::ValueType::$return
                 }
 
                 fn expected_arguments(&self) -> Vec<(std::borrow::Cow<'static, str>, $crate::functions::FunctionArgument)> {
@@ -99,15 +99,15 @@ macro_rules! define_stdfunction {
                         .collect()
                 }
 
-                fn clone_self(&self) -> Box<dyn $crate::functions::std_function::ParserFunction> {
+                fn clone_self(&self) -> Box<dyn $crate::functions::ParserFunction> {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::Reference>) -> Result<polyvalue::Value, $crate::Error> $handler
+                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> $handler
             }
 
             inventory::submit! {
-                &[<_stdlibfn_$name>] as &'static dyn $crate::functions::std_function::ParserFunction
+                &[<_stdlibfn_$name>] as &'static dyn $crate::functions::ParserFunction
             }
         }
     };
@@ -118,7 +118,7 @@ macro_rules! define_stdfunction {
 ///
 /// # Usage
 /// ```rust
-/// use lavendeux_parser::{define_stddecorator, polyvalue, Error, functions::ParserFunction};
+/// use lavendeux_parser::{define_stddecorator};
 /// define_stddecorator!(
 ///     upper { input: String },
 ///     docs = {
@@ -168,7 +168,7 @@ macro_rules! define_stddecorator {
                 };
                 const ARGUMENTS: &'static [(&'static str, $crate::functions::FunctionArgument)] = &[
                     (stringify!($aname), $crate::functions::FunctionArgument {
-                        expected_type: polyvalue::ValueType::$atype,
+                        expected_type: $crate::polyvalue::ValueType::$atype,
                         meta: $crate::functions::FunctionArgumentType::Standard
                     })
                 ];
@@ -178,7 +178,7 @@ macro_rules! define_stddecorator {
                 }
             }
 
-            impl ParserFunction for [<_stdlibfn_dec_$name>] {
+            impl $crate::functions::ParserFunction for [<_stdlibfn_dec_$name>] {
                 fn name(&self) -> &str {
                     Self::NAME
                 }
@@ -196,7 +196,7 @@ macro_rules! define_stddecorator {
                 }
 
                 fn return_type(&self) -> $crate::polyvalue::ValueType {
-                    polyvalue::ValueType::String
+                    $crate::polyvalue::ValueType::String
                 }
 
                 fn expected_arguments(&self) -> Vec<(std::borrow::Cow<'static, str>, $crate::functions::FunctionArgument)> {
@@ -211,9 +211,9 @@ macro_rules! define_stddecorator {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut $crate::State, _: Option<&crate::syntax_tree::Reference>) -> Result<polyvalue::Value, $crate::Error> {
-                    let $hndval = required_arg!(state::$aname);
-                    let value: Result<String, Error> = $handler;
+                fn call(&self, state: &mut $crate::State, _: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> {
+                    let $hndval = $crate::required_arg!(state::$aname);
+                    let value: Result<String, $crate::Error> = $handler;
                     Ok(value?.into())
                 }
             }
@@ -225,12 +225,15 @@ macro_rules! define_stddecorator {
     };
 }
 
+/// Extracts a required argument from the state and returns it. If the argument is not found, it returns an error.
+/// Use it like `required_arg!(state::name)`.
+#[macro_export]
 macro_rules! required_arg {
     ($state:ident :: $name:ident) => {
-        match optional_arg!($state::$name) {
+        match $state.get_variable(stringify!($name)).cloned() {
             Some(v) => v,
             None => {
-                return oops!(Internal {
+                return $crate::oops!(Internal {
                     msg: format!("Missing required argument: {}", stringify!($name))
                 })
             }
@@ -238,6 +241,9 @@ macro_rules! required_arg {
     };
 }
 
+/// Extracts an optional argument from the state and returns it. If the argument is not found, it returns `None`.
+/// Use it like `optional_arg!(state::name)`.
+#[macro_export]
 macro_rules! optional_arg {
     ($state:ident :: $name:ident) => {
         $state.get_variable(stringify!($name)).cloned()

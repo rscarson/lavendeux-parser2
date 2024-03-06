@@ -23,60 +23,46 @@ macro_rules! error_matches {
     };
 }
 
+/// Returns an Err(Error), optionally with a context and/or source
+/// Example:
+/// ```rust
+/// # use lavendeux_parser::error::Error;
+/// # use lavendeux_parser::oops;
+/// # use lavendeux_parser::Token;
+/// # fn example() -> Result<(), Error> {
+/// # let token = Token::dummy();
+/// # let parent_error = Error::from(lavendeux_parser::error::ErrorDetails::ArrayEmpty);
+/// return oops!(FunctionName { name: "foo".to_string() }, token);
+/// return oops!(FunctionName { name: "foo".to_string() }, token = token, src = parent_error);
+/// # Ok(())
+/// # }
+/// ```
+#[macro_export]
 macro_rules! oops {
-    ($variant:ident, token = $context:expr, src = $src:expr) => {
+    ($variant:ident $({ $($n:ident$(:$v:expr)?),+ })?, token = $context:expr, src = $src:expr) => {
         Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant,
+            details: $crate::error::ErrorDetails::$variant $({ $($n $(: $v)?),+ })?,
             context: Some($context.into_owned()),
             source: Some(Box::new($src)),
         })
     };
-    ($variant:ident, $context:expr) => {
+    ($variant:ident $({ $($n:ident$(:$v:expr)?),+ })?, $context:expr) => {
         Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant,
-            context: Some($context.into_owned()),
-            source: None,
-        })
-    };
-    ($variant:ident, src = $src:expr) => {
-        Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant,
-            context: None,
-            source: Some(Box::new($src)),
-        })
-    };
-    ($variant:ident) => {
-        Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant,
-            context: None,
-            source: None,
-        })
-    };
-
-    ($variant:ident { $($n:ident:$v:expr),+ }, token = $context:expr, src = $src:expr) => {
-        Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
-            context: Some($context.into_owned()),
-            source: Some(Box::new($src)),
-        })
-    };
-    ($variant:ident { $($n:ident:$v:expr),+ }, $context:expr) => {
-        Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
+            details: $crate::error::ErrorDetails::$variant $({ $($n $(: $v)?),+ })?,
             context: Some($context.into_owned()),
             source: None,
         })
     };
-    ($variant:ident { $($n:ident:$v:expr),+ }, src = $src:expr) => {
+    ($variant:ident $({ $($n:ident$(:$v:expr)?),+ })?, src = $src:expr) => {
         Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
+            details: $crate::error::ErrorDetails::$variant $({ $($n $(: $v)?),+ })?,
             context: None,
             source: Some(Box::new($src)),
         })
     };
-    ($variant:ident { $($n:ident:$v:expr),+ }) => {
+    ($variant:ident $({ $($n:ident$(:$v:expr)?),+ })?) => {
         Err($crate::error::Error {
-            details: $crate::error::ErrorDetails::$variant { $($n: $v),+ },
+            details: $crate::error::ErrorDetails::$variant $({ $($n $(: $v)?),+ })?,
             context: None,
             source: None,
         })

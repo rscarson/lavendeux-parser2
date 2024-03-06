@@ -127,6 +127,32 @@ impl<'i> AssignmentTarget<'i> {
         }
     }
 
+    pub fn get_value_in_parent(&self, state: &mut State) -> Result<Value, Error> {
+        match self {
+            Self::Identifier(id) => state
+                .get_variable_as_parent(id)
+                .cloned()
+                .or_error(ErrorDetails::VariableName { name: id.clone() }),
+            Self::Index(base, indices) => {
+                let mut idx = vec![];
+                for index in indices {
+                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
+                }
+
+                let base = state
+                    .get_variable_as_parent(base)
+                    .cloned()
+                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
+                Self::get_index_handle(base, &idx)
+            }
+            Self::Destructure(_) => {
+                oops!(Internal {
+                    msg: format!("Destructuring references are only valid on assignments!")
+                })
+            }
+        }
+    }
+
     pub fn get_value_mut<'s>(&self, state: &'s mut State) -> Result<&'s mut Value, Error> {
         match self {
             Self::Identifier(id) => state

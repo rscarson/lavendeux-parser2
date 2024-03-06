@@ -220,18 +220,28 @@ define_ast!(
 );
 
 impl<'i> Reference<'i> {
-    pub fn new(target: AssignmentTarget<'i>, token: Token<'i>) -> Reference<'i> {
+    pub(crate) fn new(target: AssignmentTarget<'i>, token: Token<'i>) -> Reference<'i> {
         Self { target, token }
     }
 
+    /// Get the reference's value from the state
     pub fn get_value(&self, state: &mut State) -> Result<Value, Error> {
         self.target.get_value(state)
     }
 
+    /// Get the reference's value from the state
+    /// Uses the parent scope (if a function defines a value of the same name)
+    pub fn get_value_in_parent(&self, state: &mut State) -> Result<Value, Error> {
+        self.target.get_value_in_parent(state)
+    }
+
+    /// Update the reference's value in the state
     pub fn update_value(&self, state: &mut State, value: Value) -> Result<(), Error> {
         self.target.update_value(state, value)
     }
 
+    /// Update the reference's value in the state
+    /// Uses the parent scope (if a function defines a value of the same name)
     pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
         self.target.update_value_in_parent(state, value)
     }
