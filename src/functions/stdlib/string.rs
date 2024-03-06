@@ -290,14 +290,14 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let input = required_arg!(state::s).to_string();
-        let length = required_arg!(state::length).as_a::<u64>()? as usize;
+        let length = required_arg!(state::length).as_a::<i64>()?;
         let pad = optional_arg!(state::pad).unwrap_or(Value::string(" ")).to_string().chars().next().unwrap_or(' ').to_string();
 
-        let padding = length - input.len();
+        let padding: i64 = length - input.len() as i64;
         if padding <= 0 {
             Ok(Value::from(input))
         } else {
-            let pad = pad.repeat(padding);
+            let pad = pad.repeat(padding as usize);
             Ok((pad + &input).into())
         }
     },
