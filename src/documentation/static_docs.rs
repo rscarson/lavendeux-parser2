@@ -29,7 +29,7 @@ impl DocumentationTemplate {
             output += &section["text"]
                 .as_str()
                 .unwrap()
-                .split("\n")
+                .split('\n')
                 .map(|s| self.0.format_text(s.trim()))
                 .collect::<String>();
         }

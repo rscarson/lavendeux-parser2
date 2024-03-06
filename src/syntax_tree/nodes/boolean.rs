@@ -22,7 +22,6 @@ define_ast!(Boolean {
                 value: Box::new(this.value.into_owned()),
                 token: this.token.into_owned(),
             }
-            .into()
         },
 
         docs = {
@@ -86,7 +85,6 @@ define_ast!(Boolean {
                 rhs: Box::new(this.rhs.into_owned()),
                 token: this.token.into_owned(),
             }
-            .into()
         },
 
         docs = {

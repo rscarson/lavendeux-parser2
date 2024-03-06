@@ -331,9 +331,9 @@ impl State {
     pub fn register_function(&mut self, function: impl ParserFunction) -> Result<(), Error> {
         let name = function.name();
         if self.is_system_function(name) {
-            return oops!(ReadOnlyFunction {
+            oops!(ReadOnlyFunction {
                 name: name.to_string()
-            });
+            })
         } else {
             self.functions
                 .insert(name.to_string(), function.clone_self());
@@ -356,8 +356,8 @@ impl State {
     }
 
     /// Returns a function from the state
-    pub fn get_function(&self, name: &str) -> Option<&Box<dyn ParserFunction>> {
-        self.functions.get(name)
+    pub fn get_function(&self, name: &str) -> Option<&dyn ParserFunction> {
+        self.functions.get(name).map(|f| f.as_ref())
     }
 
     /// Returns a function from the state

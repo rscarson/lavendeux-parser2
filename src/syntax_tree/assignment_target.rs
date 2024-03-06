@@ -77,12 +77,12 @@ impl<'i> AssignmentTarget<'i> {
         let mut base = base;
         for index in indices {
             let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
-            let index = index.as_ref().or_else(|| Some(&default_idx)).unwrap();
+            let index = index.as_ref().unwrap_or(&default_idx);
 
             if index.is_a(ValueType::Collection) && !index.is_a(ValueType::String) {
-                base = base.get_indices(&index)?;
+                base = base.get_indices(index)?;
             } else {
-                base = base.get_index(&index)?;
+                base = base.get_index(index)?;
             }
         }
         Ok(base)
@@ -95,8 +95,8 @@ impl<'i> AssignmentTarget<'i> {
         let mut base = base;
         for index in indices {
             let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
-            let index = index.as_ref().or_else(|| Some(&default_idx)).unwrap();
-            base = base.get_index_mut(&index)?;
+            let index = index.as_ref().unwrap_or(&default_idx);
+            base = base.get_index_mut(index)?;
         }
         Ok(base)
     }
@@ -179,7 +179,10 @@ impl<'i> AssignmentTarget<'i> {
 
     pub fn update_value(&self, state: &mut State, value: Value) -> Result<(), Error> {
         match self {
-            Self::Identifier(id) => Ok(state.set_variable(id, value)),
+            Self::Identifier(id) => {
+                state.set_variable(id, value);
+                Ok(())
+            },
             Self::Index(base, indices) => {
                 let mut idx = vec![];
                 for index in indices {
@@ -221,7 +224,10 @@ impl<'i> AssignmentTarget<'i> {
 
     pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
         match self {
-            Self::Identifier(id) => Ok(state.set_variable_as_parent(id, value)),
+            Self::Identifier(id) => {
+                state.set_variable_as_parent(id, value);
+                Ok(())
+            },
             Self::Index(base, indices) => {
                 let mut idx = vec![];
                 for index in indices {

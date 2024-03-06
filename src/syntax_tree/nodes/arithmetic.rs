@@ -26,7 +26,6 @@ define_ast!(
                     value: Box::new(this.value.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {
@@ -81,7 +80,6 @@ define_ast!(
                     rhs: Box::new(this.rhs.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {

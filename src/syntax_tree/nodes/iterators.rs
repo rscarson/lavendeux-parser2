@@ -20,7 +20,7 @@ define_ast!(
                 oops!(Skip, this.token.clone())
             },
             owned = (this) {
-                Self::Owned { token: this.token.into_owned() }.into()
+                Self::Owned { token: this.token.into_owned() }
             },
             docs = {
                 name: "Continue",
@@ -40,7 +40,7 @@ define_ast!(
                 oops!(Break, this.token.clone())
             },
             owned = (this) {
-                Self::Owned { token: this.token.into_owned() }.into()
+                Self::Owned { token: this.token.into_owned() }
             },
             docs = {
                 name: "Break",
@@ -79,7 +79,7 @@ define_ast!(
                 // An iterator over Into<Value>
                 let iterable = match iterable.own_type() {
                     ValueType::Range => {
-                        let iterable = iterable.as_a::<Range>().with_context(this.token())?.inner().clone().into_iter();
+                        let iterable = iterable.as_a::<Range>().with_context(this.token())?.inner().clone();
                         let mut values = vec![];
                         for i in iterable {
                             values.push(i.into());
@@ -141,7 +141,6 @@ define_ast!(
                     condition: this.condition.map(|c| Box::new(c.into_owned())),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {

@@ -23,7 +23,7 @@ impl std::fmt::Display for MarkdownSnippet {
             MarkdownSnippet::CodeInline(s) => write!(f, "`{}`", s.trim()),
             MarkdownSnippet::Text(s) => write!(f, "{}", s),
         }?;
-        write!(f, "\n")
+        writeln!(f)
     }
 }
 
@@ -44,14 +44,14 @@ impl DocumentationFormatter for MarkdownFormatter {
             pieces.push(MarkdownSnippet::Text(desc.to_string()));
         }
         if let Some(ext_desc) = function.documentation().ext_description() {
-            for line in ext_desc.split("\n") {
+            for line in ext_desc.split('\n') {
                 pieces.push(MarkdownSnippet::Text(line.to_string() + "  "));
             }
         }
         if let Some(examples) = function.documentation().examples() {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
-                pieces.push(MarkdownSnippet::Text(format!("**Examples:**  ",)));
+                pieces.push(MarkdownSnippet::Text("**Examples:**  ".to_string()));
                 pieces.push(MarkdownSnippet::CodeBlock(examples.to_string()));
             }
         }
@@ -110,7 +110,7 @@ impl DocumentationFormatter for MarkdownFormatter {
     fn format_operators(&self) -> String {
         let mut output = vec![];
         let mut operators = operator_documentation::all();
-        operators.sort_by(|a, b| a.name.cmp(&b.name));
+        operators.sort_by(|a, b| a.name.cmp(b.name));
 
         for operator in operators {
             output.push(MarkdownSnippet::H2(operator.name.to_string()));
@@ -120,7 +120,7 @@ impl DocumentationFormatter for MarkdownFormatter {
 
             output.push(MarkdownSnippet::Text(operator.description.to_string()));
 
-            output.push(MarkdownSnippet::Text(format!("**Examples:**  ",)));
+            output.push(MarkdownSnippet::Text("**Examples:**  ".to_string()));
             output.push(MarkdownSnippet::CodeBlock(operator.examples.to_string()));
         }
 

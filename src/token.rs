@@ -30,22 +30,21 @@ impl Token<'_> {
 
     /// Check if this token is a symbol
     pub fn is_symbol(rule: Rule) -> bool {
-        match rule {
+        matches!(
+            rule,
             Rule::symbol_questionmark
-            | Rule::symbol_colon
-            | Rule::symbol_comma
-            | Rule::symbol_arrow
-            | Rule::symbol_at
-            | Rule::symbol_eq
-            | Rule::symbol_opencurly
-            | Rule::symbol_closecurly
-            | Rule::symbol_opensquare
-            | Rule::symbol_closesquare
-            | Rule::symbol_openround
-            | Rule::symbol_closeround => true,
-
-            _ => false,
-        }
+                | Rule::symbol_colon
+                | Rule::symbol_comma
+                | Rule::symbol_arrow
+                | Rule::symbol_at
+                | Rule::symbol_eq
+                | Rule::symbol_opencurly
+                | Rule::symbol_closecurly
+                | Rule::symbol_opensquare
+                | Rule::symbol_closesquare
+                | Rule::symbol_openround
+                | Rule::symbol_closeround
+        )
     }
 
     /// Remove lifetime restrictions from this token

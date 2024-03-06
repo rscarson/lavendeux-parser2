@@ -19,7 +19,7 @@ impl ApiDefinition {
         body: Option<String>,
         mut headers: HashMap<String, String>,
     ) -> Result<Value, Error> {
-        let endpoint = endpoint.unwrap_or_default().trim_start_matches("/");
+        let endpoint = endpoint.unwrap_or_default().trim_start_matches('/');
         let target = format!("{}/{}", &self.base_url, endpoint);
         if let Some(auth_key) = &self.auth_key {
             headers.insert("Authorization".to_string(), format!("Bearer {}", auth_key));
@@ -45,7 +45,7 @@ impl TryFrom<Value> for ApiDefinition {
         value
             .get(&Value::from("base_url"))
             .ok_or(ErrorDetails::ValueFormat {
-                expected_format: format!("<base_url: string> | {{<base_url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}}"),
+                expected_format: "<base_url: string> | {<base_url: string>, <description: string>, <examples: string>, <auth_key: string>, <headers: object>}".to_string(),
             })?.to_string();
 
         base_url = base_url.trim_end_matches('/').to_string();
@@ -63,8 +63,7 @@ impl TryFrom<Value> for ApiDefinition {
                 .to_string(),
 
             auth_key: value
-                .get(&("auth_key".into()))
-                .and_then(|v| Some(v.to_string())),
+                .get(&("auth_key".into())).map(|v| v.to_string()),
 
             additional_headers: value
                 .get(&("additional_headers".into()))
@@ -78,24 +77,24 @@ impl TryFrom<Value> for ApiDefinition {
     }
 }
 
-impl Into<Value> for ApiDefinition {
-    fn into(self) -> Value {
+impl From<ApiDefinition> for Value {
+    fn from(val: ApiDefinition) -> Self {
         let mut obj = Object::new(Default::default());
-        obj.insert("base_url".into(), Value::from(self.base_url))
+        obj.insert("base_url".into(), Value::from(val.base_url))
             .ok();
-        obj.insert("description".into(), Value::from(self.description))
+        obj.insert("description".into(), Value::from(val.description))
             .ok();
-        obj.insert("examples".into(), Value::from(self.examples))
+        obj.insert("examples".into(), Value::from(val.examples))
             .ok();
 
-        if let Some(auth_key) = self.auth_key {
+        if let Some(auth_key) = val.auth_key {
             obj.insert("auth_key".into(), Value::from(auth_key)).ok();
         }
 
         obj.insert(
             "additional_headers".into(),
             Value::try_from(
-                self.additional_headers
+                val.additional_headers
                     .iter()
                     .map(|(k, v)| (Value::from(k.as_str()), Value::from(v.as_str())))
                     .collect::<Vec<(_, _)>>(),

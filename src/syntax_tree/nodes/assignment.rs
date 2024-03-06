@@ -39,7 +39,8 @@ impl AssignmentOperation {
         } else {
             let lhs = target.get_value(state)?.clone();
             let rhs = rhs.as_type(lhs.own_type())?;
-            let value = match self {
+            
+            match self {
                 Self::Add => lhs.arithmetic_op(rhs, ArithmeticOperation::Add)?,
                 Self::Sub => lhs.arithmetic_op(rhs, ArithmeticOperation::Subtract)?,
                 Self::Mul => lhs.arithmetic_op(rhs, ArithmeticOperation::Multiply)?,
@@ -57,8 +58,7 @@ impl AssignmentOperation {
                 Self::Or => lhs.boolean_op(rhs, BooleanOperation::Or)?,
 
                 Self::None => rhs,
-            };
-            value
+            }
         };
 
         target.update_value(state, value.clone())?;
@@ -91,7 +91,7 @@ define_ast!(
         DeleteExpression(target: AssignmentTarget<'i>) {
             build = (pairs, token, state) {
                 let op = pairs.next().unwrap();
-                let is_decorator = op.as_str().ends_with("@");
+                let is_decorator = op.as_str().ends_with('@');
                 let target = pairs.next().unwrap();
 
                 let target = target.into_node(state).with_context(&token)?;
@@ -137,7 +137,7 @@ define_ast!(
                 Self::Owned {
                     target: this.target.into_owned(),
                     token: this.token.into_owned()
-                }.into()
+                }
             },
             docs = {
                 name: "Deletion Keyword",
@@ -197,7 +197,6 @@ define_ast!(
                     rhs: Box::new(this.rhs.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
             docs = {
                 name: "Assignment Operator",

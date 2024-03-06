@@ -493,7 +493,7 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
-        let index = required_arg!(state::index).as_a::<i64>()?.clone();
+        let index = required_arg!(state::index).as_a::<i64>()?;
 
         let left = Value::range(0i64 ..= (index - 1i64));
         let left = input.get_indices(&left)?;
@@ -594,7 +594,7 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
-        let size = required_arg!(state::size).as_a::<i64>()?.clone();
+        let size = required_arg!(state::size).as_a::<i64>()?;
 
         let result = input.chunks(size as usize).map(|c| Value::from(c.to_vec())).collect::<Vec<_>>();
         Ok(Value::from(result))

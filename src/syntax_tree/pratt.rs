@@ -26,10 +26,10 @@ impl Parser {
     {
         let pratt = Self::get_pratt_parser();
         let mut pratt = pratt
-            .map_primary(|primary| PestIterator::from(primary))
-            .map_infix(|l, o, r| PestIterator::from_infix(l, o, r))
-            .map_prefix(|o, r| PestIterator::from_prefix(o, r))
-            .map_postfix(|l, o| PestIterator::from_postfix(l, o));
+            .map_primary(PestIterator::from)
+            .map_infix(PestIterator::from_infix)
+            .map_prefix(PestIterator::from_prefix)
+            .map_postfix(PestIterator::from_postfix);
         pratt.parse(input)
     }
 }

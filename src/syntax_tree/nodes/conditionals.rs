@@ -62,7 +62,6 @@ define_ast!(
                     else_branch: Box::new(this.else_branch.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {

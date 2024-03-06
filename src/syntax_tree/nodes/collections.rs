@@ -29,7 +29,6 @@ define_ast!(
                     elements: this.elements.into_iter().map(|e| e.into_owned()).collect(),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {
@@ -71,7 +70,6 @@ define_ast!(
                     entries: this.entries.into_iter().map(|(k, v)| (k.into_owned(), v.into_owned())).collect(),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {
@@ -169,7 +167,6 @@ define_ast!(
                     end: Box::new(this.end.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {
@@ -234,7 +231,6 @@ define_ast!(
                     indices: this.indices.into_iter().map(|i| i.map(|i| i.into_owned())).collect(),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {

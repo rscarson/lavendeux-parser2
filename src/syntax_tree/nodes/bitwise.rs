@@ -22,7 +22,6 @@ define_ast!(Bitwise {
                 value: Box::new(this.value.into_owned()),
                 token: this.token.into_owned(),
             }
-            .into()
         },
 
         docs = {
@@ -80,7 +79,6 @@ define_ast!(Bitwise {
                 rhs: Box::new(this.rhs.into_owned()),
                 token: this.token.into_owned(),
             }
-            .into()
         },
 
         docs = {

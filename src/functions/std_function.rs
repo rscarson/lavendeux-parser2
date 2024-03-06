@@ -65,7 +65,7 @@ impl ManageArguments for Vec<(Cow<'_, str>, FunctionArgument)> {
         state: &mut State,
         function_signature: String,
     ) -> Result<(), Error> {
-        let mut values = values.into_iter().peekable();
+        let mut values = values.iter().peekable();
 
         for (i, (name, arg)) in self.iter().enumerate() {
             let next = values.next();

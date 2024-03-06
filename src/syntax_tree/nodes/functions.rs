@@ -23,7 +23,6 @@ define_ast!(
                     value: Box::new(this.value.into_owned()),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
             docs = {
                 name: "Return",
@@ -80,7 +79,7 @@ define_ast!(
             },
             eval = (this, state) {
                 if &this.name == "help" {
-                    let filter = match this.arguments.get(0) {
+                    let filter = match this.arguments.first() {
                         Some(n) => Some(n.evaluate(state).with_context(this.token())?.to_string()),
                         None => None
                     };
@@ -97,7 +96,7 @@ define_ast!(
                 }
 
                 // Update reference argument
-                let reference = this.arguments.get(0).and_then(|arg1| {
+                let reference = this.arguments.first().and_then(|arg1| {
                     if let node_type!(Values::Reference(reference)) = arg1 {
                         Some(reference)
                     } else {
@@ -129,7 +128,6 @@ define_ast!(
                         .collect(),
                     token: this.token.into_owned(),
                 }
-                .into()
             },
 
             docs = {

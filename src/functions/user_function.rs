@@ -111,7 +111,7 @@ impl ParserFunction for UserDefinedFunction<'_> {
 
 impl UserDefinedFunction<'_> {
     /// Create a new user-defined function
-    pub fn new<'i>(name: &'i str, src: Vec<String>, state: &mut State) -> Result<Self, Error> {
+    pub fn new(name: &str, src: Vec<String>, state: &mut State) -> Result<Self, Error> {
         // Check that the function is valid
         if src.is_empty() {
             /* Should be caught by the grammar */
@@ -143,7 +143,7 @@ impl UserDefinedFunction<'_> {
     fn compile(src: &[String], state: &mut State) -> Result<Vec<Node<'static>>, Error> {
         src.iter()
             .map(|l| {
-                LavendeuxParser::build_ast(l, Rule::EXPR, state).and_then(|n| Ok(n.into_owned()))
+                LavendeuxParser::build_ast(l, Rule::EXPR, state).map(|n| n.into_owned())
             })
             .collect()
     }

@@ -40,7 +40,7 @@ impl DocumentationFormatter for PlaintextFormatter {
             lines.push(desc.to_string());
         }
         if let Some(ext_desc) = function.documentation().ext_description() {
-            for line in ext_desc.split("\n") {
+            for line in ext_desc.split('\n') {
                 lines.push(line.to_string());
             }
         }
@@ -48,7 +48,7 @@ impl DocumentationFormatter for PlaintextFormatter {
             let examples = examples.trim_start_matches("#skip").trim();
             if !examples.is_empty() {
                 lines.push("Examples:".to_string());
-                for line in examples.split("\n") {
+                for line in examples.split('\n') {
                     lines.push(format!("  {}", line));
                 }
             }
@@ -72,7 +72,7 @@ impl DocumentationFormatter for PlaintextFormatter {
                 lines.push(desc.to_string());
             }
             if let Some(ext_desc) = f.documentation().ext_description() {
-                for line in ext_desc.split("\n") {
+                for line in ext_desc.split('\n') {
                     lines.push(line.to_string());
                 }
             }

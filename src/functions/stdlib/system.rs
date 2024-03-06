@@ -69,11 +69,11 @@ define_stdfunction!(
         let res = Lavendeux::eval(&expression, state);
         state.scope_out();
 
-        let mut res = res.or_else(|e| Err(e))?.evaluate(state).or_else(|e| Err(e))?;
+        let mut res = res?.evaluate(state)?;
         if res.len() == 1 {
             res = res.as_a::<Vec<Value>>().unwrap().into_iter().next().unwrap();
         }
-        Ok(Value::from(res))
+        Ok(res)
     },
 );
 
@@ -103,7 +103,7 @@ define_stdfunction!(
         let res = Lavendeux::eval(&script, state);
         state.scope_out();
 
-        res.or_else(|e| Err(e))?;
+        res?;
         Ok(Value::from(""))
     },
 );

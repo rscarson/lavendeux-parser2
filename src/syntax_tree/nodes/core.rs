@@ -55,7 +55,7 @@ define_ast!(
                     .map(|pair| pair.into_node(state))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                if statements.len() == 0 {
+                if statements.is_empty() {
                     return oops!(EmptyBlock, token);
                 }
 
