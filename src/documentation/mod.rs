@@ -15,12 +15,12 @@ mod static_docs;
 pub use static_docs::DocumentationTemplate;
 
 pub trait FunctionsByCategory {
-    fn functions_by_category(&self) -> HashMap<String, Vec<&Box<dyn ParserFunction>>>;
+    fn functions_by_category(&self) -> HashMap<String, Vec<&dyn ParserFunction>>;
 }
 
 impl FunctionsByCategory for State {
-    fn functions_by_category(&self) -> HashMap<String, Vec<&Box<dyn ParserFunction>>> {
-        let mut categories: HashMap<String, Vec<&Box<dyn ParserFunction>>> = HashMap::new();
+    fn functions_by_category(&self) -> HashMap<String, Vec<&dyn ParserFunction>> {
+        let mut categories: HashMap<String, Vec<&dyn ParserFunction>> = HashMap::new();
         for (_, function) in self.all_functions().iter() {
             if function.name().starts_with("__") {
                 // Skip hidden functions
@@ -33,7 +33,7 @@ impl FunctionsByCategory for State {
             categories
                 .get_mut(function.documentation().category())
                 .unwrap()
-                .push(function);
+                .push(function.as_ref());
         }
 
         for (_, functions) in categories.iter_mut() {
