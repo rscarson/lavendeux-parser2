@@ -89,13 +89,7 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let token_part = if let Some(context) = &self.context {
-            let lines = context
-                .input
-                .split('\n')
-                .map(|l| format!("| {l}"))
-                .collect::<Vec<_>>()
-                .join("\n");
-            format!("{lines}\n= ")
+            format!("{context}\n= ")
         } else {
             "".to_string()
         };

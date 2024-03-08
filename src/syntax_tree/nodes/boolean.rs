@@ -6,7 +6,7 @@ define_ast!(Boolean {
     BooleanNot(value: Box<Node<'i>>) {
         build = (pairs, token, state) {
             pairs.next(); // Skip the operator
-            let value = pairs.next().unwrap().into_node(state).with_context(&token)?;
+            let value = unwrap_node!(pairs, state, token)?;
             Ok(Self {
                 value: Box::new(value),
                 token,
@@ -41,9 +41,9 @@ define_ast!(Boolean {
 
     BooleanExpr(lhs: Box<Node<'i>>, op: BooleanOperation, rhs: Box<Node<'i>>) {
         build = (pairs, token, state) {
-            let lhs = pairs.next().unwrap().into_node(state).with_context(&token)?;
+            let lhs = unwrap_node!(pairs, state, token)?;
 
-            let op = pairs.next().unwrap();
+            let op = unwrap_next!(pairs, token);
             let op = match op.as_rule() {
                 Rule::OP_BOOL_OR => BooleanOperation::Or,
                 Rule::OP_BOOL_AND => BooleanOperation::And,
@@ -63,7 +63,7 @@ define_ast!(Boolean {
                 }
             };
 
-            let rhs = pairs.next().unwrap().into_node(state).with_context(&token)?;
+            let rhs = unwrap_node!(pairs, state, token)?;
 
             Ok(Self {
                 lhs: Box::new(lhs),

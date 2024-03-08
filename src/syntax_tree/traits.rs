@@ -11,13 +11,16 @@ pub trait IntoOwned {
     fn into_owned(self) -> Self::Owned;
 }
 
-/// Tree evaluation trait
+/// Internal trait for use with the compiler, and AST manipulation
 #[enum_dispatch(CoreSyntaxNode)]
 pub trait NodeExt<'i>
 where
     Self: IntoOwned,
 {
+    /// Evaluate this tree
     fn evaluate(&self, state: &mut State) -> Result<Value, Error>;
+
+    /// Get the token for this node
     fn token(&self) -> &Token<'i>;
 }
 

@@ -1,5 +1,5 @@
 use crate::Rule;
-use pest::iterators::{Pair, Pairs};
+use pest::iterators::Pair;
 use std::borrow::Cow;
 
 /// A struct representing a token in the syntax tree
@@ -42,8 +42,7 @@ impl Token<'_> {
                 | Rule::symbol_closecurly
                 | Rule::symbol_opensquare
                 | Rule::symbol_closesquare
-                | Rule::symbol_openround
-                | Rule::symbol_closeround
+                | Rule::EOL
         )
     }
 
@@ -67,18 +66,81 @@ impl<'i> From<&Pair<'i, Rule>> for Token<'i> {
     }
 }
 
-impl<'i> From<&Pairs<'i, Rule>> for Token<'i> {
-    fn from(pairs: &Pairs<'i, Rule>) -> Token<'i> {
-        if let Some(pair) = pairs.peek() {
-            Token::from(&pair)
+impl std::fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let lines = self
+            .input
+            .lines()
+            .map(|l| format!("| {l}"))
+            .collect::<Vec<_>>();
+        if lines.len() == 1 {
+            write!(f, "Line {}: {}", self.line, self.input)
         } else {
-            Token::dummy()
+            write!(f, "Line {}: \n{}", self.line, lines.join("\n"))
         }
     }
 }
 
-impl std::fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Line {}: {}", self.line, self.input)
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::pest::LavendeuxParser;
+    use pest::Parser;
+
+    fn get_pair() -> Pair<'static, Rule> {
+        let mut pairs = LavendeuxParser::parse(Rule::SCRIPT, "1").unwrap();
+        pairs.next().unwrap()
+    }
+
+    #[test]
+    fn test_token_from_pair() {
+        let token = Token::from(&get_pair());
+        assert_eq!(token.line, 1);
+        assert_eq!(token.rule, Rule::SCRIPT);
+        assert_eq!(token.input, "1");
+    }
+
+    #[test]
+    fn test_token_display() {
+        let token = Token {
+            line: 1,
+            rule: Rule::symbol_arrow,
+            input: Cow::Borrowed("->"),
+        };
+        assert_eq!(format!("{}", token), "Line 1: ->");
+
+        let token = Token {
+            line: 1,
+            rule: Rule::symbol_arrow,
+            input: Cow::Borrowed("->\n->"),
+        };
+        assert_eq!(format!("{}", token), "Line 1: \n| ->\n| ->");
+    }
+
+    #[test]
+    fn test_token_into_owned() {
+        let token = Token {
+            line: 1,
+            rule: Rule::symbol_arrow,
+            input: Cow::Borrowed("->"),
+        };
+        let token = token.into_owned();
+        assert_eq!(token.line, 1);
+        assert_eq!(token.rule, Rule::symbol_arrow);
+        assert_eq!(token.input, "->");
+    }
+
+    #[test]
+    fn test_token_is_symbol() {
+        assert!(Token::is_symbol(Rule::symbol_arrow));
+        assert!(!Token::is_symbol(Rule::OP_ADD));
+    }
+
+    #[test]
+    fn test_token_dummy() {
+        let token = Token::dummy();
+        assert_eq!(token.line, 0);
+        assert_eq!(token.rule, Rule::SCRIPT);
+        assert_eq!(token.input, "");
     }
 }

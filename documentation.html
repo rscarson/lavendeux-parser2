@@ -496,14 +496,14 @@ Inside a, array or object, it will be formatted as a string literal, with enclos
 </code></pre></div>
 <hr />
 <h1 id="operators-and-syntax"><a href="#operators-and-syntax">2 Operators and Syntax</a></h1><h2 id="arithmetic-expression"><a href="#arithmetic-expression">2.1 Arithmetic Expression</a></h2>
-<p>**[+, -, *, /, %, <strong>]</strong><br />
+<p><code>[+, -, *, /, %, **]</code><br />
 Performs arithmetic operations on two values.
 All but exponentiation are left-associative.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 / 3
 2 ** 3
 </code></pre></div><h2 id="array-literals"><a href="#array-literals">2.2 Array Literals</a></h2>
-<p><strong>[[ a, b, … ]]</strong><br />
+<p><code>[[ a, b, ... ]]</code><br />
 A collection of values.
 Arrays can contain any type of value, including other arrays.
 Arrays are 0-indexed, meaning the first element is at index 0.
@@ -513,7 +513,7 @@ The indexing operator (a[b]) can be used to access elements of an array.</p>
 [&quot;Hello&quot;, &quot;World&quot;]
 [1, [2, 3], 4]
 </code></pre></div><h2 id="assignment-operator"><a href="#assignment-operator">2.3 Assignment Operator</a></h2>
-<p>**[=, +=, -=, *=, /=, %=, <strong>=, &amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;=]</strong><br />
+<p><code>[=, +=, -=, *=, /=, %=, **=, &amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;=]</code><br />
 Assigns a value to a variable, index, or destructuring assignment
 Target is either a literal with optional indices, or a destructuring assignment
 If an index is empty, a new value will be appended to the array
@@ -524,7 +524,7 @@ If the operator is present, the value will be transformed before assignment</p>
 a = 1; a += 1
 a = [1]; a[] = 2
 </code></pre></div><h2 id="bitwise"><a href="#bitwise">2.4 Bitwise</a></h2>
-<p><strong>[|, ^, &amp;, &lt;&lt;, &gt;&gt;]</strong><br />
+<p><code>[|, ^, &amp;, &lt;&lt;, &gt;&gt;]</code><br />
 A left-associative infix operator that performs bitwise operations on two values.
 Values are first converted to integers.
 Shifts are arithmetic for signed integers and logical for unsigned integers.
@@ -534,7 +534,7 @@ A larger set of bitwise operations are available in the ‘bitwise’ category o
 5 ^ 3
 5 &lt;&lt; 3 &gt;&gt; 3
 </code></pre></div><h2 id="block"><a href="#block">2.5 Block</a></h2>
-<p><strong>[{ <statements> }]</strong><br />
+<p><code>[{ &lt;statements&gt; }]</code><br />
 A series of expressions that are executed in order, and are separated by semicolons or linebreaks.
 The last statement’s value is returned.
 A block must return a value, and thus cannot be empty.
@@ -544,7 +544,7 @@ If a block doesn’t need to return a value (side-effect <code>if</code>s for ex
     1; 2
 } else nil
 </code></pre></div><h2 id="boolean"><a href="#boolean">2.6 Boolean</a></h2>
-<p><strong>[or, and, ==, !=, &lt;=, &gt;=, &lt;, &gt;]</strong><br />
+<p><code>[or, and, ==, !=, &lt;=, &gt;=, &lt;, &gt;]</code><br />
 Performs an infix boolean comparison between two values.
 Comparisons are weak, meaning that the types of the values are not checked.
 Result are always a boolean value.
@@ -554,12 +554,12 @@ All are left-associative.</p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>true || false
 1 &lt; 2
 </code></pre></div><h2 id="break"><a href="#break">2.7 Break</a></h2>
-<p><strong>[break]</strong><br />
+<p><code>[break]</code><br />
 Breaks out of a loop
 <strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>for i in 0..10 { if i == 5 { break } else {i} }
 </code></pre></div><h2 id="cast"><a href="#cast">2.8 Cast</a></h2>
-<p><strong>[as]</strong><br />
+<p><code>[as]</code><br />
 Casts a value to a different type.
 The type can be a string or an identifier.
 The operator is right-associative</p>
@@ -568,7 +568,7 @@ The operator is right-associative</p>
 5 as &#39;float&#39;
 5 as i8
 </code></pre></div><h2 id="constants"><a href="#constants">2.9 Constants</a></h2>
-<p><strong>[pi, e, tau, nil]</strong><br />
+<p><code>[pi, e, tau, nil]</code><br />
 A constant value.
 A predefined set of values that are always available.</p>
 <ul>
@@ -580,12 +580,12 @@ A predefined set of values that are always available.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>pi; e; tau; nil
 </code></pre></div><h2 id="continue"><a href="#continue">2.10 Continue</a></h2>
-<p><strong>[continue]</strong><br />
+<p><code>[continue]</code><br />
 Skips the current iteration of a loop
 <strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>for i in 0..10 { if i == 5 { continue } else {i} }
 </code></pre></div><h2 id="decorator"><a href="#decorator">2.11 Decorator</a></h2>
-<p><strong>[@name]</strong><br />
+<p><code>[@name]</code><br />
 Converts a value to a formatted string.
 It calls a function named ‘@name’ with the value as an argument.</p>
 <p><strong>Examples:</strong></p>
@@ -594,7 +594,7 @@ It calls a function named ‘@name’ with the value as an argument.</p>
     &#39;5.0&#39;
 )
 </code></pre></div><h2 id="deletion-keyword"><a href="#deletion-keyword">2.12 Deletion Keyword</a></h2>
-<p><strong>[del, delete, unset]</strong><br />
+<p><code>[del, delete, unset]</code><br />
 Deletes a value, function, @decorator, or index
 Will return the value deleted (or the function signature if a function was deleted)
 Index can be blank to delete the last value in an array, or negative to count from the end
@@ -608,7 +608,7 @@ a=1;b=2; del [a,b]
 @dec(x) = 2
 del @dec
 </code></pre></div><h2 id="for"><a href="#for">2.13 For</a></h2>
-<p><strong>[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block> [if <condition>]]</strong><br />
+<p><code>[for &lt;variable&gt; in &lt;iterable&gt; { &lt;block&gt; }, for [&lt;variable&gt; in] &lt;iterable&gt; do &lt;block&gt; [if &lt;condition&gt;]]</code><br />
 For loops are finite value iterators. This means they map over a range, array, or object, 
 and return a new array of values.
 The variable is optional, and if not provided, the loop will not bind a variable.
@@ -624,7 +624,7 @@ for a in 0..10 do a if a % 2 == 0
 
 for 0..10 do &#39;!&#39;
 </code></pre></div><h2 id="function-assignment"><a href="#function-assignment">2.14 Function Assignment</a></h2>
-<p><strong>[name([arg1:type, arg2, …]) = { … }]</strong><br />
+<p><code>[name([arg1:type, arg2, ...]) = { ... }]</code><br />
 Assigns a block of code to a function name.
 The function can be called later in the code.
 If the function name begins with <code>@</code>, it is a decorator and must take in one argument and return a string</p>
@@ -643,7 +643,7 @@ add(a:numeric, b:numeric): int = {
 }
 add(3, 4.5)
 </code></pre></div><h2 id="function-call"><a href="#function-call">2.15 Function Call</a></h2>
-<p><strong>[name(arg1, arg2, …), arg1.func(arg2, arg3, …)]</strong><br />
+<p><code>[name(arg1, arg2, ...), arg1.func(arg2, arg3, ...)]</code><br />
 Calls a function with the given arguments.
 The help() will list all available functions, and can filter by category or function name.</p>
 <p><strong>Examples:</strong></p>
@@ -653,14 +653,14 @@ arr.push(3)
 help(push)
 help(collections)
 </code></pre></div><h2 id="identifier"><a href="#identifier">2.16 Identifier</a></h2>
-<p><strong>[a, b, c]</strong><br />
+<p><code>[a, b, c]</code><br />
 A variable name.
 The value of the variable is looked up in the state.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>[a, b, c] = [1, 2, 3]
 a; b; c
 </code></pre></div><h2 id="if"><a href="#if">2.17 If</a></h2>
-<p><strong>[if <condition> then <block> else <block>, if <condition> {block} else {block}]</strong><br />
+<p><code>[if &lt;condition&gt; then &lt;block&gt; else &lt;block&gt;, if &lt;condition&gt; {block} else {block}]</code><br />
 A conditional expression that evaluates a condition and then one of two branches.
 body can be either a block or a single expression. The last expression is returned from a block.
 Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
@@ -675,7 +675,7 @@ if a == 4 {
     5
 } else nil
 </code></pre></div><h2 id="indexing"><a href="#indexing">2.18 Indexing</a></h2>
-<p><strong>[a[b], a[]]</strong><br />
+<p><code>[a[b], a[]]</code><br />
 Accessing elements of a collection.
 The indexing operator can be used to access elements of a collection or string.
 If the index is a collection, it is used to access multiple elements.
@@ -687,7 +687,7 @@ Negative indices can be used to access elements from the end of the collection.<
 [1, 2, 3][0..1]
 { &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }[&quot;name&quot;]
 </code></pre></div><h2 id="matching"><a href="#matching">2.19 Matching</a></h2>
-<p><strong>[contains, matches, is, starts_with, ends_with]</strong><br />
+<p><code>[contains, matches, is, starts_with, ends_with]</code><br />
 A set of left-associative boolean operators comparing a collection with a pattern
 ‘is’ is a special case that compares type (<code>value is string</code> is equivalent <code>typeof(value) == 'string'</code>)
 starts/ends with are not applicable to objects, which are not ordered</p>
@@ -698,7 +698,7 @@ starts/ends with are not applicable to objects, which are not ordered</p>
 &#39;hello&#39; starts_with &#39;hel&#39;
 [1, 2] endswith 2
 </code></pre></div><h2 id="object-literals"><a href="#object-literals">2.20 Object Literals</a></h2>
-<p><strong>[{ key: value, … }]</strong><br />
+<p><code>[{ key: value, ... }]</code><br />
 A collection of key-value pairs.
 Values can contain any type, including other objects.
 Keys can be any non-collection type
@@ -707,7 +707,7 @@ The indexing operator (a[b]) can be used to access elements of an object.</p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }
 { &quot;name&quot;: &quot;John&quot;, &quot;address&quot;: { &quot;city&quot;: &quot;New York&quot;, &quot;state&quot;: &quot;NY&quot; } }
 </code></pre></div><h2 id="range-literals"><a href="#range-literals">2.21 Range Literals</a></h2>
-<p><strong>[first..last]</strong><br />
+<p><code>[first..last]</code><br />
 A range of values.
 Ranges can be used to create arrays of numbers or characters.
 Ranges are inclusive, meaning the start and end values are included in the array.
@@ -717,7 +717,7 @@ Character ranges are inclusive and can only be used with single-character string
 <div class="example-wrap"><pre class="language-lavendeux"><code>1..5
 &#39;a&#39;..&#39;z&#39;
 </code></pre></div><h2 id="return"><a href="#return">2.22 Return</a></h2>
-<p><strong>[return <value>]</strong><br />
+<p><code>[return &lt;value&gt;]</code><br />
 Returns a value from a function.
 By default, the last expression is returned, unless a return statement is used.</p>
 <p><strong>Examples:</strong></p>
@@ -727,26 +727,26 @@ b() = { 5 ; 2 }
 assert_eq( a(), 5 )
 assert_eq( b(), 2 )
 </code></pre></div><h2 id="script"><a href="#script">2.23 Script</a></h2>
-<p><strong>[<statement> [ ; | \n ] <statement>]</strong><br />
+<p><code>[&lt;statement&gt; [ ; | \n ] &lt;statement&gt;]</code><br />
 A series of expressions or function definitions that are executed in order, and are separated by semicolons or linebreaks.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 ; 3 @hex
 min([1, 2, 3])
 </code></pre></div><h2 id="ternary"><a href="#ternary">2.24 Ternary</a></h2>
-<p><strong>[condition ? then : else]</strong><br />
+<p><code>[condition ? then : else]</code><br />
 A right-associative ternary operator.
 The condition is evaluated first, then either the then or else branch is evaluated.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>true ? 1 : 2
 </code></pre></div><h2 id="unary-bitwise-not"><a href="#unary-bitwise-not">2.25 Unary Bitwise Not</a></h2>
-<p><strong>[~]</strong><br />
+<p><code>[~]</code><br />
 A prefix operator that performs bitwise NOT on a value.
 The value is first converted to an integer.
 A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>~5
 </code></pre></div><h2 id="unary-boolean-not"><a href="#unary-boolean-not">2.26 Unary Boolean Not</a></h2>
-<p><strong>[not]</strong><br />
+<p><code>[not]</code><br />
 Negates a boolean value.
 If the value is not a boolean, it is cooerced to boolean first.</p>
 <p><strong>Examples:</strong></p>
@@ -754,12 +754,12 @@ If the value is not a boolean, it is cooerced to boolean first.</p>
 !&#39;test&#39; == false
 !0 == true
 </code></pre></div><h2 id="unary-negation"><a href="#unary-negation">2.27 Unary Negation</a></h2>
-<p><strong>[-]</strong><br />
+<p><code>[-]</code><br />
 Negates a value.
 <strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>-1
 </code></pre></div><h2 id="match"><a href="#match">2.28 match</a></h2>
-<p><strong>[match <value> { <condition> =&gt; <block>, _ =&gt; <block> }]</strong><br />
+<p><code>[match &lt;value&gt; { &lt;condition&gt; =&gt; &lt;block&gt;, _ =&gt; &lt;block&gt; }]</code><br />
 A conditional expression that evaluates a value and then one of several cases.
 match blocks must be exhaustive, and therefore must end in a default case</p>
 <p><strong>Examples:</strong></p>

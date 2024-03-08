@@ -10,7 +10,7 @@ define_ast!(
         ArithmeticNeg(value: Box<Node<'i>>) {
             build = (pairs, token, state) {
                 pairs.next(); // Skip the operator
-                let value = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let value = unwrap_node!(pairs, state, token)?;
                 Ok(Self {
                     value: Box::new(value),
                     token,
@@ -38,9 +38,9 @@ define_ast!(
 
         ArithmeticExpr(lhs: Box<Node<'i>>, op: ArithmeticOperation, rhs: Box<Node<'i>>) {
             build = (pairs, token, state) {
-                let lhs = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let lhs = unwrap_node!(pairs, state, token)?;
 
-                let op = pairs.next().unwrap();
+                let op = unwrap_next!(pairs, token);
                 let op = match op.as_rule() {
                     Rule::OP_ADD => ArithmeticOperation::Add,
                     Rule::OP_SUB => ArithmeticOperation::Subtract,
@@ -58,7 +58,7 @@ define_ast!(
                     }
                 };
 
-                let rhs = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let rhs = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
                     lhs: Box::new(lhs),
@@ -97,3 +97,19 @@ define_ast!(
         }
     }
 );
+
+#[cfg(test)]
+mod test {
+    use crate::lav;
+
+    lav!(test_negation(a = -1i64, b = 1i64) r#"
+        a = -1;
+        b = -a
+    "#);
+
+    lav!(test_expr(a = 8i64, b = 0i64, c = 8i64) r#"
+        a = 2 + 3 * 2;
+        b = 2 - 4 / 2;
+        c = 2 ** 3;
+    "#);
+}

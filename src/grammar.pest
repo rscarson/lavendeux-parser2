@@ -35,9 +35,9 @@ STATEMENT = _{
 function_name = @{symbol_at? ~ identifier}
 FUNCTION_ASSIGNMENT_STATEMENT = {
     | EOL* ~ function_name ~ EOL* ~ 
-        symbol_openround ~ EOL* ~ 
+        "(" ~ EOL* ~ 
             (function_argument ~ EOL* ~ (symbol_comma ~ EOL* ~ function_argument ~ EOL*)* ~ symbol_comma? ~ EOL*)? ~ 
-        symbol_closeround ~ (EOL* ~ function_typespec)? ~ EOL* ~ 
+        ")" ~ (EOL* ~ function_typespec)? ~ EOL* ~ 
         symbol_eq ~ EOL* ~ BLOCK
 }
 	function_typespec = {symbol_colon ~ EOL* ~ identifier}
@@ -63,7 +63,7 @@ EXPR = {
         POSTFIX_INDEX = {((symbol_opensquare ~ EOL* ~ EXPR ~ EOL* ~ symbol_closesquare) | POSTFIX_EMPTYINDEX)+}
         POSTFIX_CALL = {POSTFIX_NORMALMODE | POSTFIX_OBJECTMODE}
             postfixcall_args = _{(EXPR ~ EOL* ~ symbol_comma ~ EOL*)* ~ EXPR ~ EOL* ~ symbol_comma?}
-            POSTFIX_NORMALMODE = {symbol_openround ~ EOL* ~ postfixcall_args? ~ EOL* ~ symbol_closeround}
+            POSTFIX_NORMALMODE = {"(" ~ EOL* ~ postfixcall_args? ~ EOL* ~ ")"}
             POSTFIX_OBJECTMODE = {"." ~ EOL* ~ identifier ~ EOL* ~ POSTFIX_NORMALMODE}
         postfix_arith = _{POSTFIX_INC | POSTFIX_DEC}
             POSTFIX_INC = {"++"}
@@ -83,7 +83,7 @@ EXPR = {
 
     //
     // Infix
-    infix_op = _{OP_BOOL_OR | OP_BOOL_AND | assignment_infix_op | bitwise_infix_op | bool_infix_op | arithmetic_infix_op | OP_ASSIGN | match_infix_op | OP_RANGE | OP_CAST | OP_TERNARY}
+    infix_op = _{assignment_infix_op | OP_BIT_SL | OP_BIT_SR | bool_infix_op | bitwise_infix_op  | arithmetic_infix_op | OP_ASSIGN | match_infix_op | OP_RANGE | OP_CAST | OP_TERNARY}
         //
         // Assignment
         assignment_infix_op = _{
@@ -159,7 +159,7 @@ EXPR = {
 
 TERM = _{
     // These can be identified by the first character
-    | symbol_openround ~ EXPR ~ symbol_closeround
+    | "(" ~ EXPR ~ ")"
     | ARRAY_TERM
     | OBJECT_TERM
 
@@ -187,14 +187,14 @@ KEYWORD_EXPRESSION = _ {
 
     RETURN_EXPRESSION = { "return" ~ EOL* ~ BLOCK }
 
-    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ (EOL* ~ for_conditional)? }
+    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ (for_conditional)? }
         for_conditional = {"if" ~ EOL* ~ EXPR}
 
     SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ symbol_opencurly ~ EOL* ~ (switch_case ~ EOL* ~ symbol_comma ~ EOL*)* ~ switch_case ~ EOL* ~ symbol_comma? ~ EOL* ~ symbol_closecurly }
         switch_case = _{ ATOMIC_VALUE ~ EOL* ~ symbol_arrow ~ EOL* ~ BLOCK }
 
-    IF_EXPRESSION = { if_block ~ ("else" ~ EOL* ~ if_block ~ EOL*)* ~ ("else" ~ EOL* ~ BLOCK)? }
-        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ EOL* }
+    IF_EXPRESSION = { if_block ~ EOL* ~ ("else" ~ EOL* ~ if_block ~ EOL*)* ~ ("else" ~ EOL* ~ BLOCK)? }
+        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &symbol_opencurly) ~ EOL* ~ BLOCK }
 
     ARRAY_TERM = { array_symbol_opensquare ~ EOL* ~ ((EXPR) ~ (EOL* ~ symbol_comma ~ EOL* ~ (EXPR) ~ EOL*)* ~ symbol_comma? ~ EOL*)? ~ symbol_closesquare }
         array_symbol_opensquare = {"["}
@@ -299,7 +299,7 @@ UNTERMINATED_BLOCK_COMMENT = @{"/*" ~ (!"*/" ~ ANY)*}
 UNTERMINATED_STRING_LITERAL = @{"\"" ~ (!EOL ~ ANY)*}
 UNCLOSED_BRACKET = @{"[" ~ (!symbol_closesquare ~ ANY)*}
 UNCLOSED_BRACE = @{symbol_opencurly ~ (!symbol_closecurly ~ ANY)*}
-UNCLOSED_PAREN = @{symbol_openround ~ (!symbol_closeround ~ ANY)*}
+UNCLOSED_PAREN = @{"(" ~ (!")" ~ ANY)*}
 MISSING_LINEBREAK = @{"\\" ~ !EOL}
 
 //
@@ -317,5 +317,3 @@ symbol_opencurly = {"{"}
 symbol_closecurly = {"}"}
 symbol_opensquare = {"["}
 symbol_closesquare = {"]"}
-symbol_openround = {"("}
-symbol_closeround = {")"}

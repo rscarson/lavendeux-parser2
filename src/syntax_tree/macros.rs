@@ -145,3 +145,33 @@ macro_rules! node_type {
         Node::$base(crate::syntax_tree::nodes::$base::$type($ref))
     };
 }
+
+macro_rules! unwrap_next {
+    ($pairs:expr, $context:expr) => {
+        $pairs.next().unwrap_or_else(|| {
+            panic!(
+                "Rule {:?} expected a token; Grammar bug - please report this.",
+                $context.rule,
+            )
+        })
+    };
+}
+
+macro_rules! unwrap_last {
+    ($pairs:expr, $context:expr) => {
+        $pairs.last_child().unwrap_or_else(|| {
+            panic!(
+                "Rule {:?} expected a token; Grammar bug - please report this.",
+                $context.rule,
+            )
+        })
+    };
+}
+
+macro_rules! unwrap_node {
+    ($pairs:expr, $state:expr, $context:expr) => {
+        unwrap_next!($pairs, $context)
+            .into_node($state)
+            .with_context(&$context)
+    };
+}

@@ -53,9 +53,9 @@ define_ast!(
         CastExpression(value: Box<Node<'i>>, target: Box<Node<'i>>) {
             build = (pairs, token, state) {
                 let mut pairs = pairs;
-                let value = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let value = unwrap_node!(pairs, state, token)?;
                 pairs.next(); // skip the operator
-                let target = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let target = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
                     value: Box::new(value),
@@ -102,10 +102,10 @@ define_ast!(
         DecoratorExpression(expression: Box<Node<'i>>, decorator: String) {
             build = (pairs, token, state) {
                 let mut pairs = pairs;
-                let expression = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let expression = unwrap_node!(pairs, state, token)?;
 
-                let mut decorator_pair = pairs.next().unwrap();
-                let decorator = decorator_pair.next().unwrap().as_str().to_string();
+                let mut decorator_pair = unwrap_next!(pairs, token);
+                let decorator = unwrap_next!(decorator_pair, token).as_str().to_string();
 
                 Ok(Self {
                     expression: Box::new(expression),
@@ -150,9 +150,9 @@ define_ast!(
         ) {
             build = (pairs, token, state) {
                 let mut pairs = pairs;
-                let left = pairs.next().unwrap().into_node(state).with_context(&token)?;
-                let operator = pairs.next().unwrap().as_rule();
-                let right = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let left = unwrap_node!(pairs, state, token)?;
+                let operator = unwrap_next!(pairs, token).as_rule();
+                let right = unwrap_node!(pairs, state, token)?;
 
                 let operator = match operator {
                     Rule::OP_MATCH_CONTAINS => MatchingOperation::Contains,
@@ -244,5 +244,13 @@ impl<'i> Reference<'i> {
     /// Uses the parent scope (if a function defines a value of the same name)
     pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
         self.target.update_value_in_parent(state, value)
+    }
+
+    /// Get the reference's value from the state as a mutable reference
+    pub fn get_target_mut_in_parent<'s>(
+        &self,
+        state: &'s mut State,
+    ) -> Result<Option<&'s mut Value>, Error> {
+        self.target.get_target_mut_in_parent(state)
     }
 }

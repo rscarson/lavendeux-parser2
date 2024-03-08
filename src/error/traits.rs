@@ -185,11 +185,10 @@ impl From<Rule> for RuleCategory {
             Rule::array_symbol_opensquare => Self::Symbol("["),
             Rule::symbol_opensquare => Self::Symbol("["),
             Rule::symbol_closesquare => Self::Symbol("]"),
-            Rule::symbol_openround => Self::Symbol("("),
-            Rule::symbol_closeround => Self::Symbol(")"),
             Rule::symbol_arrow => Self::Symbol("=>"),
             Rule::symbol_at => Self::Symbol("@"),
             Rule::symbol_eq => Self::Symbol("="),
+            Rule::EOL => Self::Symbol("EOL"),
 
             Rule::POSTFIX_EMPTYINDEX
             | Rule::POSTFIX_DECORATE
@@ -316,7 +315,6 @@ impl From<Rule> for RuleCategory {
             | Rule::BLOCK_COMMENT
             | Rule::COMMENT
             | Rule::WHITESPACE
-            | Rule::EOL
             | Rule::STATEMENT => Self::Hidden,
         }
     }

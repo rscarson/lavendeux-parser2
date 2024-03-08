@@ -61,7 +61,13 @@ define_ast!(
             build = (pairs, token, state) {
                 let condition = match pairs.peek_last() {
                     Some(p) if p.as_rule() == Rule::for_conditional => {
-                        Some(Box::new(pairs.last_child().unwrap().next().unwrap().into_node(state).with_context(&token)?))
+                        Some(Box::new(
+                            unwrap_node!(
+                                unwrap_last!(pairs, token),
+                                state,
+                                token
+                            )?
+                        ))
                     },
                     _ => None,
                 };

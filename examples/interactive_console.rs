@@ -30,9 +30,9 @@ fn main() {
     });
 
     // Load example scripts
-    //lavendeux
-    //    .parse("include('example_scripts/zarbans_grotto.lav')")
-    //    .expect("Could not load example scripts");
+    lavendeux
+        .parse("include('example_scripts/zarbans_grotto.lav')")
+        .expect("Could not load example scripts");
 
     // Preload command stack from arguments
     let mut stack: VecDeque<String> = env::args().skip(1).collect();

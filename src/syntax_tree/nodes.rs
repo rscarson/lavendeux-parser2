@@ -43,31 +43,54 @@ mod literals;
 /// Root type for AST nodes, split by class of node
 #[derive(Debug, Clone)]
 pub enum Node<'i> {
+    /// Core syntax elements (script and block)
     Core(core::Core<'i>),
+
+    /// Variable storate (identifiers, assignment and deletion)
     Assignment(assignment::Assignment<'i>),
+
+    /// Value manipulation (references, decorators, match, cast, etc.)
     Values(values::Values<'i>),
+
+    /// Collections (arrays, objects, ranges, etc.)
     Collections(collections::Collections<'i>),
+
+    /// Conditional expressions (if, ternary, switch)
     Conditionals(conditionals::Conditionals<'i>),
-    Arithmetic(arithmetic::Arithmetic<'i>),
-    Functions(functions::Functions<'i>),
+
+    /// Iterators (for loops)
     Iterators(iterators::Iterators<'i>),
+
+    /// Function assignment and calling
+    Functions(functions::Functions<'i>),
+
+    /// Arithmetic expressions (add, sub, mul, div, etc.)
+    Arithmetic(arithmetic::Arithmetic<'i>),
+
+    /// Bitwise expressions
     Bitwise(bitwise::Bitwise<'i>),
+
+    /// Boolean expressions
     Boolean(boolean::Boolean<'i>),
+
+    /// Literal constants
     Literal(Value, Token<'i>),
 }
 impl Node<'_> {
     /// This is where rules are matched to node-builder types
-    /// I take in a parent_token so we can clone an Arc<String> of the original input
     pub fn from_pair<'i>(pair: Pair<'i, Rule>, state: &mut State) -> Result<Node<'i>, Error> {
         let pairs = PestIterator::from(pair);
         Self::from_iterator(pairs, state)
     }
 
-    pub fn from_iterator<'i>(
+    pub(crate) fn from_iterator<'i>(
         pairs: PestIterator<'i>,
         state: &mut State,
     ) -> Result<Node<'i>, Error> {
         let (token, pairs) = pairs.decompose();
+
+        // println!("{:#?}", pairs);
+
         match token.rule {
             //
             // Core nodes

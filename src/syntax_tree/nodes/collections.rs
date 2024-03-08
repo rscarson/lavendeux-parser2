@@ -53,7 +53,7 @@ define_ast!(
                 let mut entries: Vec<(_, _)> = Vec::new();
                 while let Some(key) = pairs.next() {
                     let key = key.into_node(state).with_context(&token)?;
-                    let value = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                    let value = unwrap_node!(pairs, state, token)?;
                     entries.push((key, value));
                 }
 
@@ -93,9 +93,9 @@ define_ast!(
             end: Box<Node<'i>>
         ) {
             build = (pairs, token, state) {
-                let start = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let start = unwrap_node!(pairs, state, token)?;
                 pairs.next(); // Skip the '..'
-                let end = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                let end = unwrap_node!(pairs, state, token)?;
                 Ok(Self { start: Box::new(start), end: Box::new(end), token }.into())
             },
 
@@ -106,8 +106,8 @@ define_ast!(
                 let (start, end) = start.resolve(end).with_context(this.token())?;
                 match start.own_type() {
                     ValueType::String => {
-                        let start = start.as_a::<String>().unwrap();
-                        let end = end.as_a::<String>().unwrap();
+                        let start = start.as_a::<String>()?;
+                        let end = end.as_a::<String>()?;
                         if start.len() != 1 || end.len() != 1 {
                             return oops!(
                                 InvalidRange {
@@ -139,8 +139,8 @@ define_ast!(
                     }
 
                     _ if start.is_a(ValueType::Int) => {
-                        let start = start.as_a::<i64>().unwrap();
-                        let end = end.as_a::<i64>().unwrap();
+                        let start = start.as_a::<i64>()?;
+                        let end = end.as_a::<i64>()?;
 
                         if start > end {
                             return oops!(
@@ -188,8 +188,8 @@ define_ast!(
 
         IndexingExpression(base: Box<Node<'i>>, indices: Vec<Option<Node<'i>>>) {
             build = (pairs, token, state) {
-                let base = pairs.next().unwrap().into_node(state).with_context(&token)?;
-                let indices = pairs.next().unwrap();
+                let base = unwrap_node!(pairs, state, token)?;
+                let indices = unwrap_next!(pairs, token);
                 let indices = indices
                     .map(|pair| {
                     if pair.as_rule() == Rule::POSTFIX_EMPTYINDEX {

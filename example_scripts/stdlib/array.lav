@@ -128,7 +128,7 @@ assert_eq(_is_empty([1, 2, 3]), false)
 
 // keys(object) -> array : Returns the keys of the given object                                                        
 _keys(o) = for k in o do k
-assert_eq(_keys({"a": 1, "b": 2, "c": 3}), ["a", "b", "c"])
+assert_eq(_keys({"a": 1, "b": 2, "c": 3}).sort(), ["a", "b", "c"])
 assert_eq(_keys({}), [])
 
 // last(array) -> any : Returns the last element of the given array                                                    
@@ -165,7 +165,7 @@ assert_eq(_split([1, 2, 3, 4, 5], 0), [[1], [2, 3, 4, 5]])
 
 // values(object) -> array : Returns the values of the given object         
 _values(o) = for k in o do o[k]
-assert_eq(_values({"a": 1, "b": 2, "c": 3}), [1, 2, 3])
+assert_eq(_values({"a": 1, "b": 2, "c": 3}).sort(), [1, 2, 3])
 assert_eq(_values({}), [])
 
 // chunks(array, int) -> array : Splits the given array into chunks of the given size                                  

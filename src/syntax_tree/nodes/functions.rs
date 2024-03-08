@@ -11,7 +11,7 @@ define_ast!(
     Functions {
         KeywordReturn(value: Box<Node<'i>>) {
             build = (pairs, token, state) {
-                let value = Box::new(pairs.next().unwrap().into_node(state).with_context(&token)?);
+                let value = Box::new(unwrap_node!(pairs, state, token)?);
                 Ok(Self { value, token }.into())
             },
             eval = (this, state) {
@@ -43,8 +43,11 @@ define_ast!(
 
         FunctionCall(name: String, arguments: Vec<Node<'i>>) {
             build = (pairs, token, state) {
-                let lhs = pairs.next().unwrap(); // Function name, or the first argument of an object mode call
-                let mut rhs = pairs.next().unwrap().next().unwrap(); // Arguments, or function name and arguments in object mode
+                let lhs = unwrap_next!(pairs, token); // Function name, or the first argument of an object mode call
+                let mut rhs = unwrap_next!(
+                    unwrap_next!(pairs, token),
+                    token
+                ); // Arguments, or function name and arguments in object mode
 
                 let mut node = match rhs.as_rule() {
                     Rule::POSTFIX_NORMALMODE => {
@@ -64,8 +67,9 @@ define_ast!(
                     // Rule::POSTFIX_OBJECTMODE
                     _ => {
                         let mut rhs = rhs;
-                        let name = rhs.next().unwrap().as_str().to_string();
-                        let mut rhs = rhs.next().unwrap();
+                        let name = unwrap_next!(rhs, token).as_str().to_string();
+
+                        let rhs = unwrap_next!(rhs, token);
                         let arguments = vec![lhs.into_node(state)] // First argument
                             .into_iter()
                             .chain(rhs.map(|p| p.into_node(state)))
@@ -151,7 +155,7 @@ define_ast!(
 
 define_handler!(
     FunctionDefinition(pairs, token, state) {
-        let name = pairs.next().unwrap().as_str().to_string();
+        let name = unwrap_next!(pairs, token).as_str().to_string();
         let src = pairs.last_child().unwrap().map(|p| p.as_str().to_string()).collect::<Vec<_>>();
 
         let mut returns = match pairs.peek_last() {
@@ -165,7 +169,7 @@ define_handler!(
 
         let arguments = pairs.map(|arg| {
             let mut arg = arg;
-            let name = arg.next().unwrap().as_str().to_string();
+            let name = unwrap_next!(arg, token).as_str().to_string();
             let t = match arg.next() {
                 Some(t) => {
                     let t = t.as_str();
@@ -191,7 +195,7 @@ define_handler!(
 
         let mut function = UserDefinedFunction::new(&name, src.clone(), state).with_context(&token)?;
         function.set_returns(returns);
-        function.set_src_line_offset(token.line);
+      //  function.set_src_line_offset(token.line);
 
         for (name, t) in arguments.iter() {
             function.add_arg(name, *t);

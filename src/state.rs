@@ -122,12 +122,13 @@ impl State {
 
         self.depth += 1;
         self.variables.push(HashMap::new());
+
         Ok(())
     }
 
     /// Locks the current scope, preventing access to variables in higher scopes
     pub fn lock_scope(&mut self) {
-        self.locked.push(self.depth)
+        self.locked.push(self.depth);
     }
 
     /// Unlocks the current scope, granting access to variables in higher scopes
@@ -138,6 +139,15 @@ impl State {
     /// Returns the last valid scope
     fn last_valid_scope(&self) -> usize {
         if let Some(lock) = self.locked.last() {
+            *lock
+        } else {
+            0
+        }
+    }
+
+    /// Returns the last valid scope for the parent caller
+    fn last_valid_parent_scope(&self) -> usize {
+        if let Some(lock) = self.locked.iter().rev().nth(1) {
             *lock
         } else {
             0
@@ -157,10 +167,7 @@ impl State {
         }
     }
 
-    fn get_valid_scopes(
-        &self,
-    ) -> std::iter::Take<std::iter::Rev<std::slice::Iter<'_, HashMap<String, polyvalue::Value>>>>
-    {
+    fn get_valid_scopes(&self) -> impl Iterator<Item = &HashMap<String, polyvalue::Value>> {
         self.variables
             .iter()
             .rev()
@@ -169,10 +176,28 @@ impl State {
 
     fn get_valid_scopes_mut(
         &mut self,
-    ) -> std::iter::Take<std::iter::Rev<std::slice::IterMut<'_, HashMap<String, polyvalue::Value>>>>
-    {
+    ) -> impl Iterator<Item = &mut HashMap<String, polyvalue::Value>> {
         let lock = self.last_valid_scope();
         self.variables.iter_mut().rev().take(self.depth - lock + 1)
+    }
+
+    fn get_valid_parent_scopes(&self) -> impl Iterator<Item = &HashMap<String, polyvalue::Value>> {
+        self.variables
+            .iter()
+            .rev()
+            .skip(1)
+            .take(self.depth - self.last_valid_parent_scope())
+    }
+
+    fn get_valid_parent_scopes_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut HashMap<String, polyvalue::Value>> {
+        let lock = self.last_valid_parent_scope();
+        self.variables
+            .iter_mut()
+            .rev()
+            .skip(1)
+            .take(self.depth - lock)
     }
 
     /**
@@ -230,10 +255,9 @@ impl State {
 
     /// Sets a variable in the current scope
     pub fn set_variable_in_scope(&mut self, name: &str, value: Value) {
-        self.variables
-            .last_mut()
-            .unwrap()
-            .insert(name.to_string(), value);
+        if let Some(scope) = self.variables.last_mut() {
+            scope.insert(name.to_string(), value);
+        }
     }
 
     /// Returns the value of a variable
@@ -258,8 +282,7 @@ impl State {
 
     /// Returns the value of a variable from the parent scope
     pub fn get_variable_as_parent(&self, name: &str) -> Option<&Value> {
-        let mut scopes = self.get_valid_scopes();
-        scopes.next();
+        let scopes = self.get_valid_parent_scopes();
         for scope in scopes {
             if let Some(value) = scope.get(name) {
                 return Some(value);
@@ -270,8 +293,7 @@ impl State {
 
     /// Returns the value of a variable, mutably from the parent scope
     pub fn get_variable_mut_as_parent(&mut self, name: &str) -> Option<&mut Value> {
-        let mut scopes = self.get_valid_scopes_mut();
-        scopes.next();
+        let scopes = self.get_valid_parent_scopes_mut();
         for scope in scopes {
             if let Some(value) = scope.get_mut(name) {
                 return Some(value);

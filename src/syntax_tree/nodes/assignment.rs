@@ -39,7 +39,7 @@ impl AssignmentOperation {
         } else {
             let lhs = target.get_value(state)?.clone();
             let rhs = rhs.as_type(lhs.own_type())?;
-            
+
             match self {
                 Self::Add => lhs.arithmetic_op(rhs, ArithmeticOperation::Add)?,
                 Self::Sub => lhs.arithmetic_op(rhs, ArithmeticOperation::Subtract)?,
@@ -90,9 +90,9 @@ define_ast!(
     Assignment {
         DeleteExpression(target: AssignmentTarget<'i>) {
             build = (pairs, token, state) {
-                let op = pairs.next().unwrap();
+                let op = unwrap_next!(pairs, token);
                 let is_decorator = op.as_str().ends_with('@');
-                let target = pairs.next().unwrap();
+                let target = unwrap_next!(pairs, token);
 
                 let target = target.into_node(state).with_context(&token)?;
                 if let node_type!(Values::Reference(target)) = target {
@@ -149,13 +149,17 @@ define_ast!(
                     Indices can also be a collection to delete multiple values at once
                 ",
                 examples: "
-                    a = 2; del a
-                    a = [1]; del a[]
-                    a = {'test': 1}; del a['test']
-                    a=1;b=2; del [a,b]
+                    a = 2; del a        // Deletes the variable a
+                    a = [1]; del a[]    // Deletes the last value in the array
+
+                    // Deletes the key 'test' from an object
+                    a = {'test': 1}
+                    del a['test']   
+
+                    a=1;b=2; del [a,b] // Deletes both a and b
         
                     @dec(x) = 2
-                    del @dec
+                    del @dec    // Deletes the decorator
                 ",
             }
         },
@@ -163,14 +167,20 @@ define_ast!(
         AssignmentExpression(target: Reference<'i>, op: AssignmentOperation, rhs: Box<Node<'i>>) {
             build = (pairs, token, state) {
 
-                let lhs = pairs.next().unwrap();
+                let lhs = unwrap_next!(pairs, token);
                 let lhs = lhs.into_node(state).with_context(&token)?;
-                let op = AssignmentOperation::from(pairs.next().unwrap().as_rule());
-                let rhs = Box::new(pairs.next().unwrap().into_node(state).with_context(&token)?);
+                let op = AssignmentOperation::from(unwrap_next!(pairs, token).as_rule());
+                let rhs = Box::new(unwrap_node!(pairs, state, token)?);
 
                 if let node_type!(Values::Reference(target)) = lhs {
                     Ok(Self { target, op, rhs, token }.into())
                 } else if let node_type!(Collections::Array(target)) = lhs {
+                    if op.is_some() {
+                        return oops!(Custom {
+                            msg: "Cannot use an operator with a destructuring assignment".to_string()
+                        }, token);
+                    }
+
                     let lhs_token = target.token().clone();
                     let t = target.elements.into_iter().map(|e| {
                         if let node_type!(Values::Reference(target)) = e {
@@ -188,7 +198,7 @@ define_ast!(
             },
             eval = (this, state) {
                 let rhs = this.rhs.evaluate(state).with_context(this.token())?;
-                this.op.apply(state, &this.target, rhs)
+                this.op.apply(state, &this.target, rhs).with_context(this.token())
             },
             owned = (this) {
                 Self::Owned {
@@ -207,13 +217,104 @@ define_ast!(
                     If an index is empty, a new value will be appended to the array
                     If the target is a destructuring assignment, the value must be a collection of the same length
                     If the operator is present, the value will be transformed before assignment
+
+                    Operators:
+                    - Arithmetic: `+=, -=, *=, /=, %=, **=`
+                    - Bitwise: `&=, |=, ^=, <<=, >>=`
+                    - Boolean: `&&=, ||=`
+
+                    Note: Operators are not supported for destructuring assignments
                 ",
                 examples: "
-                    [a, b] = [1, 2]
-                    a = 1; a += 1
-                    a = [1]; a[] = 2
+                    [a, b] = [1, 2]     // Destructuring assignment
+                    a = 1; a += 1       // Arithmetic assignment
+                    a = [1]; a[] = 2    // Array index assignment (appends to array)
                 ",
             }
         }
     }
 );
+
+#[cfg(test)]
+mod test {
+    use crate::lav;
+
+    lav!(test_del_ident r#"
+        a=1; del a
+    "#);
+
+    lav!(test_del_const(Error) r#"
+        del 1
+    "#);
+
+    lav!(test_del_const_arr(Error) r#"
+        a=1; del [a,1]
+    "#);
+
+    lav!(test_del_const_idx(Error) r#"
+        a=1; del a[1]
+    "#);
+
+    lav!(test_assign_ops r#"
+        a=1; a+=1; assert_eq(a, 2)
+        b=1; b-=1; assert_eq(b, 0)
+        c=1; c*=2; assert_eq(c, 2)
+        d=4; d/=2; assert_eq(d, 2)
+        ee=4; ee%=2; assert_eq(ee, 0)
+        f=2; f**=3; assert_eq(f, 8)
+        g=2; g&=3; assert_eq(g, 2)
+        h=2; h|=3; assert_eq(h, 3)
+        i=2; i^=3; assert_eq(i, 1)
+        j=2; j<<=3; assert_eq(j, 16)
+        k=2; k>>=3; assert_eq(k, 0)
+        l=true ; l&&=false; assert_eq(l, false)
+        m=true ; m||=false; assert_eq(m, true)
+    "#);
+
+    lav!(test_assign_destructure r#"
+        [a, b] = [1, [1,2]]
+        assert_eq(a, 1)
+        assert_eq(b, [1,2])
+
+        a = 1; b = 2;
+        [a, b] = [1, 1]
+        assert_eq(a, 1)
+        assert_eq(b, 1)
+    "#);
+
+    lav!(test_assign_destructure_error(Error) r#"
+        [a, b] = [1, 2, 3]
+    "#);
+
+    lav!(test_assign_destructure_error2(Error) r#"
+        [a, b] = [1]
+    "#);
+
+    lav!(test_buggy_push r#"
+        save = {'choices':[]}; choice = 5
+        save['choices'].push(choice)
+        assert_eq(save['choices'], [5])
+    "#);
+
+    lav!(test_assign_idx r#"
+        a = [1, 2, 3]
+        a[0] = 2
+        assert_eq(a, [2, 2, 3])
+
+        assert_eq(a[], 3)
+        assert_eq(a[-1], 3)
+
+        a[] = [[[3]]]
+        assert_eq(a[][][0][], 3)
+    "#);
+
+    lav!(test_assign_idx_error(Error) r#"
+        a = [1, 2, 3]
+        a[4] = 2
+    "#);
+
+    lav!(test_assign_idx_error2(Error) r#"
+        a = [1, 2, 3]
+        a[0][1] = [1, 2]
+    "#);
+}

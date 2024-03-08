@@ -1,4 +1,7 @@
-use crate::define_stdfunction;
+use crate::{
+    define_stdfunction,
+    error::{ErrorDetails, WrapOption},
+};
 use polyvalue::{fpdec::Round, types::CurrencyInner, InnerValue, Value, ValueTrait};
 
 define_stdfunction!(
@@ -22,10 +25,7 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
-        if options.is_empty() {
-            return oops!(ArrayEmpty)
-        }
-        let min = options.iter().min().unwrap();
+        let min = options.iter().min().or_error(ErrorDetails::ArrayEmpty)?;
         Ok(min.clone())
     }
 );
@@ -54,7 +54,7 @@ define_stdfunction!(
         if options.is_empty() {
             return oops!(ArrayEmpty)
         }
-        let max = options.iter().max().unwrap();
+        let max = options.iter().max().or_error(ErrorDetails::ArrayEmpty)?;
         Ok(max.clone())
     }
 );

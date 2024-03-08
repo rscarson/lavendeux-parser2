@@ -71,7 +71,7 @@ define_stdfunction!(
 
         let mut res = res?.evaluate(state)?;
         if res.len() == 1 {
-            res = res.as_a::<Vec<Value>>().unwrap().into_iter().next().unwrap();
+            res = res.as_a::<Vec<Value>>()?.into_iter().next().unwrap();
         }
         Ok(res)
     },
@@ -103,7 +103,7 @@ define_stdfunction!(
         let res = Lavendeux::eval(&script, state);
         state.scope_out();
 
-        res?;
+        res?.evaluate(state)?;
         Ok(Value::from(""))
     },
 );
@@ -266,10 +266,10 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let expression = required_arg!(state::expression).to_string();
-        let res = crate::Lavendeux::eval(&expression, state);
+        let res = crate::Lavendeux::eval(&expression, state).map(|n| n.evaluate(state));
         match res {
-            Ok(_) => Ok(Value::from(false)),
-            Err(_) => Ok(Value::from(true))
+            Ok(r) if r.is_ok() => Ok(Value::from(false)),
+            _ => Ok(Value::from(true))
         }
     },
 );
@@ -344,7 +344,7 @@ define_stdfunction!(
             if true then {
                 assign('x', 6)
                 assert_eq(6, x)
-            } else { 0 }
+            } else nil
             assert_eq(5, x)
         ",
     },

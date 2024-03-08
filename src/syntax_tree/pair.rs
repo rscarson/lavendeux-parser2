@@ -10,6 +10,7 @@ pub struct PestIterator<'i> {
     inner: InnerPestIterator<'i>,
 }
 
+#[allow(dead_code)]
 impl<'i> PestIterator<'i> {
     pub fn from_pair(pair: Pair<'i, Rule>) -> Self {
         match pair.as_rule() {

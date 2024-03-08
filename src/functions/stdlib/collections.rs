@@ -152,14 +152,14 @@ define_stdfunction!(
 );
 
 define_stdfunction!(
-    push { input: Standard::Array, value: Standard::Any },
+    push { input: Standard::Collection, value: Standard::Any },
     returns = Array,
     docs = {
         category: "Collections",
-        description: "Appends the given value to the end of the given array, and returns the result",
+        description: "Appends the given value to the end of the given collection, and returns the result",
         ext_description: "
-            Appends the given value to the end of the given array.
-            If the input is a reference to an array in a variable, the variable is updated.
+            Appends the given value to the end of the given collection.
+            If the input is a reference to a collection in a variable, the variable is updated.
         ",
         examples: "
         assert_eq(push([1, 2], 3), [1, 2, 3]);
@@ -173,19 +173,39 @@ define_stdfunction!(
     handler = (state, reference) {
         let input = required_arg!(state::input);
         let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-        let value = required_arg!(state::value).clone();
+        let value = required_arg!(state::value);
 
-        input.push(value);
+        match input_type {
+            ValueType::Array => {
+                let mut input = input.as_a::<Array>()?;
+                input.push(value.clone());
 
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
+                // Update the array if it references a variable containing an array
+                if let Some(reference) = reference {
+                    if let Some(target) = reference.get_target_mut_in_parent(state)? {
+                        *target = input.clone().into();
+                    }
+                };
+
+                Ok(input.into())
             }
-        };
 
-        Ok(input.into())
+            ValueType::String => {
+                let mut input = input.as_a::<String>()?;
+                input.push_str(&value.to_string());
+
+                // Update the array if it references a variable containing an array
+                if let Some(reference) = reference {
+                    reference.update_value_in_parent(state, input.clone().into())?;
+                };
+
+                Ok(input.into())
+            }
+
+            _ => oops!(Custom {
+                msg: format!("cannot push to `{input_type}`")
+            })
+        }
     },
 );
 
@@ -377,7 +397,10 @@ define_stdfunction!(
             The order of the keys is not guaranteed.
         ",
         examples: "
-            assert_eq(keys({'a': 1, 'b': 2}), ['a', 'b']);
+            assert_eq(
+                keys({'a': 1, 'b': 2}).sort(),
+                ['a', 'b']
+            );
             assert_eq(keys({}), []);
         ",
     },
@@ -400,7 +423,10 @@ define_stdfunction!(
             The order of the values is not guaranteed.
         ",
         examples: "
-            assert_eq(values({'a': 1, 'b': 2}), [1, 2]);
+            assert_eq(
+                values({'a': 1, 'b': 2}).sort(), 
+                [1, 2]
+            );
             assert_eq(values({}), []);
         ",
     },

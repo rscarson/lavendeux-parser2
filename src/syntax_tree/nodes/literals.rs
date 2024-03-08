@@ -5,7 +5,7 @@ use std::str::FromStr;
 
 define_handler!(
     IntLiteral(pairs, token, _state) {
-        let literal = pairs.next().unwrap();
+        let literal = unwrap_next!(pairs, token);
         let str = literal.as_str();
         let size = pairs
             .next()

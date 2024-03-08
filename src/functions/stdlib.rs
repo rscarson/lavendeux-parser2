@@ -28,7 +28,7 @@ pub fn all() -> HashMap<String, Box<dyn ParserFunction>> {
         .map(|f| (f.name().to_string(), f.clone_self()))
         .collect()
 }
-/*
+
 #[cfg(test)]
 mod test {
     use crate::{error::ErrorDetails, Error};
@@ -91,4 +91,3 @@ mod test {
         );
     }
 }
- */

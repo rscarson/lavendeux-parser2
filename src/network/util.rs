@@ -4,15 +4,18 @@ use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::Error;
+use crate::{oops, Error};
 
 pub fn resolve(hostname: &str) -> Result<Value, Error> {
     match (hostname, 0).to_socket_addrs() {
         Ok(mut addresses) => {
-            let address = addresses.next().unwrap().to_string();
-            let suffix = ":".to_string() + address.split(':').last().unwrap_or("80");
-
-            Ok(Value::from(address.replace(&suffix, "")))
+            if let Some(addr) = addresses.next() {
+                return Ok(Value::from(addr.ip().to_string()));
+            } else {
+                return oops!(Custom {
+                    msg: format!("No addresses found for `{hostname}`")
+                });
+            }
         }
         Err(e) => Err(e.into()),
     }

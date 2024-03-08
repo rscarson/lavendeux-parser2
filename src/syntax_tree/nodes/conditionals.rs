@@ -28,10 +28,10 @@ define_ast!(
                 // Then we will work backwards, grabbing pairs of expressions
                 // And turning them into ternary expressions with the previous
                 // iteration as the false side until we run out of children
-                let mut else_branch = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
+                let mut else_branch = unwrap_last!(pairs, token).into_node(state).with_context(&token)?;
                 while pairs.peek().is_some() {
-                    let then_branch = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
-                    let condition = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
+                    let then_branch = unwrap_last!(pairs, token).into_node(state).with_context(&token)?;
+                    let condition = unwrap_last!(pairs, token).into_node(state).with_context(&token)?;
 
                     else_branch = Self {
                         condition: Box::new(condition),
@@ -91,11 +91,11 @@ define_ast!(
             cases: Vec<SwitchCase<'i>>
         ) {
             build = (pairs, token, state) {
-                let match_on = Box::new(pairs.next().unwrap().into_node(state).with_context(&token)?);
+                let match_on = Box::new(unwrap_node!(pairs, state, token)?);
                 let mut cases = vec![];
 
                 while let Some(case) = pairs.next()  {
-                    let body = pairs.next().unwrap().into_node(state).with_context(&token)?;
+                    let body = unwrap_node!(pairs, state, token)?;
 
                     if case.as_str() == "_" {
                         cases.push(SwitchCase::Default(body));
@@ -197,11 +197,11 @@ impl IntoOwned for SwitchCase<'_> {
 
 define_handler!(
     TernaryExpression(pairs, token, state) {
-        let condition = pairs.next().unwrap().into_node(state).with_context(&token)?;
+        let condition = unwrap_node!(pairs, state, token)?;
 
-        let mut then_pair = pairs.next().unwrap();
-        let then_branch = then_pair.next().unwrap().into_node(state).with_context(&token)?;
-        let else_branch = pairs.next().unwrap().into_node(state).with_context(&token)?;
+        let mut then_pair = unwrap_next!(pairs, token);
+        let then_branch = unwrap_node!(then_pair, state, token)?;
+        let else_branch = unwrap_node!(pairs, state, token)?;
 
         Ok(IfExpression {
             condition: Box::new(condition),

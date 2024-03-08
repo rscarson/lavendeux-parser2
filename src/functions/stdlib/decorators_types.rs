@@ -159,7 +159,7 @@ define_stddecorator!(
         "
     },
     handler = (input) {
-        let input = input.as_a::<Bool>()?;
+        let input = Bool::from(input.is_truthy());
         Ok(input.to_string())
     }
 );

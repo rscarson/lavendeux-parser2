@@ -119,11 +119,11 @@ impl<'i> AssignmentTarget<'i> {
                     .or_error(ErrorDetails::VariableName { name: base.clone() })?;
                 Self::get_index_handle(base, &idx)
             }
-            Self::Destructure(_) => {
-                oops!(Internal {
-                    msg: format!("Destructuring references are only valid on assignments!")
-                })
-            }
+            Self::Destructure(targets) => targets
+                .iter()
+                .map(|t| t.get_value(state))
+                .collect::<Result<Vec<_>, _>>()
+                .map(Value::from),
         }
     }
 
@@ -145,35 +145,11 @@ impl<'i> AssignmentTarget<'i> {
                     .or_error(ErrorDetails::VariableName { name: base.clone() })?;
                 Self::get_index_handle(base, &idx)
             }
-            Self::Destructure(_) => {
-                oops!(Internal {
-                    msg: format!("Destructuring references are only valid on assignments!")
-                })
-            }
-        }
-    }
-
-    pub fn get_value_mut<'s>(&self, state: &'s mut State) -> Result<&'s mut Value, Error> {
-        match self {
-            Self::Identifier(id) => state
-                .get_variable_mut(id)
-                .or_error(ErrorDetails::VariableName { name: id.clone() }),
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let base = state
-                    .get_variable_mut(base)
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                Self::get_mut_index_handle(base, &idx)
-            }
-            Self::Destructure(_) => {
-                oops!(Internal {
-                    msg: format!("Destructuring references are only valid on assignments!")
-                })
-            }
+            Self::Destructure(targets) => targets
+                .iter()
+                .map(|t| t.get_value_in_parent(state))
+                .collect::<Result<Vec<_>, _>>()
+                .map(Value::from),
         }
     }
 
@@ -202,6 +178,7 @@ impl<'i> AssignmentTarget<'i> {
                 base = Self::get_mut_index_handle(base, &idx)?;
 
                 let target_idx = target_idx.unwrap_or(base.len().into());
+
                 base.set_index(&target_idx, value)?;
                 Ok(())
             }
@@ -219,6 +196,33 @@ impl<'i> AssignmentTarget<'i> {
                     Ok(())
                 }
             }
+        }
+    }
+
+    /// Get a handle to the target value, if it exists.
+    pub fn get_target_mut_in_parent<'s>(
+        &self,
+        state: &'s mut State,
+    ) -> Result<Option<&'s mut Value>, Error> {
+        match self {
+            Self::Identifier(id) => Some(
+                state
+                    .get_variable_mut_as_parent(id)
+                    .or_error(ErrorDetails::VariableName { name: id.clone() }),
+            )
+            .transpose(),
+            Self::Index(base, indices) => {
+                let mut idx = vec![];
+                for index in indices {
+                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
+                }
+
+                let base = state
+                    .get_variable_mut_as_parent(base)
+                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
+                Some(Self::get_mut_index_handle(base, &idx)).transpose()
+            }
+            Self::Destructure(_) => Ok(None),
         }
     }
 

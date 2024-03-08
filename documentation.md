@@ -134,7 +134,7 @@ $2.00 + £1.000; // 3.000
 
 **Supported currency symbols:**
 
-```
+```text
 $ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
@@ -231,7 +231,7 @@ Inside a, array or object, it will be formatted as a string literal, with enclos
 
 # Operators and Syntax
 ## Arithmetic Expression
-**[+, -, *, /, %, **]**  
+`[+, -, *, /, %, **]`  
 Performs arithmetic operations on two values.
 All but exponentiation are left-associative.
 
@@ -241,7 +241,7 @@ All but exponentiation are left-associative.
 2 ** 3
 ```
 ## Array Literals
-**[[ a, b, ... ]]**  
+`[[ a, b, ... ]]`  
 A collection of values.
 Arrays can contain any type of value, including other arrays.
 Arrays are 0-indexed, meaning the first element is at index 0.
@@ -254,7 +254,7 @@ The indexing operator (a[b]) can be used to access elements of an array.
 [1, [2, 3], 4]
 ```
 ## Assignment Operator
-**[=, +=, -=, *=, /=, %=, **=, &=, |=, ^=, <<=, >>=]**  
+`[=, +=, -=, *=, /=, %=, **=, &=, |=, ^=, <<=, >>=]`  
 Assigns a value to a variable, index, or destructuring assignment
 Target is either a literal with optional indices, or a destructuring assignment
 If an index is empty, a new value will be appended to the array
@@ -268,7 +268,7 @@ a = 1; a += 1
 a = [1]; a[] = 2
 ```
 ## Bitwise
-**[|, ^, &, <<, >>]**  
+`[|, ^, &, <<, >>]`  
 A left-associative infix operator that performs bitwise operations on two values.
 Values are first converted to integers.
 Shifts are arithmetic for signed integers and logical for unsigned integers.
@@ -281,7 +281,7 @@ A larger set of bitwise operations are available in the 'bitwise' category of th
 5 << 3 >> 3
 ```
 ## Block
-**[{ <statements> }]**  
+`[{ <statements> }]`  
 A series of expressions that are executed in order, and are separated by semicolons or linebreaks.
 The last statement's value is returned.
 A block must return a value, and thus cannot be empty.
@@ -294,7 +294,7 @@ if true {
 } else nil
 ```
 ## Boolean
-**[or, and, ==, !=, <=, >=, <, >]**  
+`[or, and, ==, !=, <=, >=, <, >]`  
 Performs an infix boolean comparison between two values.
 Comparisons are weak, meaning that the types of the values are not checked.
 Result are always a boolean value.
@@ -307,14 +307,14 @@ true || false
 1 < 2
 ```
 ## Break
-**[break]**  
+`[break]`  
 Breaks out of a loop
 **Examples:**  
 ```lavendeux
 for i in 0..10 { if i == 5 { break } else {i} }
 ```
 ## Cast
-**[as]**  
+`[as]`  
 Casts a value to a different type.
 The type can be a string or an identifier.
 The operator is right-associative
@@ -326,7 +326,7 @@ The operator is right-associative
 5 as i8
 ```
 ## Constants
-**[pi, e, tau, nil]**  
+`[pi, e, tau, nil]`  
 A constant value.
 A predefined set of values that are always available.
 
@@ -340,14 +340,14 @@ A predefined set of values that are always available.
 pi; e; tau; nil
 ```
 ## Continue
-**[continue]**  
+`[continue]`  
 Skips the current iteration of a loop
 **Examples:**  
 ```lavendeux
 for i in 0..10 { if i == 5 { continue } else {i} }
 ```
 ## Decorator
-**[@name]**  
+`[@name]`  
 Converts a value to a formatted string.
 It calls a function named '@name' with the value as an argument.
 
@@ -359,7 +359,7 @@ assert_eq(
 )
 ```
 ## Deletion Keyword
-**[del, delete, unset]**  
+`[del, delete, unset]`  
 Deletes a value, function, @decorator, or index
 Will return the value deleted (or the function signature if a function was deleted)
 Index can be blank to delete the last value in an array, or negative to count from the end
@@ -376,7 +376,7 @@ a=1;b=2; del [a,b]
 del @dec
 ```
 ## For
-**[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block> [if <condition>]]**  
+`[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block> [if <condition>]]`  
 For loops are finite value iterators. This means they map over a range, array, or object, 
 and return a new array of values.
 The variable is optional, and if not provided, the loop will not bind a variable.
@@ -395,7 +395,7 @@ for a in 0..10 do a if a % 2 == 0
 for 0..10 do '!'
 ```
 ## Function Assignment
-**[name([arg1:type, arg2, ...]) = { ... }]**  
+`[name([arg1:type, arg2, ...]) = { ... }]`  
 Assigns a block of code to a function name.
 The function can be called later in the code.
 If the function name begins with `@`, it is a decorator and must take in one argument and return a string
@@ -419,7 +419,7 @@ add(a:numeric, b:numeric): int = {
 add(3, 4.5)
 ```
 ## Function Call
-**[name(arg1, arg2, ...), arg1.func(arg2, arg3, ...)]**  
+`[name(arg1, arg2, ...), arg1.func(arg2, arg3, ...)]`  
 Calls a function with the given arguments.
 The help() will list all available functions, and can filter by category or function name.
 
@@ -432,7 +432,7 @@ help(push)
 help(collections)
 ```
 ## Identifier
-**[a, b, c]**  
+`[a, b, c]`  
 A variable name.
 The value of the variable is looked up in the state.
 
@@ -442,7 +442,7 @@ The value of the variable is looked up in the state.
 a; b; c
 ```
 ## If
-**[if <condition> then <block> else <block>, if <condition> {block} else {block}]**  
+`[if <condition> then <block> else <block>, if <condition> {block} else {block}]`  
 A conditional expression that evaluates a condition and then one of two branches.
 body can be either a block or a single expression. The last expression is returned from a block.
 Since all expressions in lavendeux return a value, the if expression will return the value of the branch that is executed.
@@ -460,7 +460,7 @@ if a == 4 {
 } else nil
 ```
 ## Indexing
-**[a[b], a[]]**  
+`[a[b], a[]]`  
 Accessing elements of a collection.
 The indexing operator can be used to access elements of a collection or string.
 If the index is a collection, it is used to access multiple elements.
@@ -475,7 +475,7 @@ Negative indices can be used to access elements from the end of the collection.
 { "name": "John", "age": 25 }["name"]
 ```
 ## Matching
-**[contains, matches, is, starts_with, ends_with]**  
+`[contains, matches, is, starts_with, ends_with]`  
 A set of left-associative boolean operators comparing a collection with a pattern
 'is' is a special case that compares type (`value is string` is equivalent `typeof(value) == 'string'`)
 starts/ends with are not applicable to objects, which are not ordered
@@ -489,7 +489,7 @@ starts/ends with are not applicable to objects, which are not ordered
 [1, 2] endswith 2
 ```
 ## Object Literals
-**[{ key: value, ... }]**  
+`[{ key: value, ... }]`  
 A collection of key-value pairs.
 Values can contain any type, including other objects.
 Keys can be any non-collection type
@@ -501,7 +501,7 @@ The indexing operator (a[b]) can be used to access elements of an object.
 { "name": "John", "address": { "city": "New York", "state": "NY" } }
 ```
 ## Range Literals
-**[first..last]**  
+`[first..last]`  
 A range of values.
 Ranges can be used to create arrays of numbers or characters.
 Ranges are inclusive, meaning the start and end values are included in the array.
@@ -514,7 +514,7 @@ Character ranges are inclusive and can only be used with single-character string
 'a'..'z'
 ```
 ## Return
-**[return <value>]**  
+`[return <value>]`  
 Returns a value from a function.
 By default, the last expression is returned, unless a return statement is used.
 
@@ -527,7 +527,7 @@ assert_eq( a(), 5 )
 assert_eq( b(), 2 )
 ```
 ## Script
-**[<statement> [ ; | \n ] <statement>]**  
+`[<statement> [ ; | \n ] <statement>]`  
 A series of expressions or function definitions that are executed in order, and are separated by semicolons or linebreaks.
 
 **Examples:**  
@@ -536,7 +536,7 @@ A series of expressions or function definitions that are executed in order, and 
 min([1, 2, 3])
 ```
 ## Ternary
-**[condition ? then : else]**  
+`[condition ? then : else]`  
 A right-associative ternary operator.
 The condition is evaluated first, then either the then or else branch is evaluated.
 
@@ -545,7 +545,7 @@ The condition is evaluated first, then either the then or else branch is evaluat
 true ? 1 : 2
 ```
 ## Unary Bitwise Not
-**[~]**  
+`[~]`  
 A prefix operator that performs bitwise NOT on a value.
 The value is first converted to an integer.
 A larger set of bitwise operations are available in the 'bitwise' category of the standard library.
@@ -555,7 +555,7 @@ A larger set of bitwise operations are available in the 'bitwise' category of th
 ~5
 ```
 ## Unary Boolean Not
-**[not]**  
+`[not]`  
 Negates a boolean value.
 If the value is not a boolean, it is cooerced to boolean first.
 
@@ -566,14 +566,14 @@ If the value is not a boolean, it is cooerced to boolean first.
 !0 == true
 ```
 ## Unary Negation
-**[-]**  
+`[-]`  
 Negates a value.
 **Examples:**  
 ```lavendeux
 -1
 ```
 ## match
-**[match <value> { <condition> => <block>, _ => <block> }]**  
+`[match <value> { <condition> => <block>, _ => <block> }]`  
 A conditional expression that evaluates a value and then one of several cases.
 match blocks must be exhaustive, and therefore must end in a default case
 

@@ -2,12 +2,11 @@ use std::borrow::Cow;
 
 use crate::{
     error::ErrorDetails,
-    pest::LavendeuxParser,
     syntax_tree::{
         traits::{IntoOwned, NodeExt},
         Node, Reference,
     },
-    Error, Rule, State,
+    Error, Lavendeux, Rule, State,
 };
 use polyvalue::{Value, ValueType};
 
@@ -70,7 +69,7 @@ impl ParserFunction for UserDefinedFunction<'_> {
             args: self.args.clone(),
             returns: self.returns,
             src: self.src.clone(),
-            body: UserDefinedFunction::compile(&self.src, &mut Default::default()).unwrap(),
+            body: UserDefinedFunction::compile(&self.src, &mut Default::default()).unwrap(), // This is safe because the function is already checked
 
             src_line_offset: self.src_line_offset,
 
@@ -98,7 +97,7 @@ impl ParserFunction for UserDefinedFunction<'_> {
 
         // Execute the last node
         let body = &self.body;
-        let body = body.iter().last().unwrap();
+        let body = body.iter().last().unwrap(); // safe because we checked that the body is not empty
         match body.evaluate(state) {
             Ok(v) => Ok(v.as_type(self.returns)?),
             Err(e) => {
@@ -142,9 +141,7 @@ impl UserDefinedFunction<'_> {
 
     fn compile(src: &[String], state: &mut State) -> Result<Vec<Node<'static>>, Error> {
         src.iter()
-            .map(|l| {
-                LavendeuxParser::build_ast(l, Rule::EXPR, state).map(|n| n.into_owned())
-            })
+            .map(|l| Lavendeux::eval_rule(l, state, Rule::EXPR).map(|n| n.into_owned()))
             .collect()
     }
 

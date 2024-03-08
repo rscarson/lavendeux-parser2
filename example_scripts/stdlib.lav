@@ -17,8 +17,8 @@
 // We will also skip a few deep-math functions, as they are not very useful for testing
 // the language, and are likely not very interesting to implement in lavendish
 
-include('./examples/stdlib/array.lav')
-include('./examples/stdlib/bitwise.lav')
-include('./examples/stdlib/math.lav')
-include('./examples/stdlib/string.lav')
-include('./examples/stdlib/system.lav')
+include('./example_scripts/stdlib/array.lav')
+include('./example_scripts/stdlib/bitwise.lav')
+include('./example_scripts/stdlib/math.lav')
+include('./example_scripts/stdlib/string.lav')
+include('./example_scripts/stdlib/system.lav')

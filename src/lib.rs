@@ -1,4 +1,4 @@
-//! test
+//!
 #![warn(missing_docs)]
 
 // Language documentation
@@ -20,7 +20,7 @@ pub mod error;
 pub use error::Error;
 
 // The core parser. Builds the AST and evaluates it.
-mod pest;
+pub mod pest;
 pub use pest::Rule; // exported for Token
 mod syntax_tree;
 pub use syntax_tree::Reference;

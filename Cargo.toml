@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["all-functions"]
+default = ["all-functions", "debug_scopes"]
 
 all-functions = ["encoding-functions", "network-functions", "crypto-functions"]
+
+debug_scopes = []
 
 encoding-functions = ["base64", "urlencoding"]
 network-functions = ["reqwest"]
@@ -30,8 +32,7 @@ lazy_static = "1.4.0"
 thiserror = "1.0.50"
 
 # Main value for the parse tree
-#polyvalue = "0.2.2"
-polyvalue = {git = "https://github.com/rscarson/polyvalue.git"}
+polyvalue = "0.3.0"
 
 # For collecting functions and nodes
 enum_dispatch = "0.3.12"
@@ -57,15 +58,17 @@ rand = { version = "0.8.5", optional = true }
 
 [dev-dependencies]
 mockito = "1.2.0" # For network tests
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "load_script"
+harness = false
 
 [[bin]]
 name = "generate_docs"
 
 [[bin]]
 name = "coverage_report"
-
-[[bin]]
-name = "load_zarban"
 
 [profile.release]
 debug = true

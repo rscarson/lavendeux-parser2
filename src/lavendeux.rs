@@ -69,8 +69,19 @@ impl Lavendeux {
 
     /// Evaluate input against a given state, bypassing the normal checks for
     /// threading, timeout, and without sanitizing scope depth
-    pub fn eval<'i>(input: &'i str, state: &mut State) -> Result<Node<'i>, Error> {
-        LavendeuxParser::build_ast(input, Rule::SCRIPT, state)
+    pub(crate) fn eval<'i>(input: &'i str, state: &mut State) -> Result<Node<'i>, Error> {
+        Self::eval_rule(input, state, Rule::SCRIPT)
+    }
+
+    /// Evaluate input against a given state, bypassing the normal checks for
+    /// threading, timeout, and without sanitizing scope depth
+    pub(crate) fn eval_rule<'i>(
+        input: &'i str,
+        state: &mut State,
+        rule: Rule,
+    ) -> Result<Node<'i>, Error> {
+        let root = LavendeuxParser::parse2(input, rule)?;
+        LavendeuxParser::compile_ast(root, state)
     }
 
     /// Parses the given input
@@ -93,19 +104,19 @@ impl Lavendeux {
             match handle.join() {
                 Ok(value) => value,
                 Err(e) => {
-                    if let Some(s) = e.downcast_ref::<&str>() {
+                    if let Some(s) = e.downcast_ref::<String>() {
                         let s = s.to_string();
                         oops!(Fatal { msg: s })
                     } else {
                         oops!(Fatal {
-                            msg: format!("Parser thread panicked: {:?}", e)
+                            msg: format!("Parser thread panicked")
                         })
                     }
                 }
             }
         })?;
 
-        let lines = value.as_a::<Array>().unwrap().inner().clone();
+        let lines = value.as_a::<Array>()?.inner().clone();
         Ok(lines)
     }
 
@@ -149,7 +160,7 @@ mod test {
     fn test_large_fixed_convert() {
         let mut parser = Lavendeux::new(Default::default());
         parser.parse(
-            "1$16666666666666666666666666666666666666666666666666666666666666666666666666662.11",
+            "1$1666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666662.11",
         ).unwrap_err();
         parser.parse("e₿8**82asin").unwrap_err();
         parser.parse("e85**88d**e8**8").unwrap_err();

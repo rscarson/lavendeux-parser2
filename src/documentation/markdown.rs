@@ -116,7 +116,7 @@ impl DocumentationFormatter for MarkdownFormatter {
             output.push(MarkdownSnippet::H2(operator.name.to_string()));
 
             let symbols = operator.symbols.join(", ");
-            output.push(MarkdownSnippet::Text(format!("**[{}]**  ", symbols)));
+            output.push(MarkdownSnippet::Text(format!("`[{}]`  ", symbols)));
 
             output.push(MarkdownSnippet::Text(operator.description.to_string()));
 
