@@ -99,16 +99,7 @@ define_ast!(
                     arguments.push(argument.evaluate(state).with_context(this.token())?);
                 }
 
-                // Update reference argument
-                let reference = this.arguments.first().and_then(|arg1| {
-                    if let node_type!(Values::Reference(reference)) = arg1 {
-                        Some(reference)
-                    } else {
-                        None
-                    }
-                });
-
-                let value = match state.call_function(&this.name, arguments, reference) {
+                let value = match state.call_function(&this.name, arguments) {
                     Ok(value) => value,
                     Err(e) => {
                         if let ErrorDetails::Return { value, .. } = e.details {
@@ -156,7 +147,7 @@ define_ast!(
 define_handler!(
     FunctionDefinition(pairs, token, state) {
         let name = unwrap_next!(pairs, token).as_str().to_string();
-        let src = pairs.last_child().unwrap().map(|p| p.as_str().to_string()).collect::<Vec<_>>();
+        let src = pairs.last_child().unwrap().as_str().to_string();
 
         let mut returns = match pairs.peek_last() {
             Some(p) if p.as_rule() == Rule::function_typespec => {

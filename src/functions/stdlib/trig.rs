@@ -17,7 +17,7 @@ macro_rules! define_trigfunction {
                 ",
                 examples: $examples,
             },
-            handler = (state, _reference) {
+            handler = (state) {
                 let n = required_arg!(state::n).as_a::<f64>()?;
                 Ok(Value::from(n.$name()))
             }

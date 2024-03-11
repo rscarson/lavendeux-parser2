@@ -17,7 +17,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).to_string();
 
         use sha2::{Digest, Sha256};
@@ -45,7 +45,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).to_string();
 
         use sha2::{Digest, Sha512};
@@ -73,7 +73,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).to_string();
 
         use md5::{Digest, Md5};
@@ -101,7 +101,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty);
@@ -132,7 +132,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         use rand::Rng;
 
         if let Some(range) = optional_arg!(state::range) {

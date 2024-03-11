@@ -1,0 +1,296 @@
+/**
+ * This file contains a series of tests for the Lavendeux language.
+ * It will be run as part of the CI process, and acts as a demonstration of the language's features.
+ *
+ * This file will focus on operators and syntax - function tests are run as part of documentation compilation.
+ */
+
+// Runs all unit tests defined here
+__exec_tests()
+
+//
+// Assignment operations
+//
+    __test_ident_assign() = { a = 5; b = a; assert_eq(a, b) }
+    __test_array_assign() = {
+        [a, b, c] = [1, 2, 3]; assert_eq(a, 1); assert_eq(b, 2); assert_eq(c, 3)
+        a = [1, 2, 3]; [b, c, d] = a; assert_eq(b, 1); assert_eq(c, 2); assert_eq(d, 3)
+        would_err('a = [1, 2, 3, 4]; [a, b, c] = a')
+    }
+    __test_index_assign() = {
+        a = [1, 2, 3]; a[0] = 5; assert_eq(a[0], 5)
+        a = [1, 2, 3]; a[] = 5; assert_eq(a[3], 5)
+        a = [1, [[2, 3]]]; a[1][0][1] = 5; assert_eq(a[1][0][1], 5)
+    }
+
+    __test_op_assign() = {
+        a = 5; a += 5; assert_eq(a, 10)
+        a = 5; a -= 5; assert_eq(a, 0)
+        a = 5; a *= 5; assert_eq(a, 25)
+        a = 5; a /= 5; assert_eq(a, 1)
+        a = 5; a %= 5; assert_eq(a, 0)
+        a = 5; a **= 5; assert_eq(a, 3125)
+
+        a = [1, 2, 3]; a += [4, 5, 6]; assert_eq(a, [1, 2, 3, 4, 5, 6])
+        [a, b, c] = [1, 2, 3]; [a, b, c] += 1; assert_eq([a, b, c], [2, 3, 4])
+    }
+
+    __test_ident_delete() = { a = 5; del a; would_err('a') }
+    __test_array_delete() = {
+        [a, b, c] = [1, 2, 3]; del [a, b]; would_err('a'); would_err('b'); assert_eq(c, 3)
+        del [c]; would_err('c')
+    }
+    __test_index_delete() = {
+        a = [1, 2, 3]; 
+        del a[0]; assert_eq(a[0], 2)
+        del a[]; assert_eq(a[], 2); assert_eq(a.len(), 1)
+        a = [1, [[2, 3]]]; del a[1][0][1]; would_err('a[1][0][1]'); assert_eq(a[1][0][0], 2)
+    }
+
+//
+// Mathematical operations
+//
+
+    __test_infix_arith() = {
+        assert_eq(5 + 5, 10)
+        assert_eq(5 - 5, 0)
+        assert_eq(5 * 5, 25)
+        assert_eq(5 / 5, 1)
+        assert_eq(5 % 5, 0)
+        assert_eq(5 ** 5, 3125)
+        assert_eq(5 + 5 * 5, 30)
+    }
+    __test_unary_arith() = {
+        assert_eq(-5, -5)
+        assert_eq(-(-5), 5)
+        assert_eq((-5), -5)
+
+        a = 5
+        assert_eq(-a, -5)
+        assert_eq(--a, 4)
+        assert_eq(a--, 4); assert_eq(a, 3)
+        assert_eq(a++, 3); assert_eq(a, 4)
+        assert_eq(++a, 5)
+    }
+
+    __test_bitwise() = {
+        assert_eq(5 & 5, 5)
+        assert_eq(5 | 5, 5)
+        assert_eq(5 ^ 5, 0)
+        assert_eq(~5, -6)
+        assert_eq(5 & 5 | 5 ^ 5, 5)
+    }
+    __test_boolean() = {
+        assert_eq(5 && 5, true)
+        assert_eq(5 || 0, true)
+        assert_eq(!5, false)
+        assert_eq(5 && 5 || 0 && 5, true)
+
+        // Test short-circuiting
+        a = 0; b = 0; c = 0
+        assert_eq(true || a++, true); assert_eq(a, 0)
+        assert_eq(false && a++, false); assert_eq(a, 0)
+
+        // Comparisons
+        assert_eq(5 == 5, true)
+        assert_eq(5 != 5, false)
+        assert_eq(5 < 6, true)
+        assert_eq(5 > 6, false)
+        assert_eq(5 <= 6, true)
+        assert_eq(5 >= 6, false)
+    }
+
+//
+// Collections
+//
+
+    __test_define_array() = {
+        a = [1, 2, 3]; assert_eq(a[0], 1); assert_eq(a[1], 2); assert_eq(a[2], 3)
+        a = [1, 2, 3, 4]; assert_eq(a.len(), 4)
+        a = [1, [2, 3]]; assert_eq(a[1][0], 2)
+    }
+    __test_define_object() = {
+        a = {0: 1, false: 2, '': 3, 0.0: 4, 0u8: 5}
+        assert_eq(a[0], 1)
+        assert_eq(a[false], 2)
+        assert_eq(a[''], 3)
+        assert_eq(a[0.0], 4)
+        assert_eq(a[0u8], 5)
+    }
+    __test_define_range() = {
+        a = 1..5; assert_eq(a[0], 1); assert_eq(a[], 5)
+        a = 'a'..'e'; assert_eq(a[0], 'a'); assert_eq(a[], 'e')
+        would_err('1..0')
+        would_err('"z".."a"')
+        would_err('"aa".."z"')
+    }
+
+    __test_indexing() = {
+        a = [1, [2], [[3]]]; assert_eq(a[0], 1); assert_eq(a[1][0], 2); assert_eq(a[2][0][0], 3)
+        a = {0: 1, 1: 2, 2: 3}; assert_eq(a[0], 1); assert_eq(a[1], 2); assert_eq(a[2], 3)
+        a = 1..5; assert_eq(a[0], 1); assert_eq(a[1], 2); assert_eq(a[2], 3)
+        assert_eq([[1, 2, 3], [4, 5, 6]][1][2], 6)
+    }
+
+//
+// Conditionals
+//
+
+    __test_if() = {
+        a = 0
+        if true { a=1 } else { a=2 }; assert_eq(a, 1);
+        if false { a=1 } else { a=2 }; assert_eq(a, 2)
+        would_err('if true { a}')
+        a = 0
+        if true then ++a else if false then --a else nil; assert_eq(a, 1)
+    }
+
+    __test_ternary() = {
+        a = true ? 1 : 2; assert_eq(a, 1)
+        a = false ? 1 : 2; assert_eq(a, 2)
+        a = true ? 1 : false ? 2 : 3; assert_eq(a, 1)
+        a = false ? 1 : false ? 2 : 3; assert_eq(a, 3)
+    }
+
+    __test_switch() = {
+        a = match true {
+            true => 1,
+            false => 2
+        }; assert_eq(a, 1)
+
+        a = match false {
+            true => 1,
+            false => 2
+        }; assert_eq(a, 2)
+
+        a = match 8 {
+            1 => 1,
+            2 => 2,
+            3 => 3,
+            4 => 4,
+            5 => 5,
+            _ => 6
+        }; assert_eq(a, 6)
+
+        would_err('match 3 { 1 => 1, 1 => 2 }') // not exhaustive
+    }
+
+//
+// Iterators
+//
+
+    __test_for() = {
+        a = 0
+        for i in 1..5 { a += 1 }; assert_eq(a, 5)
+        
+        a = for i in [1, 2, 3] do i if i > 1; assert_eq(a, [2, 3])
+        a = for i in [1, 2, 3] do { if i%2 then continue else i }; assert_eq(a, [2])
+        a = for i in [1, 2, 3] do { if i%2==0 then break else i }; assert_eq(a, [1])
+
+        a = for k in {'a': 1, 'b': 2, 'c': 3} do k; assert_eq(a.sort(), ['a', 'b', 'c'])
+    }
+
+//
+// Literals
+//
+
+    __test_int_lits() = {
+        assert_eq(0, 0)
+        assert_eq(1, 1)
+        assert_eq(0b101, 5)
+        assert_eq(0o10, 8)
+        assert_eq(010, 8)
+        assert_eq(0x10, 16)
+        assert(0u8 == 0u16)
+        assert(0u32 == 0u64)
+        assert(0i8 == 0i16)
+        assert(0i32 == 0i64)
+    }
+
+    __test_float_lits() = {
+        assert_eq(0.0, 0.0)
+        assert_eq(1.0, 1.0)
+        assert_eq(1.0e3, 1000.0)
+        assert_eq(1.0e-3, 0.001)
+        assert_eq(1E+3, 1000.0)
+    }
+
+    __test_fixed_lits() = {
+        0d; 0.0d; 0.0000000000d; 10000000.2d
+        $0; $0.0; $0.0000000000; $10000000.2
+    }
+
+    __test_bool_lits() = {
+        assert_eq(true, true)
+        assert_eq(false, false)
+    }
+
+    __test_const_lits() = {
+        pi; e; tau; nil
+    }
+
+    __test_regex_lits() = {
+        /.*/u
+        /./gM
+    }
+
+    __test_str_lits() = {
+        assert_eq('a', 'a')
+        assert_eq('a\nb', "a\nb")
+        assert_eq('a\\b'.len(), 3)
+        assert_eq('a\rb'.len(), 3)
+        assert_eq('a\'b', "a'b")
+        assert_eq('a\tb'.len(), 3)
+        //" // Yeah I should fix the vscode syntax highlighting for lavendish - it's not great
+    }
+
+//
+// Values
+//
+
+    __test_casting() = {
+        assert_eq(5 as u8, 5u8)
+        assert_eq(5 as u16, 5u16)
+        assert_eq(5 as u32, 5u32)
+        assert_eq(5 as u64, 5u64)
+        assert_eq(5 as i8, 5i8)
+        assert_eq(5 as i16, 5i16)
+        assert_eq(5 as i32, 5i32)
+        assert_eq(5 as i64, 5i64)
+        would_err('-5 as u8')
+
+        assert_eq(5 as float, 5.0)
+        assert_eq(5.0 as int, 5)
+        assert_eq(5 as fixed, 5d)
+        assert_eq(5 as numeric, 5)
+
+        assert_eq(5 as bool, true)
+        assert_eq(0 as bool, false)
+        assert_eq(true as int, 1)
+
+        assert_eq(5 as string, '5')
+        assert_eq(5 as array, [5])
+        assert_eq(5 as object, {0u64: 5})
+        assert_eq((1..2) as array, [1, 2])
+    }
+
+    __test_decorator() = {
+        assert_eq(5@hex, '0x5')
+        assert_eq(5@bin, '0b101')
+    }
+
+//
+// Functions
+//
+
+    a() = 5
+    __test_define_fn() = {
+        assert_eq(a(), 5)
+        assert_eq(del a, "a() -> any")
+    }
+
+    @a(a) = a+'toots'+a
+    __test_define_dec() = {
+        assert_eq(2@a, '2toots2')
+        assert_eq(del @a, "@a(a) -> string")
+    }

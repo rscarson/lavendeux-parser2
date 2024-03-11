@@ -64,6 +64,10 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 name = "load_script"
 harness = false
 
+[[bench]]
+name = "load_data"
+harness = false
+
 [[bin]]
 name = "generate_docs"
 

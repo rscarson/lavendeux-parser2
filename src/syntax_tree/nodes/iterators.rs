@@ -111,13 +111,20 @@ define_ast!(
 
                     state.scope_into().with_context(this.token())?;
                     if let Some(variable) = &this.variable {
-                        state.set_variable(variable, v);
+                        state.set(variable, v);
                     }
                     if let Some(condition) = &this.condition {
-                        let condition = condition.evaluate(state).with_context(this.token())?;
-                        if !condition.is_truthy() {
-                            state.scope_out();
-                            continue;
+                        let condition = condition.evaluate(state).with_context(this.token());
+                        match condition {
+                            Ok(condition) if !condition.is_truthy() => {
+                                state.scope_out();
+                                continue;
+                            },
+                            Err(e) => {
+                                state.scope_out();
+                                return Err(e)
+                            },
+                            _ => {}
                         }
                     }
 

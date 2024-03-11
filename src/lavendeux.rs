@@ -84,10 +84,16 @@ impl Lavendeux {
         LavendeuxParser::compile_ast(root, state)
     }
 
+    /// Run the parser on the given file
+    /// Returns an array of values, one for each line in the input
+    pub fn run(&mut self, filename: &str) -> Result<Vec<Value>, Error> {
+        let input = std::fs::read_to_string(filename)?;
+        self.parse(&input)
+    }
+
     /// Parses the given input
     /// Returns an array of values, one for each line in the input
     pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
-        self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
 
         let value = std::thread::scope(|s| -> Result<Value, Error> {

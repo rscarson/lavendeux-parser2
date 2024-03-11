@@ -17,7 +17,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (_state, _reference) {
+    handler = (_state) {
         Ok(Value::from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -46,7 +46,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let n = optional_arg!(state::lines).unwrap_or(1.into()).as_a::<i64>()?;
         let file = required_arg!(state::file).to_string();
 

@@ -194,8 +194,6 @@ impl From<Rule> for RuleCategory {
             | Rule::POSTFIX_DECORATE
             | Rule::POSTFIX_INDEX
             | Rule::POSTFIX_CALL
-            | Rule::POSTFIX_INC
-            | Rule::POSTFIX_DEC
             | Rule::PREFIX_DEL
             | Rule::PREFIX_BOOL_NOT
             | Rule::PREFIX_BIT_NOT
@@ -251,10 +249,8 @@ impl From<Rule> for RuleCategory {
             | Rule::prefix_op
             | Rule::prefix_arith
             | Rule::KEYWORD_EXPRESSION
-            | Rule::del_keyword
             | Rule::postfix_operation
             | Rule::postfixcall_args
-            | Rule::postfix_arith
             | Rule::POSTFIX_NORMALMODE
             | Rule::POSTFIX_OBJECTMODE
             | Rule::infix_op => Self::Operator,
@@ -294,6 +290,7 @@ impl From<Rule> for RuleCategory {
             Rule::currency_suffix | Rule::currency_symbol => Self::CurrencySymbol,
 
             Rule::object_keyvalue_pair
+            | Rule::block_line
             | Rule::for_conditional
             | Rule::switch_case
             | Rule::if_block

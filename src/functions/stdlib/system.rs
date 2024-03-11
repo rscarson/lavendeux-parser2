@@ -34,11 +34,11 @@ define_stdfunction!(
         ",
    },
 
-    handler = (state, _reference) {
+    handler = (state) {
          let name = required_arg!(state::name).to_string();
          let args = required_arg!(state::args).as_a::<Vec<Value>>()?;
 
-         state.call_function(&name, args, None)
+         state.call_function(&name, args)
     },
 );
 
@@ -61,19 +61,34 @@ define_stdfunction!(
             assert_eq([1, 2, 3], eval('1\\n2\\n3'))
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let expression = required_arg!(state::expression).to_string();
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&expression, state);
-        state.scope_out();
+        let res = Lavendeux::eval(&expression, state).map(|n| n.evaluate(state));
 
-        let mut res = res?.evaluate(state)?;
-        if res.len() == 1 {
-            res = res.as_a::<Vec<Value>>()?.into_iter().next().unwrap();
+        let mut values = match res {
+            Ok(r) => {
+                match r {
+                    Ok(v) => v,
+                    Err(e) => {
+                        state.scope_out();
+                        return Err(e);
+                    }
+                }
+            },
+            Err(e) => {
+                state.scope_out();
+                return Err(e);
+            }
+        };
+
+        state.scope_out();
+        if values.len() == 1 {
+            values = values.as_a::<Vec<Value>>()?.into_iter().next().unwrap();
         }
-        Ok(res)
+        Ok(values)
     },
 );
 
@@ -94,17 +109,100 @@ define_stdfunction!(
             include('example_scripts/stdlib.lav')
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let script = required_arg!(state::filename).to_string();
         let script = std::fs::read_to_string(script)?;
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&script, state);
-        state.scope_out();
+        let res = Lavendeux::eval(&script, state).map(|n| n.evaluate(state));
+        match res {
+            Ok(r) => {
+                match r {
+                    Ok(v) => v,
+                    Err(e) => {
+                        state.scope_out();
+                        return Err(e);
+                    }
+                }
+            },
+            Err(e) => {
+                state.scope_out();
+                return Err(e);
+            }
+        };
 
-        res?.evaluate(state)?;
+        state.scope_out();
         Ok(Value::from(""))
+    },
+);
+
+define_stdfunction!(
+    __exec_tests {
+    },
+    returns = Any,
+
+    docs = {
+        category: "System",
+        description: "Evaluates all functions beginning with __test_, and reports a list of failed tests",
+        ext_description: "
+            Designed to be used mostly for internal testing, could be useful to testing scripts.
+            Throws an error if a test fails, otherwise returns a string with the number of tests run and the number of tests failed.
+        ",
+        examples: "#skip
+            __test_will_fail() = assert_eq(1, 2)
+            __test_will_pass() = assert_eq(1, 1)
+            __exec_tests()
+            /* Output:
+            Errors:
+
+            In __test_will_fail: 
+            Line 1: assert_eq (1, 2)
+                Assertion failed: 1 != 2
+                
+            2 tests run, 1 failed
+             */
+        ",
+    },
+    handler = (state) {
+        let matching_functions = state
+            .all_functions()
+            .iter()
+            .filter(|(name, _)| name.starts_with("__test_"))
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<_>>();
+
+        let mut errors = vec![];
+        for test_case in matching_functions.iter() {
+            state.scope_into()?;
+            state.lock_scope();
+            let res = state.call_function(test_case, vec![]);
+            state.scope_out();
+
+            if let Err(e) = res {
+                errors.push((test_case, e));
+            }
+        }
+
+        let mut output = String::new();
+        if !errors.is_empty() {
+            output.push_str("Errors:\n\n");
+            for (name, e) in errors.iter() {
+                output.push_str(&format!("In {}:\n{}\n\n", name, e));
+            }
+        }
+
+        output.push_str(&format!(
+            "{} tests run, {} failed",
+            matching_functions.len(),
+            errors.len()
+        ));
+
+        if errors.is_empty() {
+            Ok(Value::from(format!("{} tests run, all passed", matching_functions.len())))
+        } else {
+            oops!(Custom { msg: output })
+        }
     },
 );
 
@@ -121,7 +219,7 @@ define_stdfunction!(
             generate_documentation()
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         Ok(DocumentationTemplate::new(MarkdownFormatter).render(state).into())
     },
 );
@@ -149,7 +247,7 @@ define_stdfunction!(
             })
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let name = required_arg!(state::name).to_string();
         let docs = required_arg!(state::docs).as_a::<Object>()?;
 
@@ -201,7 +299,7 @@ define_stdfunction!(
             assert( would_err('assert(false)') )
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let cond = required_arg!(state::condition);
         if cond.is_truthy() {
             Ok(cond.clone())
@@ -233,7 +331,7 @@ define_stdfunction!(
             assert_eq( true, would_err('assert_eq(1, true)') )
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let cond = required_arg!(state::condition);
         let expected = required_arg!(state::expected);
 
@@ -264,7 +362,7 @@ define_stdfunction!(
             assert_eq( true, would_err('1 + asparagus') )
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let expression = required_arg!(state::expression).to_string();
         let res = crate::Lavendeux::eval(&expression, state).map(|n| n.evaluate(state));
         match res {
@@ -290,7 +388,7 @@ define_stdfunction!(
             would_err('error(\"This is an error\")')
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let message = required_arg!(state::msg).to_string();
         oops!(Custom { msg: message })
     },
@@ -313,7 +411,7 @@ define_stdfunction!(
             debug(\"This is a debug message\")
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let message = required_arg!(state::msg).to_string();
         println!("{message}");
         Ok(Value::string(message))
@@ -348,11 +446,14 @@ define_stdfunction!(
             assert_eq(5, x)
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let name = required_arg!(state::name).to_string();
         let value = required_arg!(state::value);
-        state.set_variable_in_offset(1, &name, value.clone());
-        Ok(value.clone())
+
+        state.scope_out();
+        state.stack_mut().set_top(&name, value.clone());
+        state.scope_into()?;
+        Ok(value)
     },
 );
 
@@ -378,10 +479,10 @@ define_stdfunction!(
             assert_eq(6, x)
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let name = required_arg!(state::name).to_string();
         let value = required_arg!(state::value);
-        state.global_assign_variable(&name, value.clone());
+        state.stack_mut().set_global(&name, value.clone());
         Ok(value.clone())
     },
 );
@@ -403,9 +504,9 @@ define_stdfunction!(
             assert_eq(6, global('x'))
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let name = required_arg!(state::name).to_string();
-        let value = state.global_get_variable(&name).or_error(ErrorDetails::VariableName {
+        let value = state.stack().get_global(&name).or_error(ErrorDetails::VariableName {
             name
         })?;
         Ok(value.clone())
@@ -429,10 +530,10 @@ define_stdfunction!(
             assert_eq(6, state['y'])
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let obj = Object::try_from(
-            state
-                .all_variables_unscoped()
+            state.stack()
+                .all_variables()
                 .iter()
                 .map(|(k, v)| (Value::from(k.to_string()), (*v).clone()))
                 .collect::<Vec<(Value, Value)>>(),
@@ -460,8 +561,24 @@ define_stdfunction!(
             assert_eq('object', typeof({}))
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         Ok(Value::string(value.own_type().to_string()))
     },
 );
+
+#[cfg(test)]
+mod test {
+    use crate::lav;
+
+    lav!(test_exec_tests_bad(Error) r#"
+        __test_will_fail() = assert_eq(1, 2)
+        __test_will_pass() = assert_eq(1, 1)
+        __exec_tests()
+    "#);
+
+    lav!(test_exec_tests_good r#"
+        __test_will_pass() = assert_eq(1, 1)
+        __exec_tests()
+    "#);
+}

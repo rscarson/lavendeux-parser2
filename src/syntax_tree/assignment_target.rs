@@ -1,11 +1,10 @@
-use crate::{
-    error::{ErrorDetails, WrapOption},
-    Error, State,
-};
-
 use super::{
     traits::{IntoOwned, NodeExt},
     Node,
+};
+use crate::{
+    error::{ErrorDetails, WrapOption},
+    Error, State,
 };
 use polyvalue::{
     operations::{IndexingMutationExt, IndexingOperationExt},
@@ -13,305 +12,175 @@ use polyvalue::{
 };
 
 #[derive(Debug, Clone)]
-pub enum AssignmentTarget<'i> {
+enum TargetBase<'i> {
     Identifier(String),
-    Index(String, Vec<Option<Node<'i>>>), // None = last-entry index
-    Destructure(Vec<AssignmentTarget<'i>>),
+    Const(Box<Node<'i>>),
 }
 
-impl std::fmt::Display for AssignmentTarget<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Identifier(id) => write!(f, "{}", id),
-            Self::Index(base, indices) => {
-                write!(f, "{}", base)?;
-                for index in indices {
-                    write!(
-                        f,
-                        "[{}]",
-                        if let Some(i) = index {
-                            &i.token().input
-                        } else {
-                            ""
-                        }
-                    )?;
-                }
-                Ok(())
-            }
-            Self::Destructure(targets) => {
-                write!(
-                    f,
-                    "[{}]",
-                    targets
-                        .iter()
-                        .map(|t| t.to_string())
-                        .collect::<Vec<_>>()
-                        .join(",")
-                )
-            }
+/// Represents a reference within the state object.
+/// This always consists of at least one base (an address within the state object)
+/// Index also contains a list of indices, which are used to access the value within the state object.
+/// Destructuring targets are used to assign multiple values at once.
+#[derive(Debug, Clone)]
+pub struct Target<'i> {
+    base: TargetBase<'i>,
+    indices: Vec<Option<Node<'i>>>,
+}
+impl<'i> Target<'i> {
+    pub fn from_target(parent: Self, indices: Vec<Option<Node<'i>>>) -> Self {
+        Self {
+            base: parent.base,
+            indices,
         }
     }
-}
 
-impl IntoOwned for AssignmentTarget<'_> {
-    type Owned = AssignmentTarget<'static>;
-    fn into_owned(self) -> Self::Owned {
-        match self {
-            Self::Identifier(id) => Self::Owned::Identifier(id),
-            Self::Index(base, indices) => Self::Owned::Index(
-                base,
-                indices
-                    .into_iter()
-                    .map(|i| i.map(|i| i.into_owned()))
-                    .collect(),
-            ),
-            Self::Destructure(targets) => {
-                Self::Owned::Destructure(targets.into_iter().map(|t| t.into_owned()).collect())
-            }
+    /// Creates a new target with the given name and indices.
+    pub fn with_identifier(base: String, indices: Vec<Option<Node<'i>>>) -> Self {
+        Self {
+            base: TargetBase::Identifier(base),
+            indices,
         }
     }
-}
 
-impl<'i> AssignmentTarget<'i> {
-    pub fn get_index_handle(base: Value, indices: &[Option<Value>]) -> Result<Value, Error> {
-        let mut base = base;
+    /// Creates a new target with the given constant value and indices.
+    pub fn with_const(base: Node<'i>, indices: Vec<Option<Node<'i>>>) -> Self {
+        Self {
+            base: TargetBase::Const(Box::new(base)),
+            indices,
+        }
+    }
+
+    /// Returns a value, if one exists
+    pub fn get(&self, state: &mut State) -> Result<Value, Error> {
+        let mut base = match self.base {
+            TargetBase::Identifier(ref name) => state
+                .get(name)
+                .cloned()
+                .or_error(ErrorDetails::VariableName { name: name.clone() })?,
+            TargetBase::Const(ref node) => node.evaluate(state)?,
+        };
+
+        let indices = self
+            .indices
+            .iter()
+            .map(|i| i.as_ref().map(|i| i.evaluate(state)).transpose())
+            .collect::<Result<Vec<_>, _>>()?;
+
         for index in indices {
-            let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
-            let index = index.as_ref().unwrap_or(&default_idx);
+            let index = index
+                .unwrap_or_else(|| Value::from(if base.len() == 0 { 0 } else { base.len() - 1 }));
 
             if index.is_a(ValueType::Collection) && !index.is_a(ValueType::String) {
-                base = base.get_indices(index)?;
+                base = base.get_indices(&index)?;
             } else {
-                base = base.get_index(index)?;
+                base = base.get_index(&index)?;
             }
         }
+
         Ok(base)
     }
 
-    pub fn get_mut_index_handle<'v>(
-        base: &'v mut Value,
-        indices: &[Option<Value>],
-    ) -> Result<&'v mut Value, Error> {
-        let mut base = base;
+    /// Get the value this target refers to.
+    pub fn get_mut<'s>(&self, state: &'s mut State) -> Result<&'s mut Value, Error> {
+        let indices = self
+            .indices
+            .iter()
+            .map(|i| i.as_ref().map(|i| i.evaluate(state)).transpose())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut base = match self.base {
+            TargetBase::Identifier(ref name) => state
+                .stack_mut()
+                .get_mut(name)
+                .or_error(ErrorDetails::VariableName { name: name.clone() })?,
+            TargetBase::Const(_) => return oops!(ConstantValue),
+        };
+
         for index in indices {
-            let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
-            let index = index.as_ref().unwrap_or(&default_idx);
-            base = base.get_index_mut(index)?;
+            let index = index
+                .unwrap_or_else(|| Value::from(if base.len() == 0 { 0 } else { base.len() - 1 }));
+            base = base.get_index_mut(&index)?;
         }
+
         Ok(base)
     }
 
-    pub fn get_value(&self, state: &mut State) -> Result<Value, Error> {
-        match self {
-            Self::Identifier(id) => state
-                .get_variable(id)
-                .cloned()
-                .or_error(ErrorDetails::VariableName { name: id.clone() }),
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let base = state
-                    .get_variable(base)
-                    .cloned()
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                Self::get_index_handle(base, &idx)
-            }
-            Self::Destructure(targets) => targets
-                .iter()
-                .map(|t| t.get_value(state))
-                .collect::<Result<Vec<_>, _>>()
-                .map(Value::from),
-        }
-    }
-
-    pub fn get_value_in_parent(&self, state: &mut State) -> Result<Value, Error> {
-        match self {
-            Self::Identifier(id) => state
-                .get_variable_as_parent(id)
-                .cloned()
-                .or_error(ErrorDetails::VariableName { name: id.clone() }),
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let base = state
-                    .get_variable_as_parent(base)
-                    .cloned()
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                Self::get_index_handle(base, &idx)
-            }
-            Self::Destructure(targets) => targets
-                .iter()
-                .map(|t| t.get_value_in_parent(state))
-                .collect::<Result<Vec<_>, _>>()
-                .map(Value::from),
-        }
-    }
-
-    pub fn update_value(&self, state: &mut State, value: Value) -> Result<(), Error> {
-        match self {
-            Self::Identifier(id) => {
-                state.set_variable(id, value);
-                Ok(())
-            }
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let mut base = state
-                    .get_variable_mut(base)
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-
-                if idx.is_empty() {
-                    *base = value;
-                    return Ok(());
-                }
-
-                let target_idx = idx.pop().unwrap();
-                base = Self::get_mut_index_handle(base, &idx)?;
-
-                let target_idx = target_idx.unwrap_or(base.len().into());
-
-                base.set_index(&target_idx, value)?;
-                Ok(())
-            }
-            Self::Destructure(targets) => {
-                if targets.len() != value.len() {
-                    oops!(DestructuringAssignment {
-                        expected_length: targets.len(),
-                        actual_length: value.len()
-                    })
-                } else {
-                    let values = value.as_a::<Vec<Value>>()?;
-                    for (target, value) in targets.iter().zip(values.into_iter()) {
-                        target.update_value(state, value)?;
-                    }
+    /// Write a value to the target, if it is not a constant.
+    pub fn write(&self, state: &mut State, value: Value) -> Result<(), Error> {
+        if self.indices.is_empty() {
+            match &self.base {
+                TargetBase::Identifier(name) => {
+                    state.set(name, value);
                     Ok(())
                 }
+                TargetBase::Const(_) => oops!(ConstantValue),
             }
+        } else {
+            let base = self.get_mut(state)?;
+            *base = value;
+            Ok(())
         }
     }
 
-    /// Get a handle to the target value, if it exists.
-    pub fn get_target_mut_in_parent<'s>(
-        &self,
-        state: &'s mut State,
-    ) -> Result<Option<&'s mut Value>, Error> {
-        match self {
-            Self::Identifier(id) => Some(
-                state
-                    .get_variable_mut_as_parent(id)
-                    .or_error(ErrorDetails::VariableName { name: id.clone() }),
-            )
-            .transpose(),
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let base = state
-                    .get_variable_mut_as_parent(base)
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                Some(Self::get_mut_index_handle(base, &idx)).transpose()
-            }
-            Self::Destructure(_) => Ok(None),
-        }
-    }
-
-    pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
-        match self {
-            Self::Identifier(id) => {
-                state.set_variable_as_parent(id, value);
-                Ok(())
-            }
-            Self::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                let mut base = state
-                    .get_variable_mut_as_parent(base)
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                base = Self::get_mut_index_handle(base, &idx)?;
-
-                if idx.is_empty() {
-                    *base = value;
-                    return Ok(());
-                }
-
-                let target_idx = idx.pop().unwrap();
-                base = Self::get_mut_index_handle(base, &idx)?;
-
-                let target_idx = target_idx.unwrap_or(base.len().into());
-                base.set_index(&target_idx, value)?;
-                Ok(())
-            }
-            Self::Destructure(targets) => {
-                if targets.len() != value.len() {
-                    oops!(DestructuringAssignment {
-                        expected_length: targets.len(),
-                        actual_length: value.len()
-                    })
-                } else {
-                    let values = value.as_a::<Vec<Value>>()?;
-                    for (target, value) in targets.iter().zip(values.into_iter()) {
-                        target.update_value_in_parent(state, value)?;
-                    }
-                    Ok(())
-                }
-            }
-        }
-    }
-
+    /// Deletes the value this target refers to.
     pub fn delete(&self, state: &mut State) -> Result<Value, Error> {
-        match self {
-            Self::Identifier(id) => {
-                if let Some(function) = state.unregister_function(id)? {
-                    Ok(function.signature().into())
-                } else if let Some(value) = state.delete_variable(id) {
-                    Ok(value)
-                } else {
-                    oops!(VariableName { name: id.clone() })
-                }
-            }
+        if matches!(self.base, TargetBase::Const(_)) {
+            self.get(state)
+        } else {
+            let name = match &self.base {
+                TargetBase::Identifier(name) => name,
+                TargetBase::Const(_) => return oops!(ConstantValue),
+            };
 
-            AssignmentTarget::Index(base, indices) => {
-                let mut idx = vec![];
-                for index in indices {
-                    idx.push(index.as_ref().map(|i| i.evaluate(state)).transpose()?);
-                }
-
-                if indices.is_empty() {
-                    return oops!(ArrayEmpty);
-                }
+            if self.indices.is_empty() {
+                state
+                    .stack_mut()
+                    .delete(name)
+                    .or_error(ErrorDetails::ConstantValue)
+            } else {
+                let mut indices = self
+                    .indices
+                    .iter()
+                    .map(|i| i.as_ref().map(|i| i.evaluate(state)).transpose())
+                    .collect::<Result<Vec<_>, _>>()?;
 
                 let mut base = state
-                    .get_variable_mut(base)
-                    .or_error(ErrorDetails::VariableName { name: base.clone() })?;
-                let target_idx = idx.pop().unwrap();
-                base = Self::get_mut_index_handle(base, &idx)?;
+                    .stack_mut()
+                    .get_mut(name)
+                    .or_error(ErrorDetails::VariableName { name: name.clone() })?;
 
-                let target_idx = target_idx.unwrap_or((base.len() - 1).into());
+                let final_index = indices.pop().unwrap();
 
-                Ok(base.delete_index(&target_idx)?)
+                for index in indices {
+                    let index = index.unwrap_or_else(|| {
+                        Value::from(if base.len() == 0 { 0 } else { base.len() - 1 })
+                    });
+                    base = base.get_index_mut(&index)?;
+                }
+
+                let final_index = final_index.unwrap_or_else(|| {
+                    Value::from(if base.len() == 0 { 0 } else { base.len() - 1 })
+                });
+
+                Ok(base.delete_index(&final_index)?)
             }
+        }
+    }
+}
 
-            AssignmentTarget::Destructure(ids) => {
-                let results = ids
-                    .iter()
-                    .map(|id| id.delete(state))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(Value::from(results))
-            }
+impl IntoOwned for Target<'_> {
+    type Owned = Target<'static>;
+    fn into_owned(self) -> Self::Owned {
+        Self::Owned {
+            base: match self.base {
+                TargetBase::Identifier(name) => TargetBase::Identifier(name),
+                TargetBase::Const(node) => TargetBase::Const(Box::new(node.into_owned())),
+            },
+            indices: self
+                .indices
+                .into_iter()
+                .map(|i| i.map(Node::into_owned))
+                .collect(),
         }
     }
 }

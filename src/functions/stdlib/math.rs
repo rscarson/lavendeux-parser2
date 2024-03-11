@@ -23,7 +23,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         let min = options.iter().min().or_error(ErrorDetails::ArrayEmpty)?;
         Ok(min.clone())
@@ -49,7 +49,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let options = required_arg!(state::options).as_a::<Vec<Value>>()?;
         if options.is_empty() {
             return oops!(ArrayEmpty)
@@ -78,7 +78,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.ceil().into())
     }
@@ -103,7 +103,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.floor().into())
     }
@@ -127,7 +127,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         match value.inner() {
             InnerValue::Fixed(n) => Ok(Value::fixed(n.inner().abs())),
@@ -180,7 +180,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         let precision = optional_arg!(state::precision).unwrap_or(0.into()).as_a::<i64>()?;
 
@@ -225,7 +225,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -249,7 +249,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<i64>()?;
@@ -273,7 +273,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -297,7 +297,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value);
         let type_name = value.own_type();
         let value = value.as_a::<f64>()?;
@@ -322,7 +322,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, __reference) {
+    handler = (state) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         let base = optional_arg!(state::base).unwrap_or(10.into()).as_a::<f64>()?;
         Ok(value.log(base).into())
@@ -345,7 +345,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         Ok(value.sqrt().into())
     }
@@ -368,7 +368,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         let root = required_arg!(state::root).as_a::<f64>()?;
         Ok(value.powf(1.0 / root).into())

@@ -3,9 +3,9 @@ use crate::{
     error::{ErrorDetails, WrapExternalError},
 };
 use polyvalue::{
-    operations::{IndexingMutationExt, IndexingOperationExt},
+    operations::IndexingOperationExt,
     types::{Array, Object},
-    Value, ValueType,
+    Value,
 };
 
 /**********************************************
@@ -32,7 +32,7 @@ define_stdfunction!(
             assert_eq(len(38),           1);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input);
         Ok(Value::i64(input.len() as i64))
     },
@@ -56,7 +56,7 @@ define_stdfunction!(
         assert_eq(is_empty(38),     false);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input);
         Ok(Value::bool(input.len() == 0))
     },
@@ -79,7 +79,7 @@ define_stdfunction!(
             would_err('first([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?;
         input.first().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
     },
@@ -102,281 +102,9 @@ define_stdfunction!(
             would_err('last([])'); // Array is empty, so an error is returned
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?;
         input.last().cloned().ok_or(ErrorDetails::ArrayEmpty).without_context()
-    },
-);
-
-/**********************************************
- *
- * Array Manipulation Functions
- *
- *********************************************/
-
-define_stdfunction!(
-    pop { input: Standard::Array },
-    returns = Any,
-    docs = {
-        category: "Collections",
-        description: "Removes and returns the last element of the given array",
-        ext_description: "
-            Removes the last element from the given array and returns it.
-            If the array is empty, an error is returned.
-            If the input is a reference to an array in a variable, the variable is updated.
-        ",
-        examples: "
-            assert_eq(pop([1, 2, 3]), 3);
-            would_err('pop([]') // Array is empty, so an error is returned
-            
-            a = [1];
-            assert_eq(pop(a), 1);
-            assert_eq(a, []);
-        ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-        let value = input.pop().ok_or(ErrorDetails::ArrayEmpty).without_context()?;
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
-            }
-        };
-
-        Ok(value)
-    },
-);
-
-define_stdfunction!(
-    push { input: Standard::Collection, value: Standard::Any },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Appends the given value to the end of the given collection, and returns the result",
-        ext_description: "
-            Appends the given value to the end of the given collection.
-            If the input is a reference to a collection in a variable, the variable is updated.
-        ",
-        examples: "
-        assert_eq(push([1, 2], 3), [1, 2, 3]);
-        assert_eq(push([], 3), [3]);
-        
-        a = [1];
-        assert_eq(push(a, 2), [1, 2]);
-        assert_eq(a, [1, 2]);
-    ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let value = required_arg!(state::value);
-
-        match input_type {
-            ValueType::Array => {
-                let mut input = input.as_a::<Array>()?;
-                input.push(value.clone());
-
-                // Update the array if it references a variable containing an array
-                if let Some(reference) = reference {
-                    if let Some(target) = reference.get_target_mut_in_parent(state)? {
-                        *target = input.clone().into();
-                    }
-                };
-
-                Ok(input.into())
-            }
-
-            ValueType::String => {
-                let mut input = input.as_a::<String>()?;
-                input.push_str(&value.to_string());
-
-                // Update the array if it references a variable containing an array
-                if let Some(reference) = reference {
-                    reference.update_value_in_parent(state, input.clone().into())?;
-                };
-
-                Ok(input.into())
-            }
-
-            _ => oops!(Custom {
-                msg: format!("cannot push to `{input_type}`")
-            })
-        }
-    },
-);
-
-define_stdfunction!(
-    enqueue { input: Standard::Array, value: Standard::Any },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Appends the given value to the start of the given array, and returns the result",
-        ext_description: "
-            Appends the given value to the start of the given array.
-            If the input is a reference to an array in a variable, the variable is updated.
-            This function is less performant than `push` for large arrays, as it requires shifting all elements by one position.
-        ",
-        examples: "
-            assert_eq(enqueue([1, 2], 3), [3, 1, 2])
-            assert_eq(enqueue([], 3), [3])
-            
-            a = [1]
-            assert_eq(enqueue(a, 2), [2, 1])
-            assert_eq(a, [2, 1])
-        ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-        let value = required_arg!(state::value).clone();
-
-        input.insert(0, value);
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
-            }
-        };
-
-        Ok(input.into())
-    },
-);
-
-define_stdfunction!(
-    dequeue { input: Standard::Array },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Removes and returns the first element of the given array",
-        ext_description: "
-            Removes the first element from the given array and returns it.
-            If the array is empty, an error is returned.
-            If the input is a reference to an array in a variable, the variable is updated.
-            This function is less performant than `pop` for large arrays, as it requires shifting all elements by one position.
-        ",
-        examples: "
-            assert_eq(dequeue([1, 2, 3]), 1);
-            would_err('dequeue([]') // Array is empty, so an error is returned
-            
-            a = [1, 2];
-            assert_eq(dequeue(a), 1);
-            assert_eq(a, [2]);
-        ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-        let value = input.remove(0).ok_or(ErrorDetails::ArrayEmpty).without_context()?;
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
-            }
-        };
-
-        Ok(value)
-    },
-);
-
-define_stdfunction!(
-    insert {
-        input: Standard::Array,
-        index: Standard::Int,
-        value: Standard::Any
-    },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Inserts the given value at the given index in the given array, and returns the result",
-        ext_description: "
-            Inserts the given value at the given index in the given array.
-            If the input is a reference to an array in a variable, the variable is updated.
-            If the index is out of bounds, an error is returned.
-        ",
-        examples: "
-            assert_eq(insert([1, 2, 3], 1, 4), [1, 4, 2, 3]);
-            assert_eq(insert([1, 2, 3], 3, 4), [1, 2, 3, 4]);
-            assert_eq(insert([1, 2, 3], 0, 4), [4, 1, 2, 3]);
-
-            would_err('insert([1, 2, 3], 4, 4)') // Index out of bounds
-            
-            a = [1, 2, 3];
-            assert_eq(insert(a, 1, 4), [1, 4, 2, 3]);
-            assert_eq(a, [1, 4, 2, 3]);
-        ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-
-        let index = required_arg!(state::index);
-        let value = required_arg!(state::value);
-
-        input.insert_at(&index, value.clone())?;
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
-            }
-        };
-
-        Ok(input.into())
-    },
-);
-
-define_stdfunction!(
-    remove {
-        input: Standard::Array,
-        index: Standard::Int
-    },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Removes the element at the given index in the given array, and returns value",
-        ext_description: "
-            Removes the element at the given index in the given array.
-            If the input is a reference to an array in a variable, the variable is updated.
-            If the index is out of bounds, an error is returned.
-        ",
-        examples: "
-            assert_eq(remove([1, 2, 3], 1), 2);
-            assert_eq(remove([1, 2, 3], 2), 3);
-            assert_eq(remove([1, 2, 3], 0), 1);
-
-            would_err('remove([1, 2, 3], 3)') // Index out of bounds
-            
-            a = [1, 2, 3];
-            assert_eq(remove(a, 1), 2);
-            assert_eq(a, [1, 3]);
-        ",
-    },
-    handler = (state, reference) {
-        let input = required_arg!(state::input);
-        let input_type = input.own_type();
-        let mut input = input.as_a::<Array>()?.clone();
-
-        let index = required_arg!(state::index);
-
-        let removed = input.delete_index(&index)?;
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, input.clone().into())?;
-            }
-        };
-
-        Ok(removed)
     },
 );
 
@@ -404,7 +132,7 @@ define_stdfunction!(
             assert_eq(keys({}), []);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Object>()?;
         Ok(Value::from(
             input.keys().iter().cloned().cloned().collect::<Vec<_>>()
@@ -430,7 +158,7 @@ define_stdfunction!(
             assert_eq(values({}), []);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Object>()?;
         Ok(Value::from(
             input.values().iter().cloned().cloned().collect::<Vec<_>>()
@@ -460,7 +188,7 @@ define_stdfunction!(
             assert_eq(all([]), true);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?;
         Ok(Value::bool(input.iter().all(|v| v.is_truthy())))
     },
@@ -482,7 +210,7 @@ define_stdfunction!(
             assert_eq(any([]), false);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?;
         Ok(Value::bool(input.iter().any(|v| v.is_truthy())))
     },
@@ -517,7 +245,7 @@ define_stdfunction!(
             would_err('split([1, 2, 3, 4], 5)') // Index out of bounds
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let index = required_arg!(state::index).as_a::<i64>()?;
 
@@ -550,52 +278,10 @@ define_stdfunction!(
             assert_eq(merge([1, 2], []), [1, 2]);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let left = required_arg!(state::left).as_a::<Array>()?.clone();
         let right = required_arg!(state::right).as_a::<Array>()?.clone();
         Ok(Value::from(left.iter().chain(right.iter()).cloned().collect::<Vec<_>>()))
-    },
-);
-
-define_stdfunction!(
-    extend {
-        left: Standard::Array,
-        right: Standard::Array
-    },
-    returns = Array,
-    docs = {
-        category: "Collections",
-        description: "Appends the elements of the second array to the first array, and returns the result",
-        ext_description: "
-            The elements of the second array are appended to the first array.
-            The first array is updated.
-        ",
-        examples: "
-            assert_eq(extend([1, 2], [3, 4]), [1, 2, 3, 4]);
-            assert_eq(extend([], [3, 4]), [3, 4]);
-            assert_eq(extend([1, 2], []), [1, 2]);
-
-            a = [1, 2];
-            extend(a, [3, 4])
-            assert_eq(a, [1, 2, 3, 4]);
-        ",
-    },
-    handler = (state, reference) {
-        let left = required_arg!(state::left);
-        let input_type = left.own_type();
-        let mut left = left.as_a::<Array>()?.clone();
-        let right = required_arg!(state::right).as_a::<Array>()?.clone();
-
-        left.extend(right.iter().cloned());
-
-        // Update the array if it references a variable containing an array
-        if let Some(reference) = reference {
-            if input_type == ValueType::Array {
-                reference.update_value_in_parent(state, left.clone().into())?;
-            }
-        };
-
-        Ok(left.into())
     },
 );
 
@@ -618,7 +304,7 @@ define_stdfunction!(
             assert_eq(chunks([1, 2, 3, 4, 5], 5), [[1, 2, 3, 4, 5]]);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let size = required_arg!(state::size).as_a::<i64>()?;
 
@@ -643,7 +329,7 @@ define_stdfunction!(
             assert_eq(flatten([[], []]), []);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let result = input.iter().flat_map(|v| v.clone().as_a::<Array>().unwrap().iter().cloned().collect::<Vec<_>>()).collect::<Vec<_>>();
         Ok(Value::from(result))
@@ -669,7 +355,7 @@ define_stdfunction!(
             assert_eq(zip([1, 2, 3], [4, 5]), [[1, 4], [2, 5]]);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let left = required_arg!(state::left).as_a::<Array>()?.clone();
         let right = required_arg!(state::right).as_a::<Array>()?.clone();
 
@@ -696,7 +382,7 @@ define_stdfunction!(
             assert_eq(zop(['a', 'b', 'c'], [1, 2, 3]), {'a': 1, 'b': 2, 'c': 3});
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let left = required_arg!(state::left).as_a::<Array>()?.clone();
         let right = required_arg!(state::right).as_a::<Array>()?.clone();
 
@@ -721,7 +407,7 @@ define_stdfunction!(
             assert_eq(sort(['c', 'a', 'b']), ['a', 'b', 'c']);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.sort();
@@ -744,7 +430,7 @@ define_stdfunction!(
             assert_eq(reverse(['a', 'b', 'c']), ['c', 'b', 'a']);
         ",
     },
-    handler = (state, _reference) {
+    handler = (state) {
         let input = required_arg!(state::input).as_a::<Array>()?.clone();
         let mut result = input.clone();
         result.reverse();

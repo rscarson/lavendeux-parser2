@@ -4,7 +4,7 @@ use crate::{
     error::ErrorDetails,
     syntax_tree::{
         traits::{IntoOwned, NodeExt},
-        Node, Reference,
+        Node,
     },
     Error, Lavendeux, Rule, State,
 };
@@ -23,8 +23,8 @@ pub struct UserDefinedFunction<'i> {
     name: String,
     args: Vec<(String, ValueType)>,
     returns: ValueType,
-    src: Vec<String>,
-    body: Vec<Node<'i>>,
+    src: String,
+    body: Node<'i>,
 
     src_line_offset: usize,
 
@@ -77,32 +77,18 @@ impl ParserFunction for UserDefinedFunction<'_> {
         })
     }
 
-    fn call(&self, state: &mut State, _: Option<&Reference>) -> Result<Value, Error> {
+    fn call(&self, state: &mut State) -> Result<Value, Error> {
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
-        for node in self.body.iter().take(self.body.len() - 1) {
-            match node.evaluate(state) {
-                Ok(_) => {}
-                Err(e) if matches!(e.details, ErrorDetails::Return { .. }) => {
-                    if let ErrorDetails::Return { value } = e.details {
-                        return Ok(value.as_type(self.returns)?);
-                    }
-                }
-                Err(e) => {
+        match self.body.evaluate(state) {
+            Ok(v) => Ok(v.as_type(self.returns)?),
+            Err(e) => {
+                if let ErrorDetails::Return { value } = e.details {
+                    return Ok(value.as_type(self.returns)?);
+                } else {
                     let e = e.offset_linecount(self.src_line_offset);
                     return Err(e);
                 }
-            }
-        }
-
-        // Execute the last node
-        let body = &self.body;
-        let body = body.iter().last().unwrap(); // safe because we checked that the body is not empty
-        match body.evaluate(state) {
-            Ok(v) => Ok(v.as_type(self.returns)?),
-            Err(e) => {
-                let e = e.offset_linecount(self.src_line_offset);
-                Err(e)
             }
         }
     }
@@ -110,19 +96,8 @@ impl ParserFunction for UserDefinedFunction<'_> {
 
 impl UserDefinedFunction<'_> {
     /// Create a new user-defined function
-    pub fn new(name: &str, src: Vec<String>, state: &mut State) -> Result<Self, Error> {
-        // Check that the function is valid
-        if src.is_empty() {
-            /* Should be caught by the grammar */
-            return oops!(Internal {
-                msg: "User function must have at least one line".to_string()
-            });
-        }
-
-        // to get rid of this, there needs to be a way to get a Node that owns its text,
-        // or maybe something yoke-y
+    pub fn new(name: &str, src: String, state: &mut State) -> Result<Self, Error> {
         let body = Self::compile(&src, state)?;
-
         Ok(UserDefinedFunction {
             name: name.to_string(),
             args: vec![],
@@ -139,10 +114,8 @@ impl UserDefinedFunction<'_> {
         })
     }
 
-    fn compile(src: &[String], state: &mut State) -> Result<Vec<Node<'static>>, Error> {
-        src.iter()
-            .map(|l| Lavendeux::eval_rule(l, state, Rule::EXPR).map(|n| n.into_owned()))
-            .collect()
+    fn compile(src: &str, state: &mut State) -> Result<Node<'static>, Error> {
+        Lavendeux::eval_rule(src, state, Rule::BLOCK).map(|n| n.into_owned())
     }
 
     /// Add a required argument to the function
@@ -161,7 +134,7 @@ impl UserDefinedFunction<'_> {
     }
 
     /// Get the source code of the function
-    pub fn src(&self) -> &Vec<String> {
+    pub fn src(&self) -> &str {
         &self.src
     }
 
@@ -171,7 +144,7 @@ impl UserDefinedFunction<'_> {
             name: self.name,
             args: self.args,
             returns: self.returns,
-            body: self.body.into_iter().map(|n| n.into_owned()).collect(),
+            body: self.body.into_owned(),
             src: self.src,
             src_line_offset: self.src_line_offset,
             own_docs: self.own_docs,

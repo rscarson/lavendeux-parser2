@@ -1,7 +1,7 @@
 use super::Node;
 use crate::{
     error::WrapExternalError,
-    syntax_tree::{assignment_target::AssignmentTarget, traits::IntoNode},
+    syntax_tree::{assignment_target::Target, traits::IntoNode},
     Error, Rule, State, Token,
 };
 use polyvalue::{
@@ -12,9 +12,10 @@ use polyvalue::{
 define_handler!(
     Identifier(_pairs, token, _state) {
         let name = token.input.to_string();
-        Ok(Reference::new(AssignmentTarget::Identifier(name), token).into())
+        Ok(Reference::new(Target::with_identifier(name, Vec::new()), token).into())
     }
 );
+
 document_operator!(
     name = "Identifier",
     rules = [],
@@ -31,7 +32,7 @@ document_operator!(
 
 define_ast!(
     Values {
-        Reference(target: AssignmentTarget<'i>) {
+        Reference(target: Target<'i>) {
             build = (_pairs, token, _state) {
                 oops!(Internal {
                     msg: "Reference node should not be built directly".to_string()
@@ -39,7 +40,7 @@ define_ast!(
             },
 
             eval = (this, state) {
-                Ok(this.target.get_value(state).with_context(this.token())?.clone())
+                Ok(this.target.get(state).with_context(this.token())?)
             },
 
             owned = (this) {
@@ -220,37 +221,7 @@ define_ast!(
 );
 
 impl<'i> Reference<'i> {
-    pub(crate) fn new(target: AssignmentTarget<'i>, token: Token<'i>) -> Reference<'i> {
+    pub(crate) fn new(target: Target<'i>, token: Token<'i>) -> Reference<'i> {
         Self { target, token }
-    }
-
-    /// Get the reference's value from the state
-    pub fn get_value(&self, state: &mut State) -> Result<Value, Error> {
-        self.target.get_value(state)
-    }
-
-    /// Get the reference's value from the state
-    /// Uses the parent scope (if a function defines a value of the same name)
-    pub fn get_value_in_parent(&self, state: &mut State) -> Result<Value, Error> {
-        self.target.get_value_in_parent(state)
-    }
-
-    /// Update the reference's value in the state
-    pub fn update_value(&self, state: &mut State, value: Value) -> Result<(), Error> {
-        self.target.update_value(state, value)
-    }
-
-    /// Update the reference's value in the state
-    /// Uses the parent scope (if a function defines a value of the same name)
-    pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
-        self.target.update_value_in_parent(state, value)
-    }
-
-    /// Get the reference's value from the state as a mutable reference
-    pub fn get_target_mut_in_parent<'s>(
-        &self,
-        state: &'s mut State,
-    ) -> Result<Option<&'s mut Value>, Error> {
-        self.target.get_target_mut_in_parent(state)
     }
 }
