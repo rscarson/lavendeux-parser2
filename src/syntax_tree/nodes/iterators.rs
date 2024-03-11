@@ -54,26 +54,26 @@ define_ast!(
 
         ForLoopExpression(
             variable: Option<String>,
-            iterable: Box<Node<'i>>,
-            body: Box<Node<'i>>,
-            condition: Option<Box<Node<'i>>>
+            iterable: Node<'i>,
+            body: Node<'i>,
+            condition: Option<Node<'i>>
         ) {
             build = (pairs, token, state) {
                 let condition = match pairs.peek_last() {
                     Some(p) if p.as_rule() == Rule::for_conditional => {
-                        Some(Box::new(
+                        Some(
                             unwrap_node!(
                                 unwrap_last!(pairs, token),
                                 state,
                                 token
                             )?
-                        ))
+                        )
                     },
                     _ => None,
                 };
 
-                let body = Box::new(pairs.last_child().unwrap().into_node(state).with_context(&token)?);
-                let iterable = Box::new(pairs.last_child().unwrap().into_node(state).with_context(&token)?);
+                let body = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
+                let iterable = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
                 let variable = pairs.last_child().map(|p| p.as_str().to_string());
 
                 Ok(Self { variable, iterable, body, condition, token }.into())
@@ -149,9 +149,9 @@ define_ast!(
             owned = (this) {
                 Self::Owned {
                     variable: this.variable.clone(),
-                    iterable: Box::new(this.iterable.into_owned()),
-                    body: Box::new(this.body.into_owned()),
-                    condition: this.condition.map(|c| Box::new(c.into_owned())),
+                    iterable: this.iterable.into_owned(),
+                    body: this.body.into_owned(),
+                    condition: this.condition.map(|c| c.into_owned()),
                     token: this.token.into_owned(),
                 }
             },

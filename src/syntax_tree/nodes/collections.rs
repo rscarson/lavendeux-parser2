@@ -1,6 +1,6 @@
-use super::{Node, Reference};
+use super::{values::Reference, Node};
 use crate::{
-    error::WrapExternalError,
+    error::{ErrorDetails, WrapExternalError, WrapOption},
     syntax_tree::{assignment_target::AssignmentTarget, traits::IntoNode},
     Error, Rule,
 };
@@ -89,14 +89,14 @@ define_ast!(
         },
 
         Range(
-            start: Box<Node<'i>>,
-            end: Box<Node<'i>>
+            start: Node<'i>,
+            end: Node<'i>
         ) {
             build = (pairs, token, state) {
                 let start = unwrap_node!(pairs, state, token)?;
                 pairs.next(); // Skip the '..'
                 let end = unwrap_node!(pairs, state, token)?;
-                Ok(Self { start: Box::new(start), end: Box::new(end), token }.into())
+                Ok(Self { start, end, token }.into())
             },
 
             eval = (this, state) {
@@ -163,8 +163,8 @@ define_ast!(
 
             owned = (this) {
                 Self::Owned {
-                    start: Box::new(this.start.into_owned()),
-                    end: Box::new(this.end.into_owned()),
+                    start: this.start.into_owned(),
+                    end: this.end.into_owned(),
                     token: this.token.into_owned(),
                 }
             },
@@ -186,7 +186,7 @@ define_ast!(
             }
         },
 
-        IndexingExpression(base: Box<Node<'i>>, indices: Vec<Option<Node<'i>>>) {
+        IndexingExpression(base: Node<'i>, indices: Vec<Option<Node<'i>>>) {
             build = (pairs, token, state) {
                 let base = unwrap_node!(pairs, state, token)?;
                 let indices = unwrap_next!(pairs, token);
@@ -200,11 +200,20 @@ define_ast!(
                 })
                 .collect::<Result<Vec<_>, _>>().with_context(&token)?;
 
-                if let node_type!(Values::Reference(reference)) = base {
-                    let target = reference.target;
+                let is_reference = match base {
+                    Node::Values(ref node) => match &**node {
+                        super::Values::Reference(_) => true,
+                        _ => false,
+
+                    },
+                    _ => false,
+                };
+
+                if is_reference {
+                    let target = as_reference!(base).or_error(ErrorDetails::ConstantValue).with_context(&token)?;
                     Ok(Reference::new(AssignmentTarget::Index(target.to_string(), indices), token).into())
                 } else {
-                    Ok(Self { base: Box::new(base), indices, token }.into())
+                    Ok(Self { base, indices, token }.into())
                 }
             },
 
@@ -227,7 +236,7 @@ define_ast!(
 
             owned = (this) {
                 Self::Owned {
-                    base: Box::new(this.base.into_owned()),
+                    base: this.base.into_owned(),
                     indices: this.indices.into_iter().map(|i| i.map(|i| i.into_owned())).collect(),
                     token: this.token.into_owned(),
                 }

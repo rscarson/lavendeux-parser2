@@ -55,7 +55,7 @@ macro_rules! define_astnode {
         /// Simplify conversion from node to AST node
         impl<'i> From<$name<'i>> for crate::syntax_tree::Node<'i> {
             fn from(node: $name<'i>) -> Self {
-                Self::$oname($oname::$name(node))
+                Self::$oname(Box::new($oname::$name(node)))
             }
         }
     };
@@ -140,9 +140,57 @@ macro_rules! define_handler {
     };
 }
 
-macro_rules! node_type {
-    ($base:ident :: $type:ident($ref:ident)) => {
-        Node::$base(crate::syntax_tree::nodes::$base::$type($ref))
+macro_rules! as_assignment_target {
+    ($value:expr) => {
+        match $value {
+            $crate::syntax_tree::Node::Values(node) => {
+                if let $crate::syntax_tree::nodes::Values::Reference(node) = *node {
+                    Some(node.target)
+                } else {
+                    None
+                }
+            }
+            $crate::syntax_tree::Node::Collections(node) => {
+                if let $crate::syntax_tree::nodes::Collections::Array(array) = *node {
+                    match array
+                        .elements
+                        .into_iter()
+                        .map(|e| match e {
+                            $crate::syntax_tree::Node::Values(node) => {
+                                if let $crate::syntax_tree::nodes::Values::Reference(node) = *node {
+                                    Some(node.target)
+                                } else {
+                                    None
+                                }
+                            }
+                            _ => None,
+                        })
+                        .collect::<Option<Vec<_>>>()
+                    {
+                        Some(t) => Some(AssignmentTarget::Destructure(t)),
+                        None => None,
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    };
+}
+
+macro_rules! as_reference {
+    ($value:expr) => {
+        match $value {
+            $crate::syntax_tree::Node::Values(node) => {
+                if let $crate::syntax_tree::nodes::Values::Reference(node) = *node {
+                    Some(node.target)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     };
 }
 

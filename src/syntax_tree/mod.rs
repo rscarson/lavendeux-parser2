@@ -7,5 +7,5 @@ mod pair;
 mod pratt;
 pub mod traits;
 
+pub use assignment_target::AssignmentTarget;
 pub use nodes::Node;
-pub use nodes::Reference;

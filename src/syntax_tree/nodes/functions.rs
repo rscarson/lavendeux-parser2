@@ -9,9 +9,9 @@ use polyvalue::{Value, ValueType};
 
 define_ast!(
     Functions {
-        KeywordReturn(value: Box<Node<'i>>) {
+        KeywordReturn(value: Node<'i>) {
             build = (pairs, token, state) {
-                let value = Box::new(unwrap_node!(pairs, state, token)?);
+                let value = unwrap_node!(pairs, state, token)?;
                 Ok(Self { value, token }.into())
             },
             eval = (this, state) {
@@ -20,7 +20,7 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    value: Box::new(this.value.into_owned()),
+                    value: this.value.into_owned(),
                     token: this.token.into_owned(),
                 }
             },
@@ -100,14 +100,10 @@ define_ast!(
 
                 // Update reference argument
                 let reference = this.arguments.first().and_then(|arg1| {
-                    if let node_type!(Values::Reference(reference)) = arg1 {
-                        Some(reference)
-                    } else {
-                        None
-                    }
+                    as_reference!(arg1.clone())
                 });
 
-                let value = match state.call_function(&this.name, arguments, reference) {
+                let value = match state.call_function(&this.name, arguments, reference.as_ref()) {
                     Ok(value) => value,
                     Err(e) => {
                         if let ErrorDetails::Return { value, .. } = e.details {

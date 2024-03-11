@@ -1,3 +1,12 @@
+use super::Node;
+use crate::{
+    error::{ErrorDetails, WrapExternalError, WrapOption},
+    syntax_tree::{
+        assignment_target::AssignmentTarget,
+        traits::{IntoNode, NodeExt, SyntaxNodeBuilderExt},
+    },
+    Error, Rule, State,
+};
 use polyvalue::{
     operations::{
         ArithmeticOperation, ArithmeticOperationExt, BitwiseOperation, BitwiseOperationExt,
@@ -5,17 +14,6 @@ use polyvalue::{
     },
     Value,
 };
-
-use crate::{
-    error::WrapExternalError,
-    syntax_tree::{
-        assignment_target::AssignmentTarget,
-        traits::{IntoNode, NodeExt, SyntaxNodeBuilderExt},
-    },
-    Error, Rule, State,
-};
-
-use super::{Node, Reference};
 
 #[derive(Debug, Clone, Copy)]
 #[rustfmt::skip]
@@ -70,8 +68,13 @@ impl AssignmentOperation {
         Ok(value)
     }
 
-    pub fn apply(&self, state: &mut State, target: &Reference, rhs: Value) -> Result<Value, Error> {
-        match &target.target {
+    pub fn apply(
+        &self,
+        state: &mut State,
+        target: &AssignmentTarget,
+        rhs: Value,
+    ) -> Result<Value, Error> {
+        match &target {
             // Assign a single value to multiple targets
             AssignmentTarget::Destructure(targets) if rhs.len() == 1 => {
                 for target in targets {
@@ -96,7 +99,7 @@ impl AssignmentOperation {
             }),
 
             // Assign a single value to a single target
-            _ => self.apply_to(state, &target.target, rhs),
+            _ => self.apply_to(state, &target, rhs),
         }
     }
 }
@@ -130,40 +133,26 @@ define_ast!(
                 let target = unwrap_next!(pairs, token);
 
                 let target = target.into_node(state).with_context(&token)?;
-                if let node_type!(Values::Reference(target)) = target {
-                    let mut target = target.target;
-                    match target {
-                        AssignmentTarget::Identifier(ref mut id) => {
-                            if is_decorator {
-                                *id = format!("@{id}");
-                            }
+                let mut target = as_assignment_target!(target).or_error(ErrorDetails::ConstantValue).with_context(&token)?;
+
+                match target {
+                    AssignmentTarget::Identifier(ref mut id) => {
+                        if is_decorator {
+                            *id = format!("@{id}");
                         }
-                        _ if is_decorator => {
-                            return oops!(
-                                DecoratorName {
-                                    name: target.to_string()
-                                },
-                                token
-                            );
-                        }
-                        _ => {}
                     }
-
-
-                    Ok(Self { target, token }.into())
-                } else if let node_type!(Collections::Array(target)) = target {
-                    let target = target.elements.into_iter().map(|e| {
-                        if let node_type!(Values::Reference(target)) = e {
-                            Ok(target.target)
-                        } else {
-                            oops!(ConstantValue, e.token().clone())
-                        }
-                    }).collect::<Result<Vec<_>, _>>().with_context(&token)?;
-                    let target = AssignmentTarget::Destructure(target);
-                    Ok(Self { target, token }.into())
-                } else {
-                    oops!(ConstantValue, token)
+                    _ if is_decorator => {
+                        return oops!(
+                            DecoratorName {
+                                name: target.to_string()
+                            },
+                            token
+                        );
+                    }
+                    _ => {}
                 }
+
+                Ok(Self { target, token }.into())
             },
             eval = (this, state) {
                 this.target.delete(state).with_context(this.token())
@@ -199,31 +188,16 @@ define_ast!(
             }
         },
 
-        AssignmentExpression(target: Reference<'i>, op: AssignmentOperation, rhs: Box<Node<'i>>) {
+        AssignmentExpression(target: AssignmentTarget<'i>, op: AssignmentOperation, rhs: Node<'i>) {
             build = (pairs, token, state) {
 
                 let lhs = unwrap_next!(pairs, token);
                 let lhs = lhs.into_node(state).with_context(&token)?;
                 let op = AssignmentOperation::from(unwrap_next!(pairs, token).as_rule());
-                let rhs = Box::new(unwrap_node!(pairs, state, token)?);
+                let rhs = unwrap_node!(pairs, state, token)?;
 
-                if let node_type!(Values::Reference(target)) = lhs {
-                    Ok(Self { target, op, rhs, token }.into())
-                } else if let node_type!(Collections::Array(target)) = lhs {
-                    let lhs_token = target.token().clone();
-                    let t = target.elements.into_iter().map(|e| {
-                        if let node_type!(Values::Reference(target)) = e {
-                            Ok(target.target)
-                        } else {
-                            oops!(ConstantValue, e.token().clone())
-                        }
-                    }).collect::<Result<Vec<_>, _>>().with_context(&token)?;
-                    let t = AssignmentTarget::Destructure(t);
-                    let target = Reference::new(t, lhs_token);
-                    Ok(Self { target, op, rhs, token }.into())
-                } else {
-                    return oops!(ConstantValue, token);
-                }
+                let target = as_assignment_target!(lhs).or_error(ErrorDetails::ConstantValue).with_context(&token)?;
+                Ok(Self { target, op, rhs, token }.into())
             },
             eval = (this, state) {
                 let rhs = this.rhs.evaluate(state).with_context(this.token())?;
@@ -233,7 +207,7 @@ define_ast!(
                 Self::Owned {
                     target: this.target.into_owned(),
                     op: this.op,
-                    rhs: Box::new(this.rhs.into_owned()),
+                    rhs: this.rhs.into_owned(),
                     token: this.token.into_owned(),
                 }
             },

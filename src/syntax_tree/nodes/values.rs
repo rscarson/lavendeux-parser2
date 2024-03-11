@@ -50,7 +50,7 @@ define_ast!(
             }
         },
 
-        CastExpression(value: Box<Node<'i>>, target: Box<Node<'i>>) {
+        CastExpression(value: Node<'i>, target: Node<'i>) {
             build = (pairs, token, state) {
                 let mut pairs = pairs;
                 let value = unwrap_node!(pairs, state, token)?;
@@ -58,8 +58,8 @@ define_ast!(
                 let target = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
-                    value: Box::new(value),
-                    target: Box::new(target),
+                    value: value,
+                    target: target,
                     token,
                 }
                 .into())
@@ -77,8 +77,8 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    value: Box::new(this.value.into_owned()),
-                    target: Box::new(this.target.into_owned()),
+                    value: this.value.into_owned(),
+                    target: this.target.into_owned(),
                     token: this.token.into_owned(),
                 }
             },
@@ -99,7 +99,7 @@ define_ast!(
             }
         },
 
-        DecoratorExpression(expression: Box<Node<'i>>, decorator: String) {
+        DecoratorExpression(expression: Node<'i>, decorator: String) {
             build = (pairs, token, state) {
                 let mut pairs = pairs;
                 let expression = unwrap_node!(pairs, state, token)?;
@@ -108,7 +108,7 @@ define_ast!(
                 let decorator = unwrap_next!(decorator_pair, token).as_str().to_string();
 
                 Ok(Self {
-                    expression: Box::new(expression),
+                    expression: expression,
                     decorator,
                     token,
                 }
@@ -121,7 +121,7 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    expression: Box::new(this.expression.into_owned()),
+                    expression: this.expression.into_owned(),
                     decorator: this.decorator,
                     token: this.token.into_owned(),
                 }
@@ -144,8 +144,8 @@ define_ast!(
         },
 
         MatchingExpression(
-            left: Box<Node<'i>>,
-            right: Box<Node<'i>>,
+            left: Node<'i>,
+            right: Node<'i>,
             operator: MatchingOperation
         ) {
             build = (pairs, token, state) {
@@ -171,8 +171,8 @@ define_ast!(
                 };
 
                 Ok(Self {
-                    left: Box::new(left),
-                    right: Box::new(right),
+                    left: left,
+                    right: right,
                     operator,
                     token,
                 }
@@ -192,8 +192,8 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    left: Box::new(this.left.into_owned()),
-                    right: Box::new(this.right.into_owned()),
+                    left: this.left.into_owned(),
+                    right: this.right.into_owned(),
                     operator: this.operator,
                     token: this.token.into_owned(),
                 }

@@ -103,7 +103,7 @@ macro_rules! define_stdfunction {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> $handler
+                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::AssignmentTarget>) -> Result<$crate::polyvalue::Value, $crate::Error> $handler
             }
 
             inventory::submit! {
@@ -211,7 +211,7 @@ macro_rules! define_stddecorator {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut $crate::State, _: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> {
+                fn call(&self, state: &mut $crate::State, _: Option<&$crate::AssignmentTarget>) -> Result<$crate::polyvalue::Value, $crate::Error> {
                     let $hndval = $crate::required_arg!(state::$aname);
                     let value: Result<String, $crate::Error> = $handler;
                     Ok(value?.into())

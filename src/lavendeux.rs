@@ -17,9 +17,6 @@ pub struct ParserOptions {
     /// Timeout value to use when building the [State]
     pub timeout: Duration,
 
-    /// Stack size for the thread running the parser
-    pub stack_size: usize,
-
     /// The maximum number of calls to the pest parser
     /// This is used to prevent stack overflows
     pub pest_call_limit: usize,
@@ -28,7 +25,6 @@ impl Default for ParserOptions {
     fn default() -> Self {
         Self {
             timeout: Duration::from_secs(0),
-            stack_size: 1024 * 1024 * 8,
             pest_call_limit: 0,
         }
     }
@@ -97,32 +93,8 @@ impl Lavendeux {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
 
-        let value = std::thread::scope(|s| -> Result<Value, Error> {
-            let handle = std::thread::Builder::new()
-                .stack_size(self.options.stack_size)
-                .name("lavendeux-parser".to_string())
-                .spawn_scoped(s, || {
-                    self.state.start_timer();
-                    Self::eval(input, &mut self.state)?.evaluate(&mut self.state)
-                })
-                .or(oops!(Fatal {
-                    msg: "Failed to spawn parser thread".to_string()
-                }))?;
-            match handle.join() {
-                Ok(value) => value,
-                Err(e) => {
-                    if let Some(s) = e.downcast_ref::<String>() {
-                        let s = s.to_string();
-                        oops!(Fatal { msg: s })
-                    } else {
-                        oops!(Fatal {
-                            msg: format!("Parser thread panicked")
-                        })
-                    }
-                }
-            }
-        })?;
-
+        self.state.start_timer();
+        let value = Self::eval(input, &mut self.state)?.evaluate(&mut self.state)?;
         let lines = value.as_a::<Array>()?.inner().clone();
         Ok(lines)
     }

@@ -3,8 +3,6 @@ use crate::{error::WrapExternalError, token, Error, Rule, State, Token};
 use pest::iterators::Pair;
 use polyvalue::Value;
 
-pub use values::Reference;
-
 use super::{
     pair::PestIterator,
     traits::{IntoOwned, NodeExt, SyntaxNodeBuilderExt},
@@ -45,34 +43,34 @@ mod literals;
 #[derive(Debug, Clone)]
 pub enum Node<'i> {
     /// Core syntax elements (script and block)
-    Core(core::Core<'i>),
+    Core(Box<core::Core<'i>>),
 
     /// Variable storate (identifiers, assignment and deletion)
-    Assignment(assignment::Assignment<'i>),
+    Assignment(Box<assignment::Assignment<'i>>),
 
     /// Value manipulation (references, decorators, match, cast, etc.)
-    Values(values::Values<'i>),
+    Values(Box<values::Values<'i>>),
 
     /// Collections (arrays, objects, ranges, etc.)
-    Collections(collections::Collections<'i>),
+    Collections(Box<collections::Collections<'i>>),
 
     /// Conditional expressions (if, ternary, switch)
-    Conditionals(conditionals::Conditionals<'i>),
+    Conditionals(Box<conditionals::Conditionals<'i>>),
 
     /// Iterators (for loops)
-    Iterators(iterators::Iterators<'i>),
+    Iterators(Box<iterators::Iterators<'i>>),
 
     /// Function assignment and calling
-    Functions(functions::Functions<'i>),
+    Functions(Box<functions::Functions<'i>>),
 
     /// Arithmetic expressions (add, sub, mul, div, etc.)
-    Arithmetic(arithmetic::Arithmetic<'i>),
+    Arithmetic(Box<arithmetic::Arithmetic<'i>>),
 
     /// Bitwise expressions
-    Bitwise(bitwise::Bitwise<'i>),
+    Bitwise(Box<bitwise::Bitwise<'i>>),
 
     /// Boolean expressions
-    Boolean(boolean::Boolean<'i>),
+    Boolean(Box<boolean::Boolean<'i>>),
 
     /// Literal constants
     Literal(Value, Token<'i>),
@@ -221,16 +219,16 @@ impl IntoOwned for Node<'_> {
     type Owned = Node<'static>;
     fn into_owned(self) -> Self::Owned {
         match self {
-            Self::Core(node) => Self::Owned::Core(node.into_owned()),
-            Self::Assignment(node) => Self::Owned::Assignment(node.into_owned()),
-            Self::Collections(node) => Self::Owned::Collections(node.into_owned()),
-            Self::Values(node) => Self::Owned::Values(node.into_owned()),
-            Self::Arithmetic(node) => Self::Owned::Arithmetic(node.into_owned()),
-            Self::Functions(node) => Self::Owned::Functions(node.into_owned()),
-            Self::Iterators(node) => Self::Owned::Iterators(node.into_owned()),
-            Self::Conditionals(node) => Self::Owned::Conditionals(node.into_owned()),
-            Self::Bitwise(node) => Self::Owned::Bitwise(node.into_owned()),
-            Self::Boolean(node) => Self::Owned::Boolean(node.into_owned()),
+            Self::Core(node) => Self::Owned::Core(Box::new(node.into_owned())),
+            Self::Assignment(node) => Self::Owned::Assignment(Box::new(node.into_owned())),
+            Self::Collections(node) => Self::Owned::Collections(Box::new(node.into_owned())),
+            Self::Values(node) => Self::Owned::Values(Box::new(node.into_owned())),
+            Self::Arithmetic(node) => Self::Owned::Arithmetic(Box::new(node.into_owned())),
+            Self::Functions(node) => Self::Owned::Functions(Box::new(node.into_owned())),
+            Self::Iterators(node) => Self::Owned::Iterators(Box::new(node.into_owned())),
+            Self::Conditionals(node) => Self::Owned::Conditionals(Box::new(node.into_owned())),
+            Self::Bitwise(node) => Self::Owned::Bitwise(Box::new(node.into_owned())),
+            Self::Boolean(node) => Self::Owned::Boolean(Box::new(node.into_owned())),
             Self::Literal(value, token) => Self::Owned::Literal(value.clone(), token.into_owned()),
         }
     }

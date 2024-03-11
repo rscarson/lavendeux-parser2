@@ -3,7 +3,7 @@ use crate::{
     error::ErrorDetails,
     functions::{stdlib, ParserFunction},
     network::ApiRegistry,
-    syntax_tree::Reference,
+    syntax_tree::AssignmentTarget,
     Error, Value,
 };
 use std::{
@@ -402,7 +402,7 @@ impl State {
         &mut self,
         name: &str,
         args: Vec<Value>,
-        reference: Option<&Reference>,
+        reference: Option<&AssignmentTarget>,
     ) -> Result<Value, Error> {
         let function = self.get_function(name).ok_or(ErrorDetails::FunctionName {
             name: name.to_string(),

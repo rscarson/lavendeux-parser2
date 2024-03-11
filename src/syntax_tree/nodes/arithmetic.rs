@@ -1,5 +1,9 @@
 use super::Node;
-use crate::{error::WrapExternalError, syntax_tree::traits::IntoNode, Reference, Rule};
+use crate::{
+    error::{ErrorDetails, WrapExternalError, WrapOption},
+    syntax_tree::{assignment_target::AssignmentTarget, traits::IntoNode},
+    Rule,
+};
 use polyvalue::{
     operations::{ArithmeticOperation, ArithmeticOperationExt},
     Value,
@@ -27,7 +31,7 @@ impl IncDecType {
 
 define_ast!(
     Arithmetic {
-        IncDec(reference: Reference<'i>, variant: IncDecType) {
+        IncDec(target: AssignmentTarget<'i>, variant: IncDecType) {
             build = (pairs, token, state) {
                 let (op, value) = if matches!(token.rule, Rule::PREFIX_INC | Rule::PREFIX_DEC) {
                     (unwrap_next!(pairs, token).as_rule(), unwrap_node!(pairs, state, token)?)
@@ -35,14 +39,7 @@ define_ast!(
                     (token.rule, unwrap_node!(pairs, state, token)?)
                 };
 
-                let reference = if let node_type!(Values::Reference(reference)) = value {
-                    reference
-                } else {
-                    return oops!(ConstantValue,
-                        token
-                    );
-                };
-
+                let target = as_reference!(value).or_error(ErrorDetails::ConstantValue).with_context(&token)?;
                 let variant = match op {
                     Rule::PREFIX_INC => IncDecType::PreI,
                     Rule::PREFIX_DEC => IncDecType::PreD,
@@ -51,18 +48,18 @@ define_ast!(
                 };
 
                 Ok(Self {
-                    reference,
+                    target,
                     variant,
                     token,
                 }.into())
             },
             eval = (this, state) {
-                let value = this.reference.evaluate(state).with_context(this.token())?;
+                let value = this.target.get_value(state).with_context(this.token())?;
                 let increment = Value::from(1).as_type(value.own_type()).with_context(this.token())?;
                 let operation = this.variant.operation();
 
                 let new_value = value.clone().arithmetic_op(increment, operation)?;
-                this.reference.update_value(state, new_value.clone()).with_context(this.token())?;
+                this.target.update_value(state, new_value.clone()).with_context(this.token())?;
 
                 if this.variant.is_pre() {
                     Ok(new_value)
@@ -72,7 +69,7 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    reference: this.reference.into_owned(),
+                    target: this.target.into_owned(),
                     variant: this.variant,
                     token: this.token.into_owned(),
                 }
@@ -93,12 +90,12 @@ define_ast!(
             }
         },
 
-        ArithmeticNeg(value: Box<Node<'i>>) {
+        ArithmeticNeg(value: Node<'i>) {
             build = (pairs, token, state) {
                 pairs.next(); // Skip the operator
                 let value = unwrap_node!(pairs, state, token)?;
                 Ok(Self {
-                    value: Box::new(value),
+                    value: value,
                     token,
                 }
                 .into())
@@ -109,7 +106,7 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    value: Box::new(this.value.into_owned()),
+                    value: this.value.into_owned(),
                     token: this.token.into_owned(),
                 }
             },
@@ -122,7 +119,7 @@ define_ast!(
             }
         },
 
-        ArithmeticExpr(lhs: Box<Node<'i>>, op: ArithmeticOperation, rhs: Box<Node<'i>>) {
+        ArithmeticExpr(lhs: Node<'i>, op: ArithmeticOperation, rhs: Node<'i>) {
             build = (pairs, token, state) {
                 let lhs = unwrap_node!(pairs, state, token)?;
 
@@ -147,9 +144,9 @@ define_ast!(
                 let rhs = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
-                    lhs: Box::new(lhs),
+                    lhs: lhs,
                     op,
-                    rhs: Box::new(rhs),
+                    rhs: rhs,
                     token,
                 }
                 .into())
@@ -161,9 +158,9 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    lhs: Box::new(this.lhs.into_owned()),
+                    lhs: this.lhs.into_owned(),
                     op: this.op,
-                    rhs: Box::new(this.rhs.into_owned()),
+                    rhs: this.rhs.into_owned(),
                     token: this.token.into_owned(),
                 }
             },

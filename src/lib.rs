@@ -23,7 +23,7 @@ pub use error::Error;
 pub mod pest;
 pub use pest::Rule; // exported for Token
 mod syntax_tree;
-pub use syntax_tree::Reference;
+pub use syntax_tree::AssignmentTarget;
 
 //#[macro_use]
 //mod syntax_tree;

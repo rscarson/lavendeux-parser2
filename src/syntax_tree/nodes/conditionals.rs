@@ -13,9 +13,9 @@ use polyvalue::{
 define_ast!(
     Conditionals {
         IfExpression(
-            condition: Box<Node<'i>>,
-            then_branch: Box<Node<'i>>,
-            else_branch: Box<Node<'i>>
+            condition: Node<'i>,
+            then_branch: Node<'i>,
+            else_branch: Node<'i>
         ) {
             build = (pairs, token, state) {
                 if pairs.len() % 2 == 0 {
@@ -34,9 +34,9 @@ define_ast!(
                     let condition = unwrap_last!(pairs, token).into_node(state).with_context(&token)?;
 
                     else_branch = Self {
-                        condition: Box::new(condition),
-                        then_branch: Box::new(then_branch),
-                        else_branch: Box::new(else_branch),
+                        condition,
+                        then_branch,
+                        else_branch,
                         token: token.clone(),
                     }.into();
                 }
@@ -57,9 +57,9 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    condition: Box::new(this.condition.into_owned()),
-                    then_branch: Box::new(this.then_branch.into_owned()),
-                    else_branch: Box::new(this.else_branch.into_owned()),
+                    condition: this.condition.into_owned(),
+                    then_branch: this.then_branch.into_owned(),
+                    else_branch: this.else_branch.into_owned(),
                     token: this.token.into_owned(),
                 }
             },
@@ -87,11 +87,11 @@ define_ast!(
         },
 
         SwitchExpression(
-            match_on: Box<Node<'i>>,
+            match_on: Node<'i>,
             cases: Vec<SwitchCase<'i>>
         ) {
             build = (pairs, token, state) {
-                let match_on = Box::new(unwrap_node!(pairs, state, token)?);
+                let match_on = unwrap_node!(pairs, state, token)?;
                 let mut cases = vec![];
 
                 while let Some(case) = pairs.next()  {
@@ -153,7 +153,7 @@ define_ast!(
             },
             owned = (this) {
                 Self::Owned {
-                    match_on: Box::new(this.match_on.into_owned()),
+                    match_on: this.match_on.into_owned(),
                     cases: this.cases.into_iter().map(|c| c.into_owned()).collect(),
                     token: this.token.into_owned(),
                 }
@@ -204,9 +204,9 @@ define_handler!(
         let else_branch = unwrap_node!(pairs, state, token)?;
 
         Ok(IfExpression {
-            condition: Box::new(condition),
-            then_branch: Box::new(then_branch),
-            else_branch: Box::new(else_branch),
+            condition: condition,
+            then_branch: then_branch,
+            else_branch: else_branch,
             token,
         }.into())
     }

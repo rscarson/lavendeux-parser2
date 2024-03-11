@@ -3,12 +3,12 @@ use crate::{error::WrapExternalError, syntax_tree::traits::IntoNode, Rule};
 use polyvalue::operations::{BooleanOperation, BooleanOperationExt};
 
 define_ast!(Boolean {
-    BooleanNot(value: Box<Node<'i>>) {
+    BooleanNot(value: Node<'i>) {
         build = (pairs, token, state) {
             pairs.next(); // Skip the operator
             let value = unwrap_node!(pairs, state, token)?;
             Ok(Self {
-                value: Box::new(value),
+                value,
                 token,
             }
             .into())
@@ -19,7 +19,7 @@ define_ast!(Boolean {
         },
         owned = (this) {
             Self::Owned {
-                value: Box::new(this.value.into_owned()),
+                value: this.value.into_owned(),
                 token: this.token.into_owned(),
             }
         },
@@ -39,7 +39,7 @@ define_ast!(Boolean {
         }
     },
 
-    BooleanExpr(lhs: Box<Node<'i>>, op: BooleanOperation, rhs: Box<Node<'i>>) {
+    BooleanExpr(lhs: Node<'i>, op: BooleanOperation, rhs: Node<'i>) {
         build = (pairs, token, state) {
             let lhs = unwrap_node!(pairs, state, token)?;
 
@@ -65,13 +65,7 @@ define_ast!(Boolean {
 
             let rhs = unwrap_node!(pairs, state, token)?;
 
-            Ok(Self {
-                lhs: Box::new(lhs),
-                op,
-                rhs: Box::new(rhs),
-                token,
-            }
-            .into())
+            Ok(Self { lhs, op, rhs, token }.into())
         },
         eval = (this, state) {
             let lhs = this.lhs.evaluate(state).with_context(this.token())?;
@@ -88,9 +82,9 @@ define_ast!(Boolean {
         },
         owned = (this) {
             Self::Owned {
-                lhs: Box::new(this.lhs.into_owned()),
+                lhs: this.lhs.into_owned(),
                 op: this.op,
-                rhs: Box::new(this.rhs.into_owned()),
+                rhs: this.rhs.into_owned(),
                 token: this.token.into_owned(),
             }
         },

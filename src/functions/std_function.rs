@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{syntax_tree::Reference, Error, State};
+use crate::{syntax_tree::AssignmentTarget, Error, State};
 use polyvalue::{Value, ValueType};
 
 use super::FunctionDocumentation;
@@ -152,7 +152,8 @@ where
     fn documentation_mut(&mut self) -> &mut dyn FunctionDocumentation;
 
     /// Call the function's handler - use exec instead to map arguments first
-    fn call(&self, state: &mut State, reference: Option<&Reference>) -> Result<Value, Error>;
+    fn call(&self, state: &mut State, reference: Option<&AssignmentTarget>)
+        -> Result<Value, Error>;
 
     /// Loads the arguments into the state
     fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error> {
@@ -200,7 +201,7 @@ where
         &self,
         values: &[Value],
         state: &mut State,
-        reference: Option<&Reference>,
+        reference: Option<&AssignmentTarget>,
     ) -> Result<Value, Error> {
         state.scope_into()?;
         state.lock_scope();

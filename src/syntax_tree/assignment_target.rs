@@ -12,10 +12,16 @@ use polyvalue::{
     Value, ValueType,
 };
 
+/// The target for a RW operation on a value
 #[derive(Debug, Clone)]
 pub enum AssignmentTarget<'i> {
+    /// Directly assign to a variable ( a )
     Identifier(String),
+
+    /// Assign to an index of a value ( a[0] )
     Index(String, Vec<Option<Node<'i>>>), // None = last-entry index
+
+    /// Destructure a value into multiple targets ( [a, b, c] )
     Destructure(Vec<AssignmentTarget<'i>>),
 }
 
@@ -73,7 +79,7 @@ impl IntoOwned for AssignmentTarget<'_> {
 }
 
 impl<'i> AssignmentTarget<'i> {
-    pub fn get_index_handle(base: Value, indices: &[Option<Value>]) -> Result<Value, Error> {
+    pub(crate) fn get_index_handle(base: Value, indices: &[Option<Value>]) -> Result<Value, Error> {
         let mut base = base;
         for index in indices {
             let default_idx = Value::from(if base.len() == 0 { 0 } else { base.len() - 1 });
@@ -88,7 +94,7 @@ impl<'i> AssignmentTarget<'i> {
         Ok(base)
     }
 
-    pub fn get_mut_index_handle<'v>(
+    pub(crate) fn get_mut_index_handle<'v>(
         base: &'v mut Value,
         indices: &[Option<Value>],
     ) -> Result<&'v mut Value, Error> {
@@ -101,6 +107,7 @@ impl<'i> AssignmentTarget<'i> {
         Ok(base)
     }
 
+    /// Evaluate the target to get the value it points to
     pub fn get_value(&self, state: &mut State) -> Result<Value, Error> {
         match self {
             Self::Identifier(id) => state
@@ -127,6 +134,8 @@ impl<'i> AssignmentTarget<'i> {
         }
     }
 
+    /// Evaluate the target to get the value it points to
+    /// This version of the function will look for the variable in the parent scope
     pub fn get_value_in_parent(&self, state: &mut State) -> Result<Value, Error> {
         match self {
             Self::Identifier(id) => state
@@ -153,6 +162,7 @@ impl<'i> AssignmentTarget<'i> {
         }
     }
 
+    /// Update the value the target points to
     pub fn update_value(&self, state: &mut State, value: Value) -> Result<(), Error> {
         match self {
             Self::Identifier(id) => {
@@ -200,6 +210,7 @@ impl<'i> AssignmentTarget<'i> {
     }
 
     /// Get a handle to the target value, if it exists.
+    /// This function will look for the variable in the parent scope
     pub fn get_target_mut_in_parent<'s>(
         &self,
         state: &'s mut State,
@@ -226,6 +237,8 @@ impl<'i> AssignmentTarget<'i> {
         }
     }
 
+    /// Update the value the target points to
+    /// This version of the function will look for the variable in the parent scope
     pub fn update_value_in_parent(&self, state: &mut State, value: Value) -> Result<(), Error> {
         match self {
             Self::Identifier(id) => {
@@ -272,6 +285,7 @@ impl<'i> AssignmentTarget<'i> {
         }
     }
 
+    /// Delete the value the target points to
     pub fn delete(&self, state: &mut State) -> Result<Value, Error> {
         match self {
             Self::Identifier(id) => {

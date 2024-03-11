@@ -13,15 +13,18 @@ use std::{
 
 /// Implementation of the stack of scopes for the parser state
 #[derive(Debug, Clone, Default)]
-pub struct StateScopes {
+pub struct MemoryManager {
     globals: HashMap<String, Value>,
     frames: Vec<(String, Option<Value>)>,
     locks: Vec<usize>,
     frame_starts: Vec<usize>,
+
+    //
+    // Options
+    gc_stacksize: usize,
 }
-impl StateScopes {
+impl MemoryManager {
     const MAX_DEPTH: usize = 999;
-    const GC_STACKSIZE: usize = 1024;
 
     /// Creates a blank stack
     pub fn new() -> Self {
@@ -65,9 +68,12 @@ impl StateScopes {
     /// Release all locks, and clear all frames
     /// Leaves the global frame intact
     pub fn reset(&mut self) {
-        self.frames.clear();
+        self.frames
+            .truncate(self.frame_starts.first().unwrap_or_default());
         self.locks.clear();
         self.frame_starts.clear();
+
+        self.unsafely_sort_compress_stack();
     }
 
     /// Returns the size of the stack, in frames
@@ -107,21 +113,30 @@ impl StateScopes {
     }
 
     /// Returns the index from the bottom of the last frame valid for reading
-    pub fn last_valid_scope(&self) -> usize {
-        self.locks.last().cloned().unwrap_or_default()
+    /// Will act as if the stack is frame_offset frames up from the current frame
+    pub fn last_valid_scope(&self, frame_offset: usize) -> usize {
+        for lock in self.locks.iter().rev() {
+            if *lock <= self.stack_len() - frame_offset {
+                return *lock;
+            }
+        }
+        0
     }
 
     /// Get a reference to the all valid scopes
-    pub fn get_valid_scopes(&self) -> &[(String, Option<Value>)] {
-        let start = self.last_valid_scope();
-        &self.frames[start..]
+    /// Will act as if the stack is frame_offset frames up from the current frame
+    pub fn get_valid_scopes(&self, frame_offset: usize) -> &[(String, Option<Value>)] {
+        let start = self.last_valid_scope(frame_offset);
+        let end = self.stack_len() - frame_offset;
+        &self.frames[start..end]
     }
 
     /// Get a reference to the all valid scopes
-    /// If ignore_lock is true, the last lock is ignored
-    pub fn get_valid_scopes_mut(&mut self) -> &mut [(String, Option<Value>)] {
+    /// Will act as if the stack is frame_offset frames up from the current frame
+    pub fn get_valid_scopes_mut(&mut self, frame_offset: usize) -> &mut [(String, Option<Value>)] {
         let start = self.last_valid_scope();
-        &mut self.frames[start..]
+        let end = self.stack_len() - frame_offset;
+        &mut self.frames[start..end]
     }
 
     /// Set a global variable in the bottom of the stack
@@ -135,8 +150,9 @@ impl StateScopes {
     }
 
     /// Get a value from the stack
-    pub fn get(&self, name: &str) -> Option<&Value> {
-        for (k, v) in self.get_valid_scopes().iter().rev() {
+    /// Will act as if the stack is frame_offset frames up from the current frame
+    pub fn get(&self, name: &str, frame_offset: usize) -> Option<&Value> {
+        for (k, v) in self.get_valid_scopes(frame_offset).iter().rev() {
             if name == k {
                 return v.as_ref();
             }
