@@ -75,6 +75,14 @@ define_ast!(Boolean {
         },
         eval = (this, state) {
             let lhs = this.lhs.evaluate(state).with_context(this.token())?;
+
+            // Short-circuiting
+            if this.op == BooleanOperation::Or && lhs.is_truthy() {
+                return Ok(true.into())
+            } else if this.op == BooleanOperation::And && !lhs.is_truthy() {
+                return Ok(false.into())
+            }
+
             let rhs = this.rhs.evaluate(state).with_context(this.token())?;
             lhs.boolean_op(rhs, this.op).with_context(this.token())
         },

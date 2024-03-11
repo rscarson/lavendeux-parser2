@@ -87,17 +87,9 @@ define_stddecorator!(
             polyvalue::operations::ArithmeticOperation::Multiply,
         )?.inner();
 
-        match chrono::NaiveDateTime::from_timestamp_millis(input) {
-            Some(t) => {
-                let datetime: chrono::DateTime<chrono::Utc> =
-                    chrono::DateTime::from_naive_utc_and_offset(t, chrono::Utc);
-                Ok(datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string())
-            }
-            None => oops!(
-                Range {
-                    input: input.to_string()
-                }
-            ),
+        match chrono::DateTime::from_timestamp_millis(input) {
+            Some(datetime) => Ok(datetime.format("%Y-%m-%dT%H:%M:%SZ").to_string()),
+            None => oops!(Range { input: input.to_string() }),
         }
     }
 );

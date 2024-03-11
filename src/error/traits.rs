@@ -4,6 +4,33 @@ use pest::error::ErrorVariant;
 
 use crate::{error::ErrorDetails, pest::Rule, Error, Token};
 
+/// Describe the cause of a syntax error.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SyntaxErrorCause {
+    /// Tokens that could have followed the input
+    pub expected: Vec<RuleCategory>,
+
+    /// Tokens that were found instead
+    pub unexpected: Vec<RuleCategory>,
+}
+impl std::fmt::Display for SyntaxErrorCause {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if !self.unexpected.is_empty() {
+            // Unexpected token
+            write!(f, "Unexpected {}", RuleCategory::fmt(&self.unexpected))
+        } else if self.expected.len() == 1 {
+            // Expected a single token
+            write!(f, "Expected {}", self.expected[0])
+        } else if !self.expected.is_empty() {
+            // Expected multiple tokens
+            write!(f, "Expected one of: {}", RuleCategory::fmt(&self.expected))
+        } else {
+            // No tokens expected
+            write!(f, "Unexpected token")
+        }
+    }
+}
+
 /// Wraps a syntax error into an Error.
 pub trait WrapSyntaxError<T, R> {
     /// Turns a pest error into an Error.
@@ -32,13 +59,25 @@ impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
                 }
                 .into_owned();
 
-                let expected = if let ErrorVariant::ParsingError { positives, .. } = e.variant {
-                    RuleCategory::collect(&positives)
+                let (expected, unexpected) = if let ErrorVariant::ParsingError {
+                    positives,
+                    negatives,
+                } = e.variant
+                {
+                    (
+                        RuleCategory::collect(&positives),
+                        RuleCategory::collect(&negatives),
+                    )
                 } else {
-                    Vec::new()
+                    (Vec::new(), Vec::new())
                 };
 
-                oops!(Syntax { expected }, token)
+                let cause = SyntaxErrorCause {
+                    expected,
+                    unexpected,
+                };
+
+                oops!(Syntax { cause }, token)
             }
         }
     }
@@ -191,17 +230,18 @@ impl From<Rule> for RuleCategory {
             Rule::EOL => Self::Symbol("EOL"),
 
             Rule::POSTFIX_EMPTYINDEX
+            | Rule::del_keyword
             | Rule::POSTFIX_DECORATE
             | Rule::POSTFIX_INDEX
             | Rule::POSTFIX_CALL
-            | Rule::POSTFIX_INC
-            | Rule::POSTFIX_DEC
             | Rule::PREFIX_DEL
             | Rule::PREFIX_BOOL_NOT
             | Rule::PREFIX_BIT_NOT
             | Rule::PREFIX_NEG
             | Rule::PREFIX_INC
             | Rule::PREFIX_DEC
+            | Rule::POSTFIX_INC
+            | Rule::POSTFIX_DEC
             | Rule::OP_ASSIGN_ADD
             | Rule::OP_ASSIGN_SUB
             | Rule::OP_ASSIGN_POW
@@ -250,11 +290,10 @@ impl From<Rule> for RuleCategory {
             | Rule::assignment_infix_op
             | Rule::prefix_op
             | Rule::prefix_arith
+            | Rule::postfix_arith
             | Rule::KEYWORD_EXPRESSION
-            | Rule::del_keyword
             | Rule::postfix_operation
             | Rule::postfixcall_args
-            | Rule::postfix_arith
             | Rule::POSTFIX_NORMALMODE
             | Rule::POSTFIX_OBJECTMODE
             | Rule::infix_op => Self::Operator,
@@ -294,6 +333,7 @@ impl From<Rule> for RuleCategory {
             Rule::currency_suffix | Rule::currency_symbol => Self::CurrencySymbol,
 
             Rule::object_keyvalue_pair
+            | Rule::block_line
             | Rule::for_conditional
             | Rule::switch_case
             | Rule::if_block

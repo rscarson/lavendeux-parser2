@@ -41,8 +41,71 @@ impl LavendeuxParser {
     }
 }
 
+/// Runs a single expression through the parser and tests the last value
+/// This is a convenience function for testing
+/// # Example
+/// ```rust
+/// use lavendeux_parser::assert_expr;
+/// assert_expr!("1 + 1", 2i64);
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! assert_expr {
+    ($e:literal, $v:expr) => {
+        assert_eq!(
+            $crate::Lavendeux::new(Default::default())
+                .parse($e)
+                .expect(&format!("Error parsing `{}`", $e))
+                .into_iter()
+                .last()
+                .expect("No values returned from expression"),
+            $crate::Value::from($v),
+        )
+    };
+}
+
+/// Runs a single expression through the parser and matches the result
+/// This is a convenience function for testing
+/// # Example
+/// ```rust
+/// use lavendeux_parser::match_expr;
+/// match_expr!("foo + bar", Err(_));
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! match_expr {
+    ($e:literal, $v:pat) => {
+        matches!(
+            $crate::Lavendeux::new(Default::default())
+                .parse($e)
+            $v
+        )
+    };
+}
+
+/// Runs a single expression through the parser and matches on the details of the error
+/// This is a convenience function for testing
+/// # Example
+/// ```rust
+/// use lavendeux_parser::match_expr_err;
+/// match_expr!("foo + bar", VariableName {..});
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! match_expr_err {
+    ($e:literal, $v:pat) => {
+        matches!(
+            $crate::Lavendeux::new(Default::default())
+                .parse($e)
+                .expect_err(&format!("Expected an error from `{}`", $e))
+                .details,
+            $v
+        )
+    };
+}
+
 /// Generates a test case sent to the parser
-/// Examples:
+/// # Example
 ///  ```rust
 /// use lavendeux_parser::lav;
 /// use lavendeux_parser::{error::ErrorDetails, Error};
@@ -63,6 +126,7 @@ impl LavendeuxParser {
 /// asparagus
 /// "#);
 /// ```
+#[cfg(test)]
 #[macro_export]
 macro_rules! lav {
     ($test_name:ident $body:literal) => {

@@ -66,14 +66,29 @@ define_stdfunction!(
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&expression, state);
-        state.scope_out();
+        let res = Lavendeux::eval(&expression, state).map(|n| n.evaluate(state));
 
-        let mut res = res?.evaluate(state)?;
-        if res.len() == 1 {
-            res = res.as_a::<Vec<Value>>()?.into_iter().next().unwrap();
+        let mut values = match res {
+            Ok(r) => {
+                match r {
+                    Ok(v) => v,
+                    Err(e) => {
+                        state.scope_out();
+                        return Err(e);
+                    }
+                }
+            },
+            Err(e) => {
+                state.scope_out();
+                return Err(e);
+            }
+        };
+
+        state.scope_out();
+        if values.len() == 1 {
+            values = values.as_a::<Vec<Value>>()?.into_iter().next().unwrap();
         }
-        Ok(res)
+        Ok(values)
     },
 );
 
@@ -100,11 +115,94 @@ define_stdfunction!(
 
         state.scope_into()?;
         state.lock_scope();
-        let res = Lavendeux::eval(&script, state);
-        state.scope_out();
+        let res = Lavendeux::eval(&script, state).map(|n| n.evaluate(state));
+        match res {
+            Ok(r) => {
+                match r {
+                    Ok(v) => v,
+                    Err(e) => {
+                        state.scope_out();
+                        return Err(e);
+                    }
+                }
+            },
+            Err(e) => {
+                state.scope_out();
+                return Err(e);
+            }
+        };
 
-        res?.evaluate(state)?;
+        state.scope_out();
         Ok(Value::from(""))
+    },
+);
+
+define_stdfunction!(
+    __exec_tests {
+    },
+    returns = Any,
+
+    docs = {
+        category: "System",
+        description: "Evaluates all functions beginning with __test_, and reports a list of failed tests",
+        ext_description: "
+            Designed to be used mostly for internal testing, could be useful to testing scripts.
+            Throws an error if a test fails, otherwise returns a string with the number of tests run and the number of tests failed.
+        ",
+        examples: "#skip
+            __test_will_fail() = assert_eq(1, 2)
+            __test_will_pass() = assert_eq(1, 1)
+            __exec_tests()
+            /* Output:
+            Errors:
+
+            In __test_will_fail: 
+            Line 1: assert_eq (1, 2)
+                Assertion failed: 1 != 2
+                
+            2 tests run, 1 failed
+             */
+        ",
+    },
+    handler = (state, _reference) {
+        let matching_functions = state
+            .all_functions()
+            .iter()
+            .filter(|(name, _)| name.starts_with("__test_"))
+            .map(|(name, _)| name.clone())
+            .collect::<Vec<_>>();
+
+        let mut errors = vec![];
+        for test_case in matching_functions.iter() {
+            state.scope_into()?;
+            state.lock_scope();
+            let res = state.call_function(test_case, vec![], None);
+            state.scope_out();
+
+            if let Err(e) = res {
+                errors.push((test_case, e));
+            }
+        }
+
+        let mut output = String::new();
+        if !errors.is_empty() {
+            output.push_str("Errors:\n\n");
+            for (name, e) in errors.iter() {
+                output.push_str(&format!("In {}:\n{}\n\n", name, e));
+            }
+        }
+
+        output.push_str(&format!(
+            "{} tests run, {} failed",
+            matching_functions.len(),
+            errors.len()
+        ));
+
+        if errors.is_empty() {
+            Ok(Value::from(format!("{} tests run, all passed", matching_functions.len())))
+        } else {
+            oops!(Custom { msg: output })
+        }
     },
 );
 
@@ -352,7 +450,7 @@ define_stdfunction!(
         let name = required_arg!(state::name).to_string();
         let value = required_arg!(state::value);
         state.set_variable_in_offset(1, &name, value.clone());
-        Ok(value.clone())
+        Ok(value)
     },
 );
 
@@ -431,8 +529,7 @@ define_stdfunction!(
     },
     handler = (state, _reference) {
         let obj = Object::try_from(
-            state
-                .all_variables_unscoped()
+            state.all_variables_unscoped()
                 .iter()
                 .map(|(k, v)| (Value::from(k.to_string()), (*v).clone()))
                 .collect::<Vec<(Value, Value)>>(),
@@ -465,3 +562,19 @@ define_stdfunction!(
         Ok(Value::string(value.own_type().to_string()))
     },
 );
+
+#[cfg(test)]
+mod test {
+    use crate::lav;
+
+    lav!(test_exec_tests_bad(Error) r#"
+        __test_will_fail() = assert_eq(1, 2)
+        __test_will_pass() = assert_eq(1, 1)
+        __exec_tests()
+    "#);
+
+    lav!(test_exec_tests_good r#"
+        __test_will_pass() = assert_eq(1, 1)
+        __exec_tests()
+    "#);
+}

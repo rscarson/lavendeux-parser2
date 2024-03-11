@@ -1,12 +1,98 @@
 use super::Node;
-use crate::{error::WrapExternalError, syntax_tree::traits::IntoNode, Rule};
+use crate::{error::WrapExternalError, syntax_tree::traits::IntoNode, Reference, Rule};
 use polyvalue::{
     operations::{ArithmeticOperation, ArithmeticOperationExt},
     Value,
 };
 
+#[derive(Clone, Debug)]
+pub enum IncDecType {
+    PreI,
+    PreD,
+    PostI,
+    PostD,
+}
+impl IncDecType {
+    fn is_pre(&self) -> bool {
+        matches!(self, Self::PreI | Self::PreD)
+    }
+    fn operation(&self) -> ArithmeticOperation {
+        if matches!(self, Self::PreI | Self::PostI) {
+            ArithmeticOperation::Add
+        } else {
+            ArithmeticOperation::Subtract
+        }
+    }
+}
+
 define_ast!(
     Arithmetic {
+        IncDec(reference: Reference<'i>, variant: IncDecType) {
+            build = (pairs, token, state) {
+                let (op, value) = if matches!(token.rule, Rule::PREFIX_INC | Rule::PREFIX_DEC) {
+                    (unwrap_next!(pairs, token).as_rule(), unwrap_node!(pairs, state, token)?)
+                } else {
+                    (token.rule, unwrap_node!(pairs, state, token)?)
+                };
+
+                let reference = if let node_type!(Values::Reference(reference)) = value {
+                    reference
+                } else {
+                    return oops!(ConstantValue,
+                        token
+                    );
+                };
+
+                let variant = match op {
+                    Rule::PREFIX_INC => IncDecType::PreI,
+                    Rule::PREFIX_DEC => IncDecType::PreD,
+                    Rule::POSTFIX_INC => IncDecType::PostI,
+                    _ => IncDecType::PostD,
+                };
+
+                Ok(Self {
+                    reference,
+                    variant,
+                    token,
+                }.into())
+            },
+            eval = (this, state) {
+                let value = this.reference.evaluate(state).with_context(this.token())?;
+                let increment = Value::from(1).as_type(value.own_type()).with_context(this.token())?;
+                let operation = this.variant.operation();
+
+                let new_value = value.clone().arithmetic_op(increment, operation)?;
+                this.reference.update_value(state, new_value.clone()).with_context(this.token())?;
+
+                if this.variant.is_pre() {
+                    Ok(new_value)
+                } else {
+                    Ok(value)
+                }
+            },
+            owned = (this) {
+                Self::Owned {
+                    reference: this.reference.into_owned(),
+                    variant: this.variant,
+                    token: this.token.into_owned(),
+                }
+            },
+
+            docs = {
+                name: "Increment/Decrement",
+                symbols = ["++", "--"],
+                description: "
+                    Increments or decrements a value.
+                    If used as a prefix, the value is updated before the expression is evaluated.
+                    If used as a postfix, the value is updated after the expression is evaluated.
+                ",
+                examples: "
+                    a = 1; assert_eq(a++, 1);
+                    a = 1; assert_eq(--a, 0);
+                ",
+            }
+        },
+
         ArithmeticNeg(value: Box<Node<'i>>) {
             build = (pairs, token, state) {
                 pairs.next(); // Skip the operator

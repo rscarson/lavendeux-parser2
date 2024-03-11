@@ -3,6 +3,8 @@ use crate::{error::WrapExternalError, token, Error, Rule, State, Token};
 use pest::iterators::Pair;
 use polyvalue::Value;
 
+pub use values::Reference;
+
 use super::{
     pair::PestIterator,
     traits::{IntoOwned, NodeExt, SyntaxNodeBuilderExt},
@@ -35,7 +37,6 @@ mod conditionals;
 use conditionals::Conditionals;
 
 mod values;
-pub use values::Reference;
 use values::Values;
 
 mod literals;
@@ -145,6 +146,9 @@ impl Node<'_> {
 
             //
             // Arithmetic
+            Rule::PREFIX_INC | Rule::PREFIX_DEC | Rule::POSTFIX_INC | Rule::POSTFIX_DEC => {
+                arithmetic::IncDec::build(pairs, token, state)
+            }
             Rule::PREFIX_NEG => arithmetic::ArithmeticNeg::build(pairs, token, state),
             Rule::OP_ADD
             | Rule::OP_SUB
@@ -262,5 +266,17 @@ impl<'i> NodeExt<'i> for Node<'i> {
             Self::Boolean(node) => node.token(),
             Self::Literal(.., token) => token,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Lavendeux;
+
+    #[test]
+    fn run_lav_selftest() {
+        let mut lav = Lavendeux::new(Default::default());
+        lav.run("example_scripts/self_test.lav")
+            .expect("Selftest failed");
     }
 }

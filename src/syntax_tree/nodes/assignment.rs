@@ -33,7 +33,12 @@ impl AssignmentOperation {
         !self.is_none()
     }
 
-    pub fn apply(&self, state: &mut State, target: &Reference, rhs: Value) -> Result<Value, Error> {
+    pub fn apply_to(
+        &self,
+        state: &mut State,
+        target: &AssignmentTarget,
+        rhs: Value,
+    ) -> Result<Value, Error> {
         let value = if self.is_none() {
             rhs
         } else {
@@ -63,6 +68,36 @@ impl AssignmentOperation {
 
         target.update_value(state, value.clone())?;
         Ok(value)
+    }
+
+    pub fn apply(&self, state: &mut State, target: &Reference, rhs: Value) -> Result<Value, Error> {
+        match &target.target {
+            // Assign a single value to multiple targets
+            AssignmentTarget::Destructure(targets) if rhs.len() == 1 => {
+                for target in targets {
+                    self.apply_to(state, target, rhs.clone())?;
+                }
+                target.get_value(state)
+            }
+
+            // Assign multiple values to multiple targets
+            AssignmentTarget::Destructure(targets) if rhs.len() == targets.len() => {
+                let rhs = rhs.as_a::<Vec<Value>>()?;
+                for (target, value) in targets.into_iter().zip(rhs) {
+                    self.apply_to(state, target, value)?;
+                }
+                target.get_value(state)
+            }
+
+            // Target count mismatch
+            AssignmentTarget::Destructure(targets) => oops!(DestructuringAssignment {
+                expected_length: targets.len(),
+                actual_length: rhs.len()
+            }),
+
+            // Assign a single value to a single target
+            _ => self.apply_to(state, &target.target, rhs),
+        }
     }
 }
 impl From<Rule> for AssignmentOperation {
@@ -175,12 +210,6 @@ define_ast!(
                 if let node_type!(Values::Reference(target)) = lhs {
                     Ok(Self { target, op, rhs, token }.into())
                 } else if let node_type!(Collections::Array(target)) = lhs {
-                    if op.is_some() {
-                        return oops!(Custom {
-                            msg: "Cannot use an operator with a destructuring assignment".to_string()
-                        }, token);
-                    }
-
                     let lhs_token = target.token().clone();
                     let t = target.elements.into_iter().map(|e| {
                         if let node_type!(Values::Reference(target)) = e {
@@ -280,14 +309,14 @@ mod test {
         [a, b] = [1, 1]
         assert_eq(a, 1)
         assert_eq(b, 1)
+        
+        [a, b] = 1
+        assert_eq(a, 1)
+        assert_eq(b, 1)
     "#);
 
     lav!(test_assign_destructure_error(Error) r#"
         [a, b] = [1, 2, 3]
-    "#);
-
-    lav!(test_assign_destructure_error2(Error) r#"
-        [a, b] = [1]
     "#);
 
     lav!(test_buggy_push r#"

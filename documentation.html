@@ -180,14 +180,16 @@
 <li><a href="#indexing">2.18 Indexing</a><ul></ul></li>
 <li><a href="#matching">2.19 Matching</a><ul></ul></li>
 <li><a href="#object-literals">2.20 Object Literals</a><ul></ul></li>
-<li><a href="#range-literals">2.21 Range Literals</a><ul></ul></li>
-<li><a href="#return">2.22 Return</a><ul></ul></li>
-<li><a href="#script">2.23 Script</a><ul></ul></li>
-<li><a href="#ternary">2.24 Ternary</a><ul></ul></li>
-<li><a href="#unary-bitwise-not">2.25 Unary Bitwise Not</a><ul></ul></li>
-<li><a href="#unary-boolean-not">2.26 Unary Boolean Not</a><ul></ul></li>
-<li><a href="#unary-negation">2.27 Unary Negation</a><ul></ul></li>
-<li><a href="#match">2.28 match</a><ul></ul></li></ul></li>
+<li><a href="#postfix-incrementdecrement">2.21 Postfix Increment/Decrement</a><ul></ul></li>
+<li><a href="#prefix-incrementdecrement">2.22 Prefix Increment/Decrement</a><ul></ul></li>
+<li><a href="#range-literals">2.23 Range Literals</a><ul></ul></li>
+<li><a href="#return">2.24 Return</a><ul></ul></li>
+<li><a href="#script">2.25 Script</a><ul></ul></li>
+<li><a href="#ternary">2.26 Ternary</a><ul></ul></li>
+<li><a href="#unary-bitwise-not">2.27 Unary Bitwise Not</a><ul></ul></li>
+<li><a href="#unary-boolean-not">2.28 Unary Boolean Not</a><ul></ul></li>
+<li><a href="#unary-negation">2.29 Unary Negation</a><ul></ul></li>
+<li><a href="#match">2.30 match</a><ul></ul></li></ul></li>
 <li><a href="#functions">3 Functions</a><ul>
 <li><a href="#api-functions">3.1 API Functions</a><ul>
 <li><a href="#api_add">3.1.1 api_add</a><ul></ul></li>
@@ -426,12 +428,11 @@ $2.00 + £1.000; // 3.000
 3￥; // 3
 </code></pre></div>
 <p><strong>Supported currency symbols:</strong></p>
-
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code>$ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
+<div class="example-wrap"><pre class="language-text"><code>$ | ¢ | £ | ¤ | ¥ | ֏ | ؋ | ߾ | ߿ | ৲ | ৳ | ৻ | ૱ | ௹ | ฿ | ៛ | ₠ | ₡ |
 ₢ | ₣ | ₤ | ₥ | ₦ | ₧ | ₨ | ₩ | ₪ | ₫ | € | ₭ | ₮ | ₯ | ₰ | ₱ | ₲ | ₳ |
 ₴ | ₵ | ₶ | ₷ | ₸ | ₹ | ₺ | ₻ | ₼ | ₽ | ₾ | ₿ | ꠸ | ﷼ | ﹩ | ＄ | ￠ |
-￡ | ￥ | ￦</code></pre></div>
-<h2 id="array"><a href="#array">1.6 array</a></h2>
+￡ | ￥ | ￦
+</code></pre></div><h2 id="array"><a href="#array">1.6 array</a></h2>
 <p>An ordered collection of values, indexed by integers. Values can be a mix of types.</p>
 <p><strong>Casting:</strong>
 It can be cast from any type; and will result in a single-value array - <code>A as array</code> is equivalent to <code>[A]</code>.
@@ -519,10 +520,17 @@ Target is either a literal with optional indices, or a destructuring assignment
 If an index is empty, a new value will be appended to the array
 If the target is a destructuring assignment, the value must be a collection of the same length
 If the operator is present, the value will be transformed before assignment</p>
+<p>Operators:</p>
+<ul>
+<li>Arithmetic: <code>+=, -=, *=, /=, %=, **=</code></li>
+<li>Bitwise: <code>&amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;=</code></li>
+<li>Boolean: <code>&amp;&amp;=, ||=</code></li>
+</ul>
+<p>Note: Operators are not supported for destructuring assignments</p>
 <p><strong>Examples:</strong></p>
-<div class="example-wrap"><pre class="language-lavendeux"><code>[a, b] = [1, 2]
-a = 1; a += 1
-a = [1]; a[] = 2
+<div class="example-wrap"><pre class="language-lavendeux"><code>[a, b] = [1, 2]     // Destructuring assignment
+a = 1; a += 1       // Arithmetic assignment
+a = [1]; a[] = 2    // Array index assignment (appends to array)
 </code></pre></div><h2 id="bitwise"><a href="#bitwise">2.4 Bitwise</a></h2>
 <p><code>[|, ^, &amp;, &lt;&lt;, &gt;&gt;]</code><br />
 A left-associative infix operator that performs bitwise operations on two values.
@@ -600,13 +608,17 @@ Will return the value deleted (or the function signature if a function was delet
 Index can be blank to delete the last value in an array, or negative to count from the end
 Indices can also be a collection to delete multiple values at once</p>
 <p><strong>Examples:</strong></p>
-<div class="example-wrap"><pre class="language-lavendeux"><code>a = 2; del a
-a = [1]; del a[]
-a = {&#39;test&#39;: 1}; del a[&#39;test&#39;]
-a=1;b=2; del [a,b]
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 2; del a        // Deletes the variable a
+a = [1]; del a[]    // Deletes the last value in the array
+
+// Deletes the key &#39;test&#39; from an object
+a = {&#39;test&#39;: 1}
+del a[&#39;test&#39;]   
+
+a=1;b=2; del [a,b] // Deletes both a and b
 
 @dec(x) = 2
-del @dec
+del @dec    // Deletes the decorator
 </code></pre></div><h2 id="for"><a href="#for">2.13 For</a></h2>
 <p><code>[for &lt;variable&gt; in &lt;iterable&gt; { &lt;block&gt; }, for [&lt;variable&gt; in] &lt;iterable&gt; do &lt;block&gt; [if &lt;condition&gt;]]</code><br />
 For loops are finite value iterators. This means they map over a range, array, or object, 
@@ -706,7 +718,25 @@ The indexing operator (a[b]) can be used to access elements of an object.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>{ &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 25 }
 { &quot;name&quot;: &quot;John&quot;, &quot;address&quot;: { &quot;city&quot;: &quot;New York&quot;, &quot;state&quot;: &quot;NY&quot; } }
-</code></pre></div><h2 id="range-literals"><a href="#range-literals">2.21 Range Literals</a></h2>
+</code></pre></div><h2 id="postfix-incrementdecrement"><a href="#postfix-incrementdecrement">2.21 Postfix Increment/Decrement</a></h2>
+<p><code>[++, --]</code><br />
+Increments or decrements a value after it is used.
+This is done by adding 1i64 or subtracting 1i64 from the value.
+This may have odd behavior when used on collections.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 0
+assert_eq(a++, 0)
+assert_eq(a--, 1)
+</code></pre></div><h2 id="prefix-incrementdecrement"><a href="#prefix-incrementdecrement">2.22 Prefix Increment/Decrement</a></h2>
+<p><code>[++, --]</code><br />
+Increments or decrements a value before it is used.
+This is done by adding 1i64 or subtracting 1i64 from the value.
+This may have odd behavior when used on collections.</p>
+<p><strong>Examples:</strong></p>
+<div class="example-wrap"><pre class="language-lavendeux"><code>a = 0
+assert_eq(++a, 1)
+assert_eq(--a, 0)
+</code></pre></div><h2 id="range-literals"><a href="#range-literals">2.23 Range Literals</a></h2>
 <p><code>[first..last]</code><br />
 A range of values.
 Ranges can be used to create arrays of numbers or characters.
@@ -716,7 +746,7 @@ Character ranges are inclusive and can only be used with single-character string
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>1..5
 &#39;a&#39;..&#39;z&#39;
-</code></pre></div><h2 id="return"><a href="#return">2.22 Return</a></h2>
+</code></pre></div><h2 id="return"><a href="#return">2.24 Return</a></h2>
 <p><code>[return &lt;value&gt;]</code><br />
 Returns a value from a function.
 By default, the last expression is returned, unless a return statement is used.</p>
@@ -726,26 +756,26 @@ b() = { 5 ; 2 }
 
 assert_eq( a(), 5 )
 assert_eq( b(), 2 )
-</code></pre></div><h2 id="script"><a href="#script">2.23 Script</a></h2>
+</code></pre></div><h2 id="script"><a href="#script">2.25 Script</a></h2>
 <p><code>[&lt;statement&gt; [ ; | \n ] &lt;statement&gt;]</code><br />
 A series of expressions or function definitions that are executed in order, and are separated by semicolons or linebreaks.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>1 + 2 ; 3 @hex
 min([1, 2, 3])
-</code></pre></div><h2 id="ternary"><a href="#ternary">2.24 Ternary</a></h2>
+</code></pre></div><h2 id="ternary"><a href="#ternary">2.26 Ternary</a></h2>
 <p><code>[condition ? then : else]</code><br />
 A right-associative ternary operator.
 The condition is evaluated first, then either the then or else branch is evaluated.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>true ? 1 : 2
-</code></pre></div><h2 id="unary-bitwise-not"><a href="#unary-bitwise-not">2.25 Unary Bitwise Not</a></h2>
+</code></pre></div><h2 id="unary-bitwise-not"><a href="#unary-bitwise-not">2.27 Unary Bitwise Not</a></h2>
 <p><code>[~]</code><br />
 A prefix operator that performs bitwise NOT on a value.
 The value is first converted to an integer.
 A larger set of bitwise operations are available in the ‘bitwise’ category of the standard library.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>~5
-</code></pre></div><h2 id="unary-boolean-not"><a href="#unary-boolean-not">2.26 Unary Boolean Not</a></h2>
+</code></pre></div><h2 id="unary-boolean-not"><a href="#unary-boolean-not">2.28 Unary Boolean Not</a></h2>
 <p><code>[not]</code><br />
 Negates a boolean value.
 If the value is not a boolean, it is cooerced to boolean first.</p>
@@ -753,12 +783,12 @@ If the value is not a boolean, it is cooerced to boolean first.</p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>!true == false
 !&#39;test&#39; == false
 !0 == true
-</code></pre></div><h2 id="unary-negation"><a href="#unary-negation">2.27 Unary Negation</a></h2>
+</code></pre></div><h2 id="unary-negation"><a href="#unary-negation">2.29 Unary Negation</a></h2>
 <p><code>[-]</code><br />
 Negates a value.
 <strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>-1
-</code></pre></div><h2 id="match"><a href="#match">2.28 match</a></h2>
+</code></pre></div><h2 id="match"><a href="#match">2.30 match</a></h2>
 <p><code>[match &lt;value&gt; { &lt;condition&gt; =&gt; &lt;block&gt;, _ =&gt; &lt;block&gt; }]</code><br />
 A conditional expression that evaluates a value and then one of several cases.
 match blocks must be exhaustive, and therefore must end in a default case</p>
@@ -1037,7 +1067,10 @@ assert_eq(is_empty(38),     false);
 Returns an array of the keys of the given object.<br />
 The order of the keys is not guaranteed.</p>
 <p><strong>Examples:</strong></p>
-<div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(keys({&#39;a&#39;: 1, &#39;b&#39;: 2}), [&#39;a&#39;, &#39;b&#39;]);
+<div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    keys({&#39;a&#39;: 1, &#39;b&#39;: 2}).sort(),
+    [&#39;a&#39;, &#39;b&#39;]
+);
 assert_eq(keys({}), []);
 </code></pre></div>
 <hr />
@@ -1092,11 +1125,11 @@ assert_eq(pop(a), 1);
 assert_eq(a, []);
 </code></pre></div>
 <hr />
-<h3 id="push"><a href="#push">3.3.16 push</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>push(input:array, value) -&gt; array
+<h3 id="push"><a href="#push">3.3.16 push</a></h3><div class="example-wrap"><pre class="language-lavendeux"><code>push(input:collection, value) -&gt; array
 </code></pre></div>
-<p>Appends the given value to the end of the given array, and returns the result
-Appends the given value to the end of the given array.<br />
-If the input is a reference to an array in a variable, the variable is updated.</p>
+<p>Appends the given value to the end of the given collection, and returns the result
+Appends the given value to the end of the given collection.<br />
+If the input is a reference to a collection in a variable, the variable is updated.</p>
 <p><strong>Examples:</strong></p>
 <div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(push([1, 2], 3), [1, 2, 3]);
 assert_eq(push([], 3), [3]);
@@ -1163,7 +1196,10 @@ would_err(&#39;split([1, 2, 3, 4], 5)&#39;) // Index out of bounds
 Returns an array of the values of the given object.<br />
 The order of the values is not guaranteed.</p>
 <p><strong>Examples:</strong></p>
-<div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(values({&#39;a&#39;: 1, &#39;b&#39;: 2}), [1, 2]);
+<div class="example-wrap"><pre class="language-lavendeux"><code>assert_eq(
+    values({&#39;a&#39;: 1, &#39;b&#39;: 2}).sort(), 
+    [1, 2]
+);
 assert_eq(values({}), []);
 </code></pre></div>
 <hr />
@@ -1867,7 +1903,7 @@ Writes a value to the current scope, leaving other scopes unchanged.</p>
 if true then {
     assign(&#39;x&#39;, 6)
     assert_eq(6, x)
-} else { 0 }
+} else nil
 assert_eq(5, x)
 </code></pre></div>
 <hr />

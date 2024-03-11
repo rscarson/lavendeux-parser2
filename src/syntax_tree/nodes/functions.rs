@@ -94,7 +94,6 @@ define_ast!(
 
                 // Collect arguments
                 let mut arguments = Vec::new();
-
                 for argument in this.arguments.iter() {
                     arguments.push(argument.evaluate(state).with_context(this.token())?);
                 }
@@ -156,7 +155,7 @@ define_ast!(
 define_handler!(
     FunctionDefinition(pairs, token, state) {
         let name = unwrap_next!(pairs, token).as_str().to_string();
-        let src = pairs.last_child().unwrap().map(|p| p.as_str().to_string()).collect::<Vec<_>>();
+        let src = pairs.last_child().unwrap().as_str().to_string();
 
         let mut returns = match pairs.peek_last() {
             Some(p) if p.as_rule() == Rule::function_typespec => {

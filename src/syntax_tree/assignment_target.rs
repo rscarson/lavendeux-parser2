@@ -275,10 +275,10 @@ impl<'i> AssignmentTarget<'i> {
     pub fn delete(&self, state: &mut State) -> Result<Value, Error> {
         match self {
             Self::Identifier(id) => {
-                if let Some(function) = state.unregister_function(id)? {
-                    Ok(function.signature().into())
-                } else if let Some(value) = state.delete_variable(id) {
+                if let Some(value) = state.delete_variable(id) {
                     Ok(value)
+                } else if let Some(function) = state.unregister_function(id)? {
+                    Ok(function.signature().into())
                 } else {
                     oops!(VariableName { name: id.clone() })
                 }

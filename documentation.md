@@ -261,11 +261,18 @@ If an index is empty, a new value will be appended to the array
 If the target is a destructuring assignment, the value must be a collection of the same length
 If the operator is present, the value will be transformed before assignment
 
+Operators:
+- Arithmetic: `+=, -=, *=, /=, %=, **=`
+- Bitwise: `&=, |=, ^=, <<=, >>=`
+- Boolean: `&&=, ||=`
+
+Note: Operators are not supported for destructuring assignments
+
 **Examples:**  
 ```lavendeux
-[a, b] = [1, 2]
-a = 1; a += 1
-a = [1]; a[] = 2
+[a, b] = [1, 2]     // Destructuring assignment
+a = 1; a += 1       // Arithmetic assignment
+a = [1]; a[] = 2    // Array index assignment (appends to array)
 ```
 ## Bitwise
 `[|, ^, &, <<, >>]`  
@@ -367,13 +374,17 @@ Indices can also be a collection to delete multiple values at once
 
 **Examples:**  
 ```lavendeux
-a = 2; del a
-a = [1]; del a[]
-a = {'test': 1}; del a['test']
-a=1;b=2; del [a,b]
+a = 2; del a        // Deletes the variable a
+a = [1]; del a[]    // Deletes the last value in the array
+
+// Deletes the key 'test' from an object
+a = {'test': 1}
+del a['test']   
+
+a=1;b=2; del [a,b] // Deletes both a and b
 
 @dec(x) = 2
-del @dec
+del @dec    // Deletes the decorator
 ```
 ## For
 `[for <variable> in <iterable> { <block> }, for [<variable> in] <iterable> do <block> [if <condition>]]`  
@@ -499,6 +510,30 @@ The indexing operator (a[b]) can be used to access elements of an object.
 ```lavendeux
 { "name": "John", "age": 25 }
 { "name": "John", "address": { "city": "New York", "state": "NY" } }
+```
+## Postfix Increment/Decrement
+`[++, --]`  
+Increments or decrements a value after it is used.
+This is done by adding 1i64 or subtracting 1i64 from the value.
+This may have odd behavior when used on collections.
+
+**Examples:**  
+```lavendeux
+a = 0
+assert_eq(a++, 0)
+assert_eq(a--, 1)
+```
+## Prefix Increment/Decrement
+`[++, --]`  
+Increments or decrements a value before it is used.
+This is done by adding 1i64 or subtracting 1i64 from the value.
+This may have odd behavior when used on collections.
+
+**Examples:**  
+```lavendeux
+a = 0
+assert_eq(++a, 1)
+assert_eq(--a, 0)
 ```
 ## Range Literals
 `[first..last]`  
@@ -986,7 +1021,10 @@ The order of the keys is not guaranteed.
   
 **Examples:**  
 ```lavendeux
-assert_eq(keys({'a': 1, 'b': 2}), ['a', 'b']);
+assert_eq(
+    keys({'a': 1, 'b': 2}).sort(),
+    ['a', 'b']
+);
 assert_eq(keys({}), []);
 ```
 
@@ -1064,11 +1102,11 @@ assert_eq(a, []);
 ------------
 ### push
 ```lavendeux
-push(input:array, value) -> array
+push(input:collection, value) -> array
 ```
-Appends the given value to the end of the given array, and returns the result
-Appends the given value to the end of the given array.  
-If the input is a reference to an array in a variable, the variable is updated.  
+Appends the given value to the end of the given collection, and returns the result
+Appends the given value to the end of the given collection.  
+If the input is a reference to a collection in a variable, the variable is updated.  
   
 **Examples:**  
 ```lavendeux
@@ -1162,7 +1200,10 @@ The order of the values is not guaranteed.
   
 **Examples:**  
 ```lavendeux
-assert_eq(values({'a': 1, 'b': 2}), [1, 2]);
+assert_eq(
+    values({'a': 1, 'b': 2}).sort(), 
+    [1, 2]
+);
 assert_eq(values({}), []);
 ```
 
@@ -2188,7 +2229,7 @@ x = 5
 if true then {
     assign('x', 6)
     assert_eq(6, x)
-} else { 0 }
+} else nil
 assert_eq(5, x)
 ```
 

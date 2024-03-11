@@ -322,7 +322,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state, __reference) {
+    handler = (state, _reference) {
         let value = required_arg!(state::value).as_a::<f64>()?;
         let base = optional_arg!(state::base).unwrap_or(10.into()).as_a::<f64>()?;
         Ok(value.log(base).into())

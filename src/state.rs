@@ -55,7 +55,11 @@ impl Default for State {
 }
 
 impl State {
-    const MAX_DEPTH: usize = 999;
+    #[cfg(debug_assertions)]
+    const MAX_DEPTH: usize = 950;
+
+    #[cfg(not(debug_assertions))]
+    const MAX_DEPTH: usize = 2400;
 
     /// Creates a new parser state
     pub fn new() -> Self {

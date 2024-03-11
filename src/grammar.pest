@@ -44,9 +44,13 @@ FUNCTION_ASSIGNMENT_STATEMENT = {
 	function_argument = {identifier ~ EOL* ~ (symbol_colon ~ EOL* ~ identifier)?}
 
 BLOCK = {
-    | symbol_opencurly ~ LINE* ~ (STATEMENT)? ~ EOL? ~ symbol_closecurly
+    | symbol_opencurly ~ block_line* ~ (EXPR)? ~ EOL? ~ symbol_closecurly
     | EXPR
 }
+    block_line = _{
+        | WHITESPACE* ~ EXPR ~ (EOL | &EOI)
+        | WHITESPACE* ~ (EOL | INLINE_COMMENT)
+    }
 
 //
 // Expressions tree
@@ -72,8 +76,8 @@ EXPR = {
     //
     // Prefix
     prefix_op = _{PREFIX_DEL | prefix_arith | PREFIX_BOOL_NOT | PREFIX_BIT_NOT}
-        PREFIX_DEL = @{del_keyword ~ WHITESPACE* ~ symbol_at?}
-            del_keyword = @{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
+        PREFIX_DEL = @{del_keyword ~ (WHITESPACE* ~ symbol_at)?}
+            del_keyword = _{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
         PREFIX_BOOL_NOT = {"!" ~ !"="}
         PREFIX_BIT_NOT = {"~" ~ !"="}
         prefix_arith = _{PREFIX_INC | PREFIX_DEC | PREFIX_NEG}
@@ -269,7 +273,7 @@ ATOMIC_VALUE = _{
     string_literal = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
 
     regex_literal = @{
-        "/" ~ (!"/" ~ ANY | "\\/")* ~ "/" ~ ("i" | "g" | "m" | "s" | "u" | "y")*
+        "/" ~ (!"/" ~ ANY | "\\/")* ~ "/" ~ (ASCII_ALPHA)*
     }
 
     identifier = @{!reserved_words ~ (ASCII_ALPHA|"_") ~ (ASCII_ALPHANUMERIC|"_")*}
