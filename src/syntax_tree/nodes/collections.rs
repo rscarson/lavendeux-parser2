@@ -1,7 +1,7 @@
-use super::{values::Reference, Node};
+use super::{Node, Reference};
 use crate::{
     error::WrapExternalError,
-    syntax_tree::{assignment_target::Target, traits::IntoNode},
+    syntax_tree::{assignment_target::AssignmentTarget, traits::IntoNode},
     Error, Rule,
 };
 use polyvalue::{Value, ValueType};
@@ -184,49 +184,72 @@ define_ast!(
                     'a'..'z'
                 ",
             }
+        },
+
+        IndexingExpression(base: Box<Node<'i>>, indices: Vec<Option<Node<'i>>>) {
+            build = (pairs, token, state) {
+                let base = unwrap_node!(pairs, state, token)?;
+                let indices = unwrap_next!(pairs, token);
+                let indices = indices
+                    .map(|pair| {
+                    if pair.as_rule() == Rule::POSTFIX_EMPTYINDEX {
+                        Ok::<_, Error>(None)
+                    } else {
+                        Ok(Some(pair.into_node(state).with_context(&token)?))
+                    }
+                })
+                .collect::<Result<Vec<_>, _>>().with_context(&token)?;
+
+                if let node_type!(Values::Reference(reference)) = base {
+                    let target = reference.target;
+                    Ok(Reference::new(AssignmentTarget::Index(target.to_string(), indices), token).into())
+                } else {
+                    Ok(Self { base: Box::new(base), indices, token }.into())
+                }
+            },
+
+            eval = (this, state) {
+                let base = this.base.evaluate(state).with_context(this.token())?;
+                let indices = this
+                    .indices
+                    .iter()
+                    .map(|index| {
+                        if let Some(index) = index {
+                            Ok::<_, Error>(Some(index.evaluate(state).with_context(this.token())?))
+                        } else {
+                            Ok(None)
+                        }
+                    })
+                    .collect::<Result<Vec<_>, _>>().with_context(this.token())?;
+                let value = AssignmentTarget::get_index_handle(base, &indices).with_context(this.token())?;
+                Ok(value.clone())
+            },
+
+            owned = (this) {
+                Self::Owned {
+                    base: Box::new(this.base.into_owned()),
+                    indices: this.indices.into_iter().map(|i| i.map(|i| i.into_owned())).collect(),
+                    token: this.token.into_owned(),
+                }
+            },
+
+            docs = {
+                name: "Indexing",
+                symbols = ["a[b]", "a[]"],
+                description: "
+                    Accessing elements of a collection.
+                    The indexing operator can be used to access elements of a collection or string.
+                    If the index is a collection, it is used to access multiple elements.
+                    If the index is a string, it is used to access a character.
+                    If the index is blank, it is used to access the last element of the collection.
+                    Negative indices can be used to access elements from the end of the collection.
+                ",
+                examples: "
+                    [1, 2, 3][0]
+                    [1, 2, 3][0..1]
+                    { \"name\": \"John\", \"age\": 25 }[\"name\"]
+                ",
+            }
         }
     }
-);
-
-define_handler!(
-    IndexingExpression(pairs, token, state) {
-        let base = unwrap_node!(pairs, state, token)?;
-        let indices = unwrap_next!(pairs, token);
-        let indices = indices
-            .map(|pair| {
-            if pair.as_rule() == Rule::POSTFIX_EMPTYINDEX {
-                Ok::<_, Error>(None)
-            } else {
-                Ok(Some(pair.into_node(state).with_context(&token)?))
-            }
-        })
-        .collect::<Result<Vec<_>, _>>().with_context(&token)?;
-
-        let target = if let node_type!(Values::Reference(reference)) = base {
-            Target::from_target(reference.target, indices)
-        } else {
-            Target::with_const(base, indices)
-        };
-
-        Ok(Reference::new(target, token).into())
-    }
-);
-
-document_operator!(
-    name = "Indexing",
-    rules = [],
-    symbols = ["a[b]", "a[]"],
-    description = "
-        Accessing elements of a collection.
-        The indexing operator can be used to access elements of a collection or string.
-        If the index is a collection, it is used to access multiple elements.
-        If the index is a string, it is used to access a character.
-        If the index is blank, it is used to access the last element of the collection.
-        Negative indices can be used to access elements from the end of the collection.
-    ",
-    examples = "
-        [1, 2, 3][0]
-        [1, 2, 3][0..1]
-        { \"name\": \"John\", \"age\": 25 }[\"name\"]
-    ",
 );

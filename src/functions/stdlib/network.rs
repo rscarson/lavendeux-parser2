@@ -29,7 +29,7 @@ define_stdfunction!(
             resolve('example.com')
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let hostname = required_arg!(state::hostname).to_string();
         Ok(resolve(&hostname).unwrap())
     }
@@ -57,7 +57,7 @@ define_stdfunction!(
             assert(obj_out is array)
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let url = required_arg!(state::url).to_string();
         let headers = optional_arg!(state::headers).unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
         let headers = headers.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect::<HashMap<_, _>>();
@@ -87,7 +87,7 @@ define_stdfunction!(
             )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let url = required_arg!(state::url).to_string();
         let body = required_arg!(state::body).to_string();
         let headers = optional_arg!(state::headers).unwrap_or(Value::from(Object::default())).as_a::<Object>()?;
@@ -121,7 +121,7 @@ define_stdfunction!(
             assert( api_list() contains 'ipify' )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let name = required_arg!(state::name).to_string();
         let endpoint = required_arg!(state::endpoint);
 
@@ -147,7 +147,7 @@ define_stdfunction!(
             assert( !(api_list() contains 'ipify') )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let name = required_arg!(state::name).to_string();
         ApiRegistry::new(state).remove(state, &name);
         Ok(Value::from(name))
@@ -167,7 +167,7 @@ define_stdfunction!(
             api_all()['chatgpt']['base_url']
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         Ok(ApiRegistry::raw(state))
     }
 );
@@ -185,7 +185,7 @@ define_stdfunction!(
             assert( api_list() contains 'chatgpt' )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         Ok(ApiRegistry::new(state).all().keys().cloned().map(Value::from).collect::<Vec<_>>().into())
     }
 );
@@ -208,7 +208,7 @@ define_stdfunction!(
             api_get('ipify', '/?format=json')
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let name = required_arg!(state::name).to_string();
         let path = optional_arg!(state::path).map(|v| v.to_string());
 
@@ -239,7 +239,7 @@ define_stdfunction!(
             api_post('ipify', '{\"name\"=\"john\"}', 'format=json')
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let name = required_arg!(state::name).to_string();
         let path = optional_arg!(state::path).map(|v| v.to_string());
         let body = required_arg!(state::body).to_string();
@@ -271,7 +271,7 @@ define_stdfunction!(
             assert_eq( api_all()['chatgpt']['auth_key'], 'my_super_secret_api_key' )
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let name = required_arg!(state::name).to_string();
         let auth_key = required_arg!(state::auth_key).to_string();
 
@@ -302,7 +302,7 @@ define_stdfunction!(
             chatgpt('What is the meaning of life?')
         "
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let prompt = required_arg!(state::prompt).to_string();
         let registry = ApiRegistry::new(state);
         let api = registry.get("chatgpt").or_error(ErrorDetails::Custom {

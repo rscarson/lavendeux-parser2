@@ -163,5 +163,10 @@ pub const PRECEDENCE_MAP: &[&[PrattOperator]] = &[
     ],
     //
     // Postfix operators
-    &[postfix!(POSTFIX_CALL), postfix!(POSTFIX_INDEX)],
+    &[
+        postfix!(POSTFIX_INC),
+        postfix!(POSTFIX_DEC),
+        postfix!(POSTFIX_CALL),
+        postfix!(POSTFIX_INDEX),
+    ],
 ];

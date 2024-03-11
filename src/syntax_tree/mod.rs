@@ -8,3 +8,4 @@ mod pratt;
 pub mod traits;
 
 pub use nodes::Node;
+pub use nodes::Reference;

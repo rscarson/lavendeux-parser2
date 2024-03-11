@@ -3,6 +3,7 @@ use crate::{
     error::ErrorDetails,
     functions::{stdlib, ParserFunction},
     network::ApiRegistry,
+    syntax_tree::Reference,
     Error, Value,
 };
 use std::{
@@ -14,16 +15,21 @@ use std::{
 /// Stores variables, scoping data, functions, and metadata about the current parse
 #[derive(Debug)]
 pub struct State {
-    /// The state's stackframes
-    /// Stores variables in a stack of scopes
-    /// without resorting to a recursive data structure
-    stack: StateScopes,
+    /// Current depth of the parser
+    /// This is used to prevent infinite recursion
+    /// while parsing user_functions
+    depth: usize,
+    locked: Vec<usize>,
 
     /// The time that the current parse started
     /// This is used to prevent infinite loops
     /// and implement a timeout
     parse_starttime: Instant,
     timeout: Duration,
+
+    /// Registered variables
+    /// Used as a stack for scoping
+    variables: Vec<HashMap<String, Value>>,
 
     /// Registered functions
     functions: HashMap<String, Box<dyn ParserFunction>>,
@@ -33,9 +39,11 @@ impl Default for State {
     fn default() -> Self {
         let stdlib_fns = stdlib::all();
         let mut instance = Self {
-            stack: StateScopes::new(),
+            depth: 0,
+            locked: Vec::new(),
             parse_starttime: std::time::Instant::now(),
             timeout: Duration::from_secs(0),
+            variables: vec![HashMap::new()],
 
             functions: stdlib_fns,
         };
@@ -47,6 +55,12 @@ impl Default for State {
 }
 
 impl State {
+    #[cfg(debug_assertions)]
+    const MAX_DEPTH: usize = 950;
+
+    #[cfg(not(debug_assertions))]
+    const MAX_DEPTH: usize = 2400;
+
     /// Creates a new parser state
     pub fn new() -> Self {
         Self::default()
@@ -86,43 +100,241 @@ impl State {
 
     /**
      *
-     * Stack handling functions
+     * Scope handling functions
      *
      */
 
-    /// Read the state's variable stack
-    pub fn stack(&self) -> &StateScopes {
-        &self.stack
+    /// Returns the current depth of the parser
+    pub fn current_depth(&self) -> usize {
+        self.depth
     }
 
-    /// Mutate the state's variable stack
-    pub fn stack_mut(&mut self) -> &mut StateScopes {
-        &mut self.stack
+    /// Sets the depth to 0, and destroys all scopes but the root scope
+    pub fn sanitize_scopes(&mut self) {
+        self.depth = 0;
+        self.locked = Vec::new();
+        self.variables.truncate(1);
     }
 
-    /// Increase the depth of the stack
+    /// Creates a new scope from this state
+    /// A limit is placed on the depth of scopes that can be created
+    /// This is to prevent infinite recursion
     pub fn scope_into(&mut self) -> Result<(), Error> {
-        self.stack.scope_into()
+        if self.depth >= Self::MAX_DEPTH {
+            return Err(ErrorDetails::StackOverflow.into());
+        }
+
+        self.depth += 1;
+        self.variables.push(HashMap::new());
+
+        Ok(())
     }
 
-    /// Decrease the depth of the stack
-    pub fn scope_out(&mut self) {
-        self.stack.scope_out();
-    }
-
-    /// Lock the current scope
+    /// Locks the current scope, preventing access to variables in higher scopes
     pub fn lock_scope(&mut self) {
-        self.stack.lock_scope();
+        self.locked.push(self.depth);
     }
 
-    /// Read a variable from the state
-    pub fn get(&self, name: &str) -> Option<&Value> {
-        self.stack.get(name)
+    /// Unlocks the current scope, granting access to variables in higher scopes
+    pub fn unlock_scope(&mut self) {
+        self.locked.pop();
     }
 
-    /// Write a value to the stack
-    pub fn set(&mut self, name: &str, value: Value) {
-        self.stack.set(name, value);
+    /// Returns the last valid scope
+    fn last_valid_scope(&self) -> usize {
+        if let Some(lock) = self.locked.last() {
+            *lock
+        } else {
+            0
+        }
+    }
+
+    /// Returns the last valid scope for the parent caller
+    fn last_valid_parent_scope(&self) -> usize {
+        if let Some(lock) = self.locked.iter().rev().nth(1) {
+            *lock
+        } else {
+            0
+        }
+    }
+
+    /// Removes the current scope from this state
+    pub fn scope_out(&mut self) {
+        if self.depth == 0 {
+            return;
+        }
+        self.depth -= 1;
+        self.variables.pop();
+
+        if self.depth < self.last_valid_scope() {
+            self.unlock_scope();
+        }
+    }
+
+    fn get_valid_scopes(&self) -> impl Iterator<Item = &HashMap<String, polyvalue::Value>> {
+        self.variables
+            .iter()
+            .rev()
+            .take(self.depth - self.last_valid_scope() + 1)
+    }
+
+    fn get_valid_scopes_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut HashMap<String, polyvalue::Value>> {
+        let lock = self.last_valid_scope();
+        self.variables.iter_mut().rev().take(self.depth - lock + 1)
+    }
+
+    fn get_valid_parent_scopes(&self) -> impl Iterator<Item = &HashMap<String, polyvalue::Value>> {
+        self.variables
+            .iter()
+            .rev()
+            .skip(1)
+            .take(self.depth - self.last_valid_parent_scope())
+    }
+
+    fn get_valid_parent_scopes_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut HashMap<String, polyvalue::Value>> {
+        let lock = self.last_valid_parent_scope();
+        self.variables
+            .iter_mut()
+            .rev()
+            .skip(1)
+            .take(self.depth - lock)
+    }
+
+    /**
+     *
+     * Variable handling functions
+     *
+     */
+
+    /// Assigns a variable in the state, in the root scope
+    pub fn global_assign_variable(&mut self, name: &str, value: Value) {
+        self.variables[0].insert(name.to_string(), value);
+    }
+
+    /// Gets a variable from the root scope
+    pub fn global_get_variable(&self, name: &str) -> Option<&Value> {
+        self.variables[0].get(name)
+    }
+
+    /// Sets a variable in the a scope offset levels from the current scope
+    /// If that scope does not exist, the variable is not set
+    pub fn set_variable_in_offset(&mut self, offset: usize, name: &str, value: Value) {
+        if let Some(scope) = self.variables.iter_mut().rev().nth(offset) {
+            scope.insert(name.to_string(), value);
+        }
+    }
+
+    /// Sets a variable as if it were in the parent scope
+    /// Bypasses the scope lock
+    pub fn set_variable_as_parent(&mut self, name: &str, value: Value) {
+        let mut scopes = self.get_valid_scopes_mut();
+        scopes.next();
+        for scope in scopes {
+            if scope.contains_key(name) {
+                scope.insert(name.to_string(), value);
+                return;
+            }
+        }
+
+        // If the variable is not found, assign it in the current scope
+        self.set_variable_in_offset(1, name, value)
+    }
+
+    /// Sets a variable in the state
+    pub fn set_variable(&mut self, name: &str, value: Value) {
+        for scope in self.get_valid_scopes_mut() {
+            if scope.contains_key(name) {
+                scope.insert(name.to_string(), value);
+                return;
+            }
+        }
+
+        // If the variable is not found, assign it in the root scope
+        self.set_variable_in_scope(name, value)
+    }
+
+    /// Sets a variable in the current scope
+    pub fn set_variable_in_scope(&mut self, name: &str, value: Value) {
+        if let Some(scope) = self.variables.last_mut() {
+            scope.insert(name.to_string(), value);
+        }
+    }
+
+    /// Returns the value of a variable
+    pub fn get_variable(&self, name: &str) -> Option<&Value> {
+        for scope in self.get_valid_scopes() {
+            if let Some(value) = scope.get(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable, mutably
+    pub fn get_variable_mut(&mut self, name: &str) -> Option<&mut Value> {
+        for scope in self.get_valid_scopes_mut() {
+            if let Some(value) = scope.get_mut(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable from the parent scope
+    pub fn get_variable_as_parent(&self, name: &str) -> Option<&Value> {
+        let scopes = self.get_valid_parent_scopes();
+        for scope in scopes {
+            if let Some(value) = scope.get(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns the value of a variable, mutably from the parent scope
+    pub fn get_variable_mut_as_parent(&mut self, name: &str) -> Option<&mut Value> {
+        let scopes = self.get_valid_parent_scopes_mut();
+        for scope in scopes {
+            if let Some(value) = scope.get_mut(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Deletes a variable from the state
+    pub fn delete_variable(&mut self, name: &str) -> Option<Value> {
+        for scope in self.get_valid_scopes_mut() {
+            if let Some(value) = scope.remove(name) {
+                return Some(value);
+            }
+        }
+        None
+    }
+
+    /// Returns all variables in the state
+    pub fn all_variables(&self) -> HashMap<&str, &Value> {
+        let mut variables = HashMap::new();
+        for scope in self.get_valid_scopes() {
+            variables.extend(scope.iter().map(|(k, v)| (k.as_str(), v)));
+        }
+
+        variables
+    }
+
+    /// Returns all variables in the state
+    /// Ignores the scope lock
+    pub fn all_variables_unscoped(&self) -> HashMap<&str, &Value> {
+        let mut variables = HashMap::new();
+        for scope in self.variables.iter().rev() {
+            variables.extend(scope.iter().map(|(k, v)| (k.as_str(), v)));
+        }
+
+        variables
     }
 
     /**
@@ -186,18 +398,23 @@ impl State {
 
     /// Calls a function in the state
     /// arg1_references maps to the references field of the source [crate::Token]
-    pub fn call_function(&mut self, name: &str, args: Vec<Value>) -> Result<Value, Error> {
+    pub fn call_function(
+        &mut self,
+        name: &str,
+        args: Vec<Value>,
+        reference: Option<&Reference>,
+    ) -> Result<Value, Error> {
         let function = self.get_function(name).ok_or(ErrorDetails::FunctionName {
             name: name.to_string(),
         })?;
         let function = function.clone_self();
-        function.exec(&args, self)
+        function.exec(&args, self, reference)
     }
 
     /// Calls a decorator function
     pub fn decorate(&mut self, name: &str, value: Value) -> Result<String, Error> {
         let name = format!("@{name}");
-        match self.call_function(&name, vec![value]) {
+        match self.call_function(&name, vec![value], None) {
             Ok(value) => Ok(value.to_string()),
             Err(e) if matches!(e.details, ErrorDetails::FunctionName { .. }) => {
                 oops!(DecoratorName {
@@ -214,179 +431,34 @@ impl State {
     }
 }
 
-/// Implementation of the stack of scopes for the parser state
-#[derive(Debug, Clone, Default)]
-pub struct StateScopes {
-    globals: HashMap<String, Value>,
-    frames: Vec<(String, Value)>,
-    locks: Vec<usize>,
-    frame_starts: Vec<usize>,
-}
-impl StateScopes {
-    const MAX_DEPTH: usize = 999;
-
-    /// Creates a blank stack
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Release all locks, and clear all frames
-    /// Leaves the global frame intact
-    pub fn reset(&mut self) {
-        self.frames.clear();
-        self.locks.clear();
-        self.frame_starts.clear();
-    }
-
-    /// Returns the size of the stack, in frames
-    pub fn stack_len(&self) -> usize {
-        self.frames.len()
-    }
-
-    /// Increases the depth of the stack
-    pub fn scope_into(&mut self) -> Result<(), Error> {
-        if self.frame_starts.len() >= Self::MAX_DEPTH {
-            oops!(StackOverflow)
-        } else {
-            self.frame_starts.push(self.stack_len());
-            Ok(())
-        }
-    }
-
-    /// Decreases the depth of the stack
-    pub fn scope_out(&mut self) {
-        if !self.frame_starts.is_empty() {
-            self.frames.truncate(self.frame_starts.pop().unwrap());
-            while self.stack_len() < self.last_valid_scope() {
-                self.unlock_scope();
-            }
-        }
-    }
-
-    /// Locks the current scope, preventing access to variables in higher scopes
-    pub fn lock_scope(&mut self) {
-        self.locks.push(self.stack_len());
-    }
-
-    /// Unlocks the current scope, granting access to variables in higher scopes
-    pub fn unlock_scope(&mut self) {
-        self.locks.pop();
-    }
-
-    /// Returns the index from the bottom of the last frame valid for reading
-    pub fn last_valid_scope(&self) -> usize {
-        self.locks.last().cloned().unwrap_or_default()
-    }
-
-    /// Get a reference to the all valid scopes
-    pub fn get_valid_scopes(&self) -> &[(String, Value)] {
-        let start = self.last_valid_scope();
-        &self.frames[start..]
-    }
-
-    /// Get a reference to the all valid scopes
-    /// If ignore_lock is true, the last lock is ignored
-    pub fn get_valid_scopes_mut(&mut self) -> &mut [(String, Value)] {
-        let start = self.last_valid_scope();
-        &mut self.frames[start..]
-    }
-
-    /// Set a global variable in the bottom of the stack
-    pub fn set_global(&mut self, name: &str, value: Value) {
-        self.globals.insert(name.to_string(), value);
-    }
-
-    /// Get a global variable from the bottom of the stack
-    pub fn get_global(&self, name: &str) -> Option<&Value> {
-        self.globals.get(name)
-    }
-
-    /// Get a value from the stack
-    pub fn get(&self, name: &str) -> Option<&Value> {
-        for (k, v) in self.get_valid_scopes().iter().rev() {
-            if name == k {
-                return Some(v);
-            }
-        }
-        None
-    }
-
-    /// Get a value from the stack
-    pub fn get_mut(&mut self, name: &str) -> Option<&mut Value> {
-        for (k, v) in self.get_valid_scopes_mut().iter_mut().rev() {
-            if name == k {
-                return Some(v);
-            }
-        }
-        None
-    }
-
-    /// Write a value to the stack
-    pub fn set(&mut self, name: &str, value: Value) {
-        if let Some(v) = self.get_mut(name) {
-            *v = value;
-        } else {
-            self.set_top(name, value);
-        }
-    }
-
-    /// Write a value to the top of the stack
-    pub fn set_top(&mut self, name: &str, value: Value) {
-        self.frames.push((name.to_string(), value));
-    }
-
-    /// Deletes a value from the stack
-    pub fn delete(&mut self, name: &str) -> Option<Value> {
-        let index = self
-            .get_valid_scopes_mut()
-            .iter()
-            .rev()
-            .position(|(k, _)| k == name);
-        if let Some(index) = index {
-            let index = self.last_valid_scope() + index;
-            Some(self.frames.remove(index).1)
-        } else {
-            self.globals.remove(name)
-        }
-    }
-
-    /// Returns all variables in the state that are valid for reading
-    pub fn all_variables_in_scope(&self) -> HashMap<&str, &Value> {
-        let mut variables = HashMap::new();
-        for (k, v) in self.get_valid_scopes() {
-            variables.insert(k.as_str(), v);
-        }
-        variables
-    }
-
-    /// Returns all variables in the state, regardless of locks
-    pub fn all_variables(&self) -> HashMap<&str, &Value> {
-        let mut variables = HashMap::new();
-        for (k, v) in &self.frames {
-            variables.insert(k.as_str(), v);
-        }
-        variables
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     #[test]
     fn test_scope() {
         let mut state = State::new();
-        state.set("a", Value::from(2.0));
+        state.set_variable("a", Value::from(2.0));
         state.scope_into().ok();
-        assert_eq!(state.stack_mut().delete("a"), Some(Value::from(2.0)));
-        assert_eq!(state.stack_mut().delete("a"), None);
+        assert_eq!(state.delete_variable("a"), Some(Value::from(2.0)));
+        assert_eq!(state.delete_variable("a"), None);
 
-        state.stack_mut().set_global("b", Value::from(2.0));
+        state.global_assign_variable("b", Value::from(2.0));
+
+        assert_eq!(state.current_depth(), 1);
+        state.scope_out();
+        assert_eq!(state.current_depth(), 0);
 
         state.scope_out();
-        state.scope_out();
+        assert_eq!(state.current_depth(), 0);
 
-        assert_eq!(state.get("a"), None);
-        assert_eq!(state.stack().get_global("b"), Some(&Value::from(2.0)));
+        assert_eq!(state.get_variable("a"), None);
+        assert_eq!(state.get_variable("b"), Some(&Value::from(2.0)));
+
+        state.depth = State::MAX_DEPTH;
+        assert!(matches!(
+            state.scope_into().unwrap_err().details,
+            ErrorDetails::StackOverflow { .. }
+        ));
     }
 
     #[test]
@@ -403,11 +475,11 @@ mod test {
     #[test]
     fn test_all_variables() {
         let mut state = State::new();
-        state.set("a", Value::from(2.0));
+        state.set_variable("a", Value::from(2.0));
         state.scope_into().ok();
-        state.set("b", Value::from(3.0));
+        state.set_variable("b", Value::from(3.0));
 
-        let variables = state.stack.all_variables();
+        let variables = state.all_variables();
         assert!(variables.contains_key("a"));
         assert!(variables.contains_key("b"));
     }

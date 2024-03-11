@@ -21,7 +21,7 @@ macro_rules! define_standard_bitwise_fn {
                 ",
                 examples: $examples,
             },
-            handler = (state) {
+            handler = (state, _reference) {
                 let left = required_arg!(state::left);
                 let right = required_arg!(state::right);
                 Ok(left.bitwise_op(right, BitwiseOperation::$bitwise_op)?)
@@ -49,7 +49,7 @@ define_stdfunction!(
             assert_eq(0b1111_1111u8, not(0b0000_0000u8))
         ",
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let value = required_arg!(state::value);
         Ok(value.bitwise_not()?)
     },
@@ -75,7 +75,7 @@ define_stdfunction!(
             )
         ",
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let value = required_arg!(state::value);
         let shift = required_arg!(state::shift).as_a::<i32>()?;
 
@@ -115,7 +115,7 @@ define_stdfunction!(
             )
         ",
     },
-    handler = (state) {
+    handler = (state, _reference) {
         let value = required_arg!(state::value);
         let shift = required_arg!(state::shift).as_a::<i32>()?;
 

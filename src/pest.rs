@@ -158,7 +158,7 @@ macro_rules! lav {
         fn $test_name() {
             let mut lav = $crate::Lavendeux::new(Default::default());
             lav.parse($body).expect("Error parsing expression");
-            $( assert_eq!(lav.state().get(stringify!($n)).expect(&format!("`{}` was not set", stringify!($n))), &$crate::Value::from($v)); )+
+            $( assert_eq!(lav.state().get_variable(stringify!($n)).expect(&format!("`{}` was not set", stringify!($n))), &$crate::Value::from($v)); )+
         }
     };
 }

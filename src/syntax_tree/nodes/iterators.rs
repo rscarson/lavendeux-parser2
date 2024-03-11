@@ -111,7 +111,7 @@ define_ast!(
 
                     state.scope_into().with_context(this.token())?;
                     if let Some(variable) = &this.variable {
-                        state.set(variable, v);
+                        state.set_variable(variable, v);
                     }
                     if let Some(condition) = &this.condition {
                         let condition = condition.evaluate(state).with_context(this.token());

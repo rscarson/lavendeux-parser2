@@ -1,7 +1,7 @@
 use polyvalue::{Value, ValueType};
 use thiserror::Error;
 
-use super::RuleCategory;
+use super::SyntaxErrorCause;
 
 const BUG_REPORT_URL : &str = "https://github.com/rscarson/lavendeux-parser/issues/new?assignees=&labels=&template=bug_report.md&title=";
 
@@ -30,17 +30,10 @@ pub enum ErrorDetails {
     EmptyBlock,
 
     /// An error caused by a problem with the syntax of the script
-    #[error("Syntax error{}", if expected.len() == 1 {
-        format!("; Expected {}", expected[0])
-    } else if !expected.is_empty() {
-        format!("; Expected one of: {}", RuleCategory::fmt(expected))
-    } else {
-        "".to_string()
-    }
-    )]
+    #[error("Syntax error; {cause}")]
     Syntax {
-        /// List of expected rule categories
-        expected: Vec<RuleCategory>
+        /// Cause of the syntax error
+        cause: SyntaxErrorCause
     },
 
     /// Error causing the parser thread to panic
@@ -91,11 +84,7 @@ pub enum ErrorDetails {
     /// An error caused by a problem with the syntax of the script
     #[error("If statements are required return a value - use 'else' to select a default value")]
     NoElseBlock,
-
-    /// An error caused by a problem with the syntax of the script
-    #[error("Operator assignment is not allowed in destructuring assignment")]
-    DestructuringAssignmentWithOperator,
-
+    
     /// An error caused by a problem with the syntax of the script
     #[error("Did not specify a value for return")]
     UnterminatedReturn,

@@ -94,12 +94,20 @@ define_ast!(
 
                 // Collect arguments
                 let mut arguments = Vec::new();
-
                 for argument in this.arguments.iter() {
                     arguments.push(argument.evaluate(state).with_context(this.token())?);
                 }
 
-                let value = match state.call_function(&this.name, arguments) {
+                // Update reference argument
+                let reference = this.arguments.first().and_then(|arg1| {
+                    if let node_type!(Values::Reference(reference)) = arg1 {
+                        Some(reference)
+                    } else {
+                        None
+                    }
+                });
+
+                let value = match state.call_function(&this.name, arguments, reference) {
                     Ok(value) => value,
                     Err(e) => {
                         if let ErrorDetails::Return { value, .. } = e.details {

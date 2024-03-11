@@ -61,7 +61,7 @@ EXPR = {
 }
     //
     // Postfix
-    postfix_operation = _{POSTFIX_DECORATE | POSTFIX_INDEX | POSTFIX_CALL}
+    postfix_operation = _{POSTFIX_DECORATE | POSTFIX_INDEX | POSTFIX_CALL | postfix_arith}
         POSTFIX_DECORATE = {"@" ~ EOL* ~ identifier}
         POSTFIX_EMPTYINDEX = {(symbol_opensquare ~ EOL* ~ symbol_closesquare)}
         POSTFIX_INDEX = {((symbol_opensquare ~ EOL* ~ EXPR ~ EOL* ~ symbol_closesquare) | POSTFIX_EMPTYINDEX)+}
@@ -69,11 +69,15 @@ EXPR = {
             postfixcall_args = _{(EXPR ~ EOL* ~ symbol_comma ~ EOL*)* ~ EXPR ~ EOL* ~ symbol_comma?}
             POSTFIX_NORMALMODE = {"(" ~ EOL* ~ postfixcall_args? ~ EOL* ~ ")"}
             POSTFIX_OBJECTMODE = {"." ~ EOL* ~ identifier ~ EOL* ~ POSTFIX_NORMALMODE}
+        postfix_arith = _{POSTFIX_INC | POSTFIX_DEC}
+            POSTFIX_INC = {"++"}
+            POSTFIX_DEC = {"--"}
     
     //
     // Prefix
     prefix_op = _{PREFIX_DEL | prefix_arith | PREFIX_BOOL_NOT | PREFIX_BIT_NOT}
-        PREFIX_DEL = @{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
+        PREFIX_DEL = @{del_keyword ~ (WHITESPACE* ~ symbol_at)?}
+            del_keyword = _{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
         PREFIX_BOOL_NOT = {"!" ~ !"="}
         PREFIX_BIT_NOT = {"~" ~ !"="}
         prefix_arith = _{PREFIX_INC | PREFIX_DEC | PREFIX_NEG}

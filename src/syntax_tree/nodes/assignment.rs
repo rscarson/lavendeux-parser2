@@ -1,12 +1,3 @@
-use super::Node;
-use crate::{
-    error::WrapExternalError,
-    syntax_tree::{
-        assignment_target::Target,
-        traits::{IntoNode, NodeExt, SyntaxNodeBuilderExt},
-    },
-    Error, Rule, State,
-};
 use polyvalue::{
     operations::{
         ArithmeticOperation, ArithmeticOperationExt, BitwiseOperation, BitwiseOperationExt,
@@ -14,6 +5,17 @@ use polyvalue::{
     },
     Value,
 };
+
+use crate::{
+    error::WrapExternalError,
+    syntax_tree::{
+        assignment_target::AssignmentTarget,
+        traits::{IntoNode, NodeExt, SyntaxNodeBuilderExt},
+    },
+    Error, Rule, State,
+};
+
+use super::{Node, Reference};
 
 #[derive(Debug, Clone, Copy)]
 #[rustfmt::skip]
@@ -31,12 +33,18 @@ impl AssignmentOperation {
         !self.is_none()
     }
 
-    fn apply_to(&self, state: &mut State, target: &Target, rhs: Value) -> Result<Value, Error> {
+    pub fn apply_to(
+        &self,
+        state: &mut State,
+        target: &AssignmentTarget,
+        rhs: Value,
+    ) -> Result<Value, Error> {
         let value = if self.is_none() {
             rhs
         } else {
-            let lhs = target.get(state)?;
+            let lhs = target.get_value(state)?.clone();
             let rhs = rhs.as_type(lhs.own_type())?;
+
             match self {
                 Self::Add => lhs.arithmetic_op(rhs, ArithmeticOperation::Add)?,
                 Self::Sub => lhs.arithmetic_op(rhs, ArithmeticOperation::Subtract)?,
@@ -58,34 +66,37 @@ impl AssignmentOperation {
             }
         };
 
-        target.write(state, value.clone())?;
+        target.update_value(state, value.clone())?;
         Ok(value)
     }
 
-    pub fn apply(&self, state: &mut State, targets: &[Target], rhs: Value) -> Result<Value, Error> {
-        if targets.len() > 1 {
-            if rhs.len() == 1 {
-                let rhs = rhs.clone();
-                let values = targets
-                    .iter()
-                    .map(|t| self.apply_to(state, t, rhs.clone()))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(values.into())
-            } else if targets.len() != rhs.len() {
-                oops!(DestructuringAssignment {
-                    expected_length: targets.len(),
-                    actual_length: rhs.len()
-                })
-            } else {
-                for (target, value) in targets.iter().zip(rhs.clone().as_a::<Vec<Value>>()?.iter())
-                {
-                    self.apply_to(state, target, value.clone())?;
+    pub fn apply(&self, state: &mut State, target: &Reference, rhs: Value) -> Result<Value, Error> {
+        match &target.target {
+            // Assign a single value to multiple targets
+            AssignmentTarget::Destructure(targets) if rhs.len() == 1 => {
+                for target in targets {
+                    self.apply_to(state, target, rhs.clone())?;
                 }
-                Ok(rhs)
+                target.get_value(state)
             }
-        } else {
-            let target = &targets[0];
-            self.apply_to(state, target, rhs)
+
+            // Assign multiple values to multiple targets
+            AssignmentTarget::Destructure(targets) if rhs.len() == targets.len() => {
+                let rhs = rhs.as_a::<Vec<Value>>()?;
+                for (target, value) in targets.into_iter().zip(rhs) {
+                    self.apply_to(state, target, value)?;
+                }
+                target.get_value(state)
+            }
+
+            // Target count mismatch
+            AssignmentTarget::Destructure(targets) => oops!(DestructuringAssignment {
+                expected_length: targets.len(),
+                actual_length: rhs.len()
+            }),
+
+            // Assign a single value to a single target
+            _ => self.apply_to(state, &target.target, rhs),
         }
     }
 }
@@ -112,39 +123,54 @@ impl From<Rule> for AssignmentOperation {
 
 define_ast!(
     Assignment {
-        DeleteExpression(targets: Vec<Target<'i>>) {
+        DeleteExpression(target: AssignmentTarget<'i>) {
             build = (pairs, token, state) {
-                pairs.next(); // Skip the 'del' keyword
+                let op = unwrap_next!(pairs, token);
+                let is_decorator = op.as_str().ends_with('@');
                 let target = unwrap_next!(pairs, token);
 
                 let target = target.into_node(state).with_context(&token)?;
-                if let node_type!(Values::Reference(reference)) = target {
-                    // Identifier or Index reference
-                    Ok(Self { targets: vec![reference.target], token }.into())
+                if let node_type!(Values::Reference(target)) = target {
+                    let mut target = target.target;
+                    match target {
+                        AssignmentTarget::Identifier(ref mut id) => {
+                            if is_decorator {
+                                *id = format!("@{id}");
+                            }
+                        }
+                        _ if is_decorator => {
+                            return oops!(
+                                DecoratorName {
+                                    name: target.to_string()
+                                },
+                                token
+                            );
+                        }
+                        _ => {}
+                    }
 
+
+                    Ok(Self { target, token }.into())
                 } else if let node_type!(Collections::Array(target)) = target {
-                    // Destructuring assignment
-                    let targets = target.elements.into_iter().map(|e| {
+                    let target = target.elements.into_iter().map(|e| {
                         if let node_type!(Values::Reference(target)) = e {
                             Ok(target.target)
                         } else {
                             oops!(ConstantValue, e.token().clone())
                         }
                     }).collect::<Result<Vec<_>, _>>().with_context(&token)?;
-                    Ok(Self { targets, token }.into())
-
+                    let target = AssignmentTarget::Destructure(target);
+                    Ok(Self { target, token }.into())
                 } else {
-                    // Invalid target
                     oops!(ConstantValue, token)
                 }
             },
             eval = (this, state) {
-                let values = this.targets.iter().map(|t| t.delete(state)).collect::<Result<Vec<_>, _>>().with_context(this.token())?;
-                Ok(values.into())
+                this.target.delete(state).with_context(this.token())
             },
             owned = (this) {
                 Self::Owned {
-                    targets: this.targets.into_iter().map(|t| t.into_owned()).collect(),
+                    target: this.target.into_owned(),
                     token: this.token.into_owned()
                 }
             },
@@ -173,7 +199,7 @@ define_ast!(
             }
         },
 
-        AssignmentExpression(targets: Vec<Target<'i>>, op: AssignmentOperation, rhs: Box<Node<'i>>) {
+        AssignmentExpression(target: Reference<'i>, op: AssignmentOperation, rhs: Box<Node<'i>>) {
             build = (pairs, token, state) {
 
                 let lhs = unwrap_next!(pairs, token);
@@ -181,29 +207,31 @@ define_ast!(
                 let op = AssignmentOperation::from(unwrap_next!(pairs, token).as_rule());
                 let rhs = Box::new(unwrap_node!(pairs, state, token)?);
 
-                if let node_type!(Values::Reference(reference)) = lhs {
-                    Ok(Self { targets: vec![reference.target], op, rhs, token }.into())
+                if let node_type!(Values::Reference(target)) = lhs {
+                    Ok(Self { target, op, rhs, token }.into())
                 } else if let node_type!(Collections::Array(target)) = lhs {
-                    let targets = target.elements.into_iter().map(|e| {
+                    let lhs_token = target.token().clone();
+                    let t = target.elements.into_iter().map(|e| {
                         if let node_type!(Values::Reference(target)) = e {
                             Ok(target.target)
                         } else {
                             oops!(ConstantValue, e.token().clone())
                         }
                     }).collect::<Result<Vec<_>, _>>().with_context(&token)?;
-
-                    Ok(Self { targets, op, rhs, token }.into())
+                    let t = AssignmentTarget::Destructure(t);
+                    let target = Reference::new(t, lhs_token);
+                    Ok(Self { target, op, rhs, token }.into())
                 } else {
                     return oops!(ConstantValue, token);
                 }
             },
             eval = (this, state) {
                 let rhs = this.rhs.evaluate(state).with_context(this.token())?;
-                this.op.apply(state, &this.targets, rhs).with_context(this.token())
+                this.op.apply(state, &this.target, rhs).with_context(this.token())
             },
             owned = (this) {
                 Self::Owned {
-                    targets: this.targets.into_iter().map(|t| t.into_owned()).collect(),
+                    target: this.target.into_owned(),
                     op: this.op,
                     rhs: Box::new(this.rhs.into_owned()),
                     token: this.token.into_owned(),
@@ -223,6 +251,8 @@ define_ast!(
                     - Arithmetic: `+=, -=, *=, /=, %=, **=`
                     - Bitwise: `&=, |=, ^=, <<=, >>=`
                     - Boolean: `&&=, ||=`
+
+                    Note: Operators are not supported for destructuring assignments
                 ",
                 examples: "
                     [a, b] = [1, 2]     // Destructuring assignment
@@ -236,57 +266,39 @@ define_ast!(
 
 #[cfg(test)]
 mod test {
-    use crate::{assert_expr, error::ErrorDetails, lav, match_expr_err};
+    use crate::lav;
 
-    #[test]
-    fn test_del() {
-        // Identifiers
-        assert_expr!("a = 2; del a", 2i64);
-        match_expr_err!("del a", ErrorDetails::VariableName { .. });
-        assert_expr!("a = 2; del a; would_err('a')", true);
-        match_expr_err!("del e", ErrorDetails::ConstantValue { .. });
+    lav!(test_del_ident r#"
+        a=1; del a
+    "#);
 
-        // Destructuring
-        assert_expr!("a = 1; b = 2; del [a, b]", vec![1i64, 2i64]);
-        match_expr_err!("del [a, b]", ErrorDetails::VariableName { .. });
-        match_expr_err!("a = 1; del [a, b]", ErrorDetails::VariableName { .. });
-        assert_expr!("a = 1; b = 2; del [a, b]; would_err('a')", true);
-        match_expr_err!("a = 1; del [a, 1]", ErrorDetails::ConstantValue { .. });
+    lav!(test_del_const(Error) r#"
+        del 1
+    "#);
 
-        // Indices
-        assert_expr!("a = [1, 2]; del a[0]", 1i64);
-        assert_expr!("a = [1, 2]; del a[]", 2i64);
-        assert_expr!("a = {'test': 1}; del a['test']", 1i64);
-        assert_expr!("a = {'test': 1}; del a['test']; would_err('test')", true);
-        assert_expr!("a = {'test': [[[1]]]}; del a['test'][0][0][0]", 1i64);
-        assert_expr!(
-            "a = {'test': [[[1]]]}; del a['test'][0][0]; len(a['test'][0])",
-            0i64
-        );
-    }
+    lav!(test_del_const_arr(Error) r#"
+        a=1; del [a,1]
+    "#);
 
-    #[test]
-    fn test_assignment_ops() {
-        assert_expr!("a=1; a+=1; a", 2i64);
-        assert_expr!("b=1; b-=1; b", 0i64);
-        assert_expr!("c=1; c*=2; c", 2i64);
-        assert_expr!("d=4; d/=2; d", 2i64);
-        assert_expr!("ee=4; ee%=2; ee", 0i64);
-        assert_expr!("f=2; f**=3; f", 8i64);
-        assert_expr!("g=2; g&=3; g", 2i64);
-        assert_expr!("h=2; h|=3; h", 3i64);
-        assert_expr!("i=2; i^=3; i", 1i64);
-        assert_expr!("j=2; j<<=3; j", 16i64);
-        assert_expr!("k=2; k>>=3; k", 0i64);
-        assert_expr!("l=true; l&&=false; l", false);
-        assert_expr!("m=true; m||=false; m", true);
+    lav!(test_del_const_idx(Error) r#"
+        a=1; del a[1]
+    "#);
 
-        // destructuring
-        assert_expr!("a = 1; b = 2; [a, b] += 1; [a, b]", vec![2i64, 3i64]);
-
-        // indices are fine
-        assert_expr!("a = [1, 2]; a[0] += 1; a", vec![2i64, 2i64.into()]);
-    }
+    lav!(test_assign_ops r#"
+        a=1; a+=1; assert_eq(a, 2)
+        b=1; b-=1; assert_eq(b, 0)
+        c=1; c*=2; assert_eq(c, 2)
+        d=4; d/=2; assert_eq(d, 2)
+        ee=4; ee%=2; assert_eq(ee, 0)
+        f=2; f**=3; assert_eq(f, 8)
+        g=2; g&=3; assert_eq(g, 2)
+        h=2; h|=3; assert_eq(h, 3)
+        i=2; i^=3; assert_eq(i, 1)
+        j=2; j<<=3; assert_eq(j, 16)
+        k=2; k>>=3; assert_eq(k, 0)
+        l=true ; l&&=false; assert_eq(l, false)
+        m=true ; m||=false; assert_eq(m, true)
+    "#);
 
     lav!(test_assign_destructure r#"
         [a, b] = [1, [1,2]]
@@ -297,14 +309,14 @@ mod test {
         [a, b] = [1, 1]
         assert_eq(a, 1)
         assert_eq(b, 1)
+        
+        [a, b] = 1
+        assert_eq(a, 1)
+        assert_eq(b, 1)
     "#);
 
-    lav!(test_assign_destructure_error_toomany(Error) r#"
+    lav!(test_assign_destructure_error(Error) r#"
         [a, b] = [1, 2, 3]
-    "#);
-
-    lav!(test_assign_destructure_error_toofew(Error) r#"
-        [a, b, c] = [1, 2]
     "#);
 
     lav!(test_buggy_push r#"

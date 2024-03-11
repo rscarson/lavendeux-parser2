@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{Error, State};
+use crate::{syntax_tree::Reference, Error, State};
 use polyvalue::{Value, ValueType};
 
 use super::FunctionDocumentation;
@@ -104,9 +104,9 @@ impl ManageArguments for Vec<(Cow<'_, str>, FunctionArgument)> {
                         break;
                     }
                 }
-                state.set(name, Value::array(matches));
+                state.set_variable(name, Value::array(matches));
             } else {
-                state.set(name, next);
+                state.set_variable(name, next);
             }
         }
 
@@ -152,7 +152,7 @@ where
     fn documentation_mut(&mut self) -> &mut dyn FunctionDocumentation;
 
     /// Call the function's handler - use exec instead to map arguments first
-    fn call(&self, state: &mut State) -> Result<Value, Error>;
+    fn call(&self, state: &mut State, reference: Option<&Reference>) -> Result<Value, Error>;
 
     /// Loads the arguments into the state
     fn load_arguments(&self, values: &[Value], state: &mut State) -> Result<(), Error> {
@@ -196,12 +196,17 @@ where
     /// Executes the function with the given values
     /// Values are checked mapped into the state into a new scope
     /// arg1_references is used to add a pass-by-reference flag to the first argument
-    fn exec(&self, values: &[Value], state: &mut State) -> Result<Value, Error> {
+    fn exec(
+        &self,
+        values: &[Value],
+        state: &mut State,
+        reference: Option<&Reference>,
+    ) -> Result<Value, Error> {
         state.scope_into()?;
         state.lock_scope();
         self.load_arguments(values, state)?;
 
-        let result = self.call(state);
+        let result = self.call(state, reference);
         state.scope_out();
 
         result

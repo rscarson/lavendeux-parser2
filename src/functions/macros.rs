@@ -18,7 +18,7 @@
 ///             )
 ///         "
 ///     },
-///     handler = (state) {
+///     handler = (state, reference) {
 ///         let a = required_arg!(state::a).as_a::<i64>()?;
 ///         let b = required_arg!(state::b).as_a::<i64>()?;
 ///         Ok((a + b).into())
@@ -43,7 +43,7 @@ macro_rules! define_stdfunction {
             ext_description: $ext_description:literal,
             examples: $examples:literal$(,)?
         },
-        handler = ($hndstate:ident) $handler:block$(,)?
+        handler = ($hndstate:ident, $hndref:ident) $handler:block$(,)?
     ) => {
         paste::paste! {
             #[allow(non_camel_case_types)]
@@ -103,7 +103,7 @@ macro_rules! define_stdfunction {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, $hndstate: &mut $crate::State) -> Result<$crate::polyvalue::Value, $crate::Error> $handler
+                fn call(&self, $hndstate: &mut $crate::State, $hndref: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> $handler
             }
 
             inventory::submit! {
@@ -211,7 +211,7 @@ macro_rules! define_stddecorator {
                     Box::new(Self::new())
                 }
 
-                fn call(&self, state: &mut $crate::State) -> Result<$crate::polyvalue::Value, $crate::Error> {
+                fn call(&self, state: &mut $crate::State, _: Option<&$crate::Reference>) -> Result<$crate::polyvalue::Value, $crate::Error> {
                     let $hndval = $crate::required_arg!(state::$aname);
                     let value: Result<String, $crate::Error> = $handler;
                     Ok(value?.into())
@@ -230,7 +230,7 @@ macro_rules! define_stddecorator {
 #[macro_export]
 macro_rules! required_arg {
     ($state:ident :: $name:ident) => {
-        match $state.get(stringify!($name)).cloned() {
+        match $state.get_variable(stringify!($name)).cloned() {
             Some(v) => v,
             None => {
                 return $crate::oops!(Internal {
@@ -246,6 +246,6 @@ macro_rules! required_arg {
 #[macro_export]
 macro_rules! optional_arg {
     ($state:ident :: $name:ident) => {
-        $state.get(stringify!($name)).cloned()
+        $state.get_variable(stringify!($name)).cloned()
     };
 }

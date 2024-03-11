@@ -6,7 +6,7 @@ use crate::{
         traits::{IntoOwned, NodeExt},
         Node,
     },
-    Error, Lavendeux, Rule, State,
+    Error, Lavendeux, Reference, Rule, State,
 };
 use polyvalue::{Value, ValueType};
 
@@ -77,7 +77,7 @@ impl ParserFunction for UserDefinedFunction<'_> {
         })
     }
 
-    fn call(&self, state: &mut State) -> Result<Value, Error> {
+    fn call(&self, state: &mut State, _reference: Option<&Reference>) -> Result<Value, Error> {
         // Execute the body - this is checked in the constructor
         // so we can unwrap here
         match self.body.evaluate(state) {

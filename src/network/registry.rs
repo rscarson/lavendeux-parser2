@@ -23,8 +23,7 @@ impl ApiRegistry {
     /// Get the raw value of the registry from the state object
     pub fn raw(state: &State) -> Value {
         state
-            .stack()
-            .get_global(Self::STORE_NAME)
+            .global_get_variable(Self::STORE_NAME)
             .cloned()
             .unwrap_or(Object::default().into())
     }
@@ -47,9 +46,7 @@ impl ApiRegistry {
             .iter()
             .map(|(k, v)| (k.to_string(), v.clone()))
             .collect::<Vec<(_, _)>>();
-        state
-            .stack_mut()
-            .set_global(Self::STORE_NAME, Value::try_from(obj).unwrap());
+        state.global_assign_variable(Self::STORE_NAME, Value::try_from(obj).unwrap());
     }
 
     /// Add a new API to the registry
