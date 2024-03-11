@@ -44,7 +44,7 @@ impl ApiRegistry {
         let obj = self
             .0
             .iter()
-            .map(|(k, v)| (Value::from(k.to_string()), v.clone().into()))
+            .map(|(k, v)| (k.to_string(), v.clone()))
             .collect::<Vec<(_, _)>>();
         state.global_assign_variable(Self::STORE_NAME, Value::try_from(obj).unwrap());
     }

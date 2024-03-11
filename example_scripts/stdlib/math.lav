@@ -36,17 +36,17 @@ assert_eq(_abs(1), 1)
 
 // ceil(numeric) -> float : Rounds a number up to the nearest integer                  
 _ceil(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 : n - n % 1 + 1) as int
-assert_eq(_ceil(1.1), 2.0)
-assert_eq(_ceil(1.9), 2.0)
-assert_eq(_ceil(-1.1), -1.0)
-assert_eq(_ceil(-1.9), -1.0)
+assert_eq(_ceil(1.1), 2)
+assert_eq(_ceil(1.9), 2)
+assert_eq(_ceil(-1.1), -1)
+assert_eq(_ceil(-1.9), -1)
 
 // floor(numeric) -> float : Rounds a number down to the nearest integer               
 _floor(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 - 1 : n - n % 1) as int
-assert_eq(_floor(1.1), 1.0)
-assert_eq(_floor(1.9), 1.0)
-assert_eq(_floor(-1.1), -2.0)
-assert_eq(_floor(-1.9), -2.0)
+assert_eq(_floor(1.1), 1)
+assert_eq(_floor(1.9), 1)
+assert_eq(_floor(-1.1), -2)
+assert_eq(_floor(-1.9), -2)
 
 
 // max(compound) -> float : Returns the largest value in a set
