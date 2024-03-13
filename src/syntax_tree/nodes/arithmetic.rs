@@ -95,7 +95,7 @@ define_ast!(
                 pairs.next(); // Skip the operator
                 let value = unwrap_node!(pairs, state, token)?;
                 Ok(Self {
-                    value: value,
+                    value,
                     token,
                 }
                 .into())
@@ -144,9 +144,9 @@ define_ast!(
                 let rhs = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
-                    lhs: lhs,
+                    lhs,
                     op,
-                    rhs: rhs,
+                    rhs,
                     token,
                 }
                 .into())

@@ -215,9 +215,9 @@ define_handler!(
         let else_branch = unwrap_node!(pairs, state, token)?;
 
         Ok(IfExpression {
-            condition: condition,
-            then_branch: then_branch,
-            else_branch: else_branch,
+            condition,
+            then_branch,
+            else_branch,
             token,
         }.into())
     }

@@ -64,7 +64,7 @@ mod test {
                 continue;
             }
 
-            match parser.parse(&examples) {
+            match parser.parse(examples) {
                 Ok(_) => {}
                 Err(e) => {
                     errors.push(Error {

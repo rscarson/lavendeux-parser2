@@ -21,7 +21,7 @@ define_stdfunction!(
         Ok(Value::from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_else(|_| std::time::Duration::ZERO)
+                .unwrap_or(std::time::Duration::ZERO)
                 .as_secs_f64(),
         ))
     }

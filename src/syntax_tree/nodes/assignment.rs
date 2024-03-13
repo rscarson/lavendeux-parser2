@@ -86,7 +86,7 @@ impl AssignmentOperation {
             // Assign multiple values to multiple targets
             AssignmentTarget::Destructure(targets) if rhs.len() == targets.len() => {
                 let rhs = rhs.as_a::<Vec<Value>>()?;
-                for (target, value) in targets.into_iter().zip(rhs) {
+                for (target, value) in targets.iter().zip(rhs) {
                     self.apply_to(state, target, value)?;
                 }
                 target.get_value(state)
@@ -99,7 +99,7 @@ impl AssignmentOperation {
             }),
 
             // Assign a single value to a single target
-            _ => self.apply_to(state, &target, rhs),
+            _ => self.apply_to(state, target, rhs),
         }
     }
 }

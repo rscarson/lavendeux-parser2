@@ -10,11 +10,11 @@ pub fn resolve(hostname: &str) -> Result<Value, Error> {
     match (hostname, 0).to_socket_addrs() {
         Ok(mut addresses) => {
             if let Some(addr) = addresses.next() {
-                return Ok(Value::from(addr.ip().to_string()));
+                Ok(Value::from(addr.ip().to_string()))
             } else {
-                return oops!(Custom {
+                oops!(Custom {
                     msg: format!("No addresses found for `{hostname}`")
-                });
+                })
             }
         }
         Err(e) => Err(e.into()),

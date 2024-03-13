@@ -39,7 +39,7 @@ define_ast!(
             },
 
             eval = (this, state) {
-                Ok(this.target.get_value(state).with_context(this.token())?)
+                this.target.get_value(state).with_context(this.token())
             },
 
             owned = (this) {
@@ -58,8 +58,8 @@ define_ast!(
                 let target = unwrap_node!(pairs, state, token)?;
 
                 Ok(Self {
-                    value: value,
-                    target: target,
+                    value,
+                    target,
                     token,
                 }
                 .into())
@@ -108,7 +108,7 @@ define_ast!(
                 let decorator = unwrap_next!(decorator_pair, token).as_str().to_string();
 
                 Ok(Self {
-                    expression: expression,
+                    expression,
                     decorator,
                     token,
                 }
@@ -171,8 +171,8 @@ define_ast!(
                 };
 
                 Ok(Self {
-                    left: left,
-                    right: right,
+                    left,
+                    right,
                     operator,
                     token,
                 }

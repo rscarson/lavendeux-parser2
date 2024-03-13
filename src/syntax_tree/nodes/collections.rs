@@ -201,11 +201,7 @@ define_ast!(
                 .collect::<Result<Vec<_>, _>>().with_context(&token)?;
 
                 let is_reference = match base {
-                    Node::Values(ref node) => match &**node {
-                        super::Values::Reference(_) => true,
-                        _ => false,
-
-                    },
+                    Node::Values(ref node) => matches!(&**node, super::Values::Reference(_)),
                     _ => false,
                 };
 

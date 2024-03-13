@@ -79,6 +79,7 @@ macro_rules! define_ast {
             }),+
         }
     ) => {
+        #[allow(clippy::enum_variant_names)]
         #[enum_dispatch::enum_dispatch]
         #[derive(Debug, Clone)]
         pub enum $name<'i> {

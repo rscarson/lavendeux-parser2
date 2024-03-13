@@ -8,7 +8,7 @@ define_ast!(Bitwise {
             pairs.next(); // Skip the operator
             let value = unwrap_node!(pairs, state, token)?;
             Ok(Self {
-                value: value,
+                value,
                 token,
             }
             .into())

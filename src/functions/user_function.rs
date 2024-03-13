@@ -88,10 +88,10 @@ impl ParserFunction for UserDefinedFunction<'_> {
             Ok(v) => Ok(v.as_type(self.returns)?),
             Err(e) => {
                 if let ErrorDetails::Return { value } = e.details {
-                    return Ok(value.as_type(self.returns)?);
+                    Ok(value.as_type(self.returns)?)
                 } else {
                     let e = e.offset_linecount(self.src_line_offset);
-                    return Err(e);
+                    Err(e)
                 }
             }
         }
