@@ -26,10 +26,7 @@ impl LavendeuxParser {
         Node::from_pair(root_pair, state)
     }
 
-    pub fn parse2(
-        input: &str,
-        rule: Rule,
-    ) -> Result<pest::iterators::Pair<'_, Rule>, Error> {
+    pub fn parse2(input: &str, rule: Rule) -> Result<pest::iterators::Pair<'_, Rule>, Error> {
         let pairs = stacker::maybe_grow(Node::STACK_EXP * 10, Node::STACK_EXP * 10, || {
             Self::parse(rule, input).wrap_syntax_error(input)
         })?;
