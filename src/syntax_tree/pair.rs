@@ -178,3 +178,19 @@ impl<'i> ExactSizeIterator for InnerPestIterator<'i> {
         self.0.len()
     }
 }
+
+impl<'i> From<Vec<PestIterator<'i>>> for InnerPestIterator<'i> {
+    fn from(pairs: Vec<PestIterator<'i>>) -> Self {
+        Self(pairs.into())
+    }
+}
+
+pub trait Reiterate<'i> {
+    /// Convert a Vec of PestIterators into an InnerPestIterator
+    fn reiterate(self) -> InnerPestIterator<'i>;
+}
+impl<'i> Reiterate<'i> for Vec<PestIterator<'i>> {
+    fn reiterate(self) -> InnerPestIterator<'i> {
+        self.into()
+    }
+}

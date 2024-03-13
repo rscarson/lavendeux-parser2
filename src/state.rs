@@ -55,11 +55,7 @@ impl Default for State {
 }
 
 impl State {
-    #[cfg(debug_assertions)]
-    const MAX_DEPTH: usize = 950;
-
-    #[cfg(not(debug_assertions))]
-    const MAX_DEPTH: usize = 2400;
+    const MAX_DEPTH: usize = 15000;
 
     /// Creates a new parser state
     pub fn new() -> Self {
@@ -120,7 +116,10 @@ impl State {
     /// A limit is placed on the depth of scopes that can be created
     /// This is to prevent infinite recursion
     pub fn scope_into(&mut self) -> Result<(), Error> {
-        if self.depth >= Self::MAX_DEPTH {
+        // If stacker reports < 1MB of stack remaining, then we need to stop
+        if self.depth >= Self::MAX_DEPTH
+            || stacker::remaining_stack() < Some(crate::pest::Node::MIN_STACK)
+        {
             return Err(ErrorDetails::StackOverflow.into());
         }
 
@@ -218,6 +217,11 @@ impl State {
     /// Gets a variable from the root scope
     pub fn global_get_variable(&self, name: &str) -> Option<&Value> {
         self.variables[0].get(name)
+    }
+
+    /// Deletes a variable from the root scope
+    pub fn global_delete_variable(&mut self, name: &str) -> Option<Value> {
+        self.variables[0].remove(name)
     }
 
     /// Sets a variable in the a scope offset levels from the current scope

@@ -309,6 +309,10 @@ mod test {
 
         a[] = [[[3]]]
         assert_eq(a[][][0][], 3)
+
+        a = [[]]
+        assert_eq(push(a[], 1), [1])
+        assert_eq(a, [[1]])
     "#);
 
     lav!(test_assign_idx_error(Error) r#"

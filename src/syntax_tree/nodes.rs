@@ -76,6 +76,14 @@ pub enum Node<'i> {
     Literal(Value, Token<'i>),
 }
 impl Node<'_> {
+    /// The minimum available stack size for the parser
+    /// We are guaranteed to have at least this much stack
+    pub const MIN_STACK: usize = 1024 * 1024;
+
+    /// The stack expansion size for the parser
+    /// This is the amount of stack to allocate when the parser runs out
+    pub const STACK_EXP: usize = 8 * 1024 * 1024;
+
     /// This is where rules are matched to node-builder types
     pub fn from_pair<'i>(pair: Pair<'i, Rule>, state: &mut State) -> Result<Node<'i>, Error> {
         let pairs = PestIterator::from(pair);
@@ -90,7 +98,7 @@ impl Node<'_> {
 
         // println!("{:#?}", pairs);
 
-        match token.rule {
+        stacker::maybe_grow(Node::MIN_STACK, Node::STACK_EXP, || match token.rule {
             //
             // Core nodes
             Rule::SCRIPT => core::Script::build(pairs, token, state),
@@ -170,6 +178,8 @@ impl Node<'_> {
             Rule::OP_BOOL_OR
             | Rule::OP_BOOL_AND
             | Rule::OP_BOOL_EQ
+            | Rule::OP_BOOL_SNE
+            | Rule::OP_BOOL_SEQ
             | Rule::OP_BOOL_NE
             | Rule::OP_BOOL_LE
             | Rule::OP_BOOL_GE
@@ -212,7 +222,7 @@ impl Node<'_> {
             Rule::MISSING_LINEBREAK => oops!(UnterminatedLinebreak),
 
             _ => panic!("No node builder for rule {:?}", token.rule),
-        }
+        })
     }
 }
 impl IntoOwned for Node<'_> {
@@ -235,7 +245,7 @@ impl IntoOwned for Node<'_> {
 }
 impl<'i> NodeExt<'i> for Node<'i> {
     fn evaluate(&self, state: &mut State) -> Result<Value, Error> {
-        match self {
+        stacker::maybe_grow(Node::MIN_STACK, Node::STACK_EXP, || match self {
             Self::Core(node) => node.evaluate(state),
             Self::Assignment(node) => node.evaluate(state),
             Self::Collections(node) => node.evaluate(state),
@@ -247,7 +257,7 @@ impl<'i> NodeExt<'i> for Node<'i> {
             Self::Bitwise(node) => node.evaluate(state),
             Self::Boolean(node) => node.evaluate(state),
             Self::Literal(value, ..) => Ok(value.clone()),
-        }
+        })
     }
 
     fn token(&self) -> &Token<'i> {

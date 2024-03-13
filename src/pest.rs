@@ -30,7 +30,9 @@ impl LavendeuxParser {
         input: &'i str,
         rule: Rule,
     ) -> Result<pest::iterators::Pair<'i, Rule>, Error> {
-        let pairs = Self::parse(rule, input).wrap_syntax_error(input)?;
+        let pairs = stacker::maybe_grow(Node::STACK_EXP * 10, Node::STACK_EXP * 10, || {
+            Self::parse(rule, input).wrap_syntax_error(input)
+        })?;
         if let Some(pair) = pairs.flatten().next() {
             Ok(pair)
         } else {

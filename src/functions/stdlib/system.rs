@@ -485,6 +485,31 @@ define_stdfunction!(
 );
 
 define_stdfunction!(
+    delete_global {
+        name: Standard::String
+    },
+    returns = Any,
+
+    docs = {
+        category: "System",
+        description: "Removes a variable from the top-level scope",
+        ext_description: "
+            Removes a value from the top-level scope, leaving other scopes unchanged.
+        ",
+        examples: "
+            assign_global('x', 6)
+            delete_global('x')
+        ",
+    },
+    handler = (state, _reference) {
+        let name = required_arg!(state::name).to_string();
+        state.global_delete_variable(&name).or_error(ErrorDetails::VariableName {
+            name
+        })
+    },
+);
+
+define_stdfunction!(
     global {
         name: Standard::String
     },

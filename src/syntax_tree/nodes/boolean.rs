@@ -47,6 +47,8 @@ define_ast!(Boolean {
             let op = match op.as_rule() {
                 Rule::OP_BOOL_OR => BooleanOperation::Or,
                 Rule::OP_BOOL_AND => BooleanOperation::And,
+                Rule::OP_BOOL_SEQ => BooleanOperation::StrictEQ,
+                Rule::OP_BOOL_SNE => BooleanOperation::StrictNEQ,
                 Rule::OP_BOOL_EQ => BooleanOperation::EQ,
                 Rule::OP_BOOL_NE => BooleanOperation::NEQ,
                 Rule::OP_BOOL_LE => BooleanOperation::LTE,
@@ -91,17 +93,23 @@ define_ast!(Boolean {
 
         docs = {
             name: "Boolean",
-            symbols = ["or", "and", "==", "!=", "<=", ">=", "<", ">"],
+            symbols = ["or", "and", "==", "!=", "===", "!==", "<=", ">=", "<", ">"],
             description: "
                 Performs an infix boolean comparison between two values.
                 Comparisons are weak, meaning that the types of the values are not checked.
                 Result are always a boolean value.
                 And and Or are short-circuiting.
                 All are left-associative.
+
+                Most comparisons are weak, meaning that the types of the values are not checked.
+                Strict comparisons (=== and !==) are also available, which checks the type of the values before comparing.
+                Comparing collections (arrays and objects) will perform strict comparisons on their contents.
             ",
             examples: "
                 true || false
                 1 < 2
+                assert(false == 0)
+                assert(false !== 0)
             ",
         }
     }

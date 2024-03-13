@@ -30,27 +30,27 @@
  */
 
 // abs(numeric) -> float : Returns the absolute value of a number                      
-_abs(n) = n < 0 ? -n : n
-assert_eq(_abs(-1), 1)
-assert_eq(_abs(1), 1)
+__abs(n) = n < 0 ? -n : n
+assert_eq(__abs(-1), 1)
+assert_eq(__abs(1), 1)
 
 // ceil(numeric) -> float : Rounds a number up to the nearest integer                  
-_ceil(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 : n - n % 1 + 1) as int
-assert_eq(_ceil(1.1), 2)
-assert_eq(_ceil(1.9), 2)
-assert_eq(_ceil(-1.1), -1)
-assert_eq(_ceil(-1.9), -1)
+__ceil(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 : n - n % 1 + 1) as int
+assert_eq(__ceil(1.1), 2)
+assert_eq(__ceil(1.9), 2)
+assert_eq(__ceil(-1.1), -1)
+assert_eq(__ceil(-1.9), -1)
 
 // floor(numeric) -> float : Rounds a number down to the nearest integer               
-_floor(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 - 1 : n - n % 1) as int
-assert_eq(_floor(1.1), 1)
-assert_eq(_floor(1.9), 1)
-assert_eq(_floor(-1.1), -2)
-assert_eq(_floor(-1.9), -2)
+__floor(n) = (n % 1 == 0 ? n : n < 0 ? n - n % 1 - 1 : n - n % 1) as int
+assert_eq(__floor(1.1), 1)
+assert_eq(__floor(1.9), 1)
+assert_eq(__floor(-1.1), -2)
+assert_eq(__floor(-1.9), -2)
 
 
 // max(compound) -> float : Returns the largest value in a set
-_max(a) = {
+__max(a) = {
     v = a[0]
     for i in a do {
         v = if i > v then {
@@ -61,11 +61,11 @@ _max(a) = {
     }
     v
 }
-assert_eq(_max([1, 2, 3]), 3)
-assert_eq(_max([3, 2, 1]), 3)
+assert_eq(__max([1, 2, 3]), 3)
+assert_eq(__max([3, 2, 1]), 3)
 
 // min(compound) -> float : Returns the smallest value in a set
-_min(a) = {
+__min(a) = {
     v = a[0]
     for i in a do {
         v = if i < v then {
@@ -76,17 +76,17 @@ _min(a) = {
     }
     v
 }
-assert_eq(_min([1, 2, 3]), 1)
-assert_eq(_min([3, 2, 1]), 1)
+assert_eq(__min([1, 2, 3]), 1)
+assert_eq(__min([3, 2, 1]), 1)
 
 // round(numeric, int) -> float : Rounds a number to a given precision
-_round(n, p) = {
+__round(n, p) = {
     m = 10 ** p
     _n = n * m
-    _n = _n % 1 >= 0.5 ? _ceil(_n) : _floor(_n)
+    _n = _n % 1 >= 0.5 ? __ceil(_n) : __floor(_n)
     (_n as float) / m
 }
-assert_eq(_round(1.123, 2), 1.12)
-assert_eq(_round(1.125, 2), 1.13)
-assert_eq(_round(1.123, 0), 1.0)
-assert_eq(_round(1.5, 0), 2.0)
+assert_eq(__round(1.123, 2), 1.12)
+assert_eq(__round(1.125, 2), 1.13)
+assert_eq(__round(1.123, 0), 1.0)
+assert_eq(__round(1.5, 0), 2.0)

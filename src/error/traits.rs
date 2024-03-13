@@ -59,25 +59,32 @@ impl<T> WrapSyntaxError<T, Rule> for Result<T, pest::error::Error<Rule>> {
                 }
                 .into_owned();
 
-                let (expected, unexpected) = if let ErrorVariant::ParsingError {
-                    positives,
-                    negatives,
-                } = e.variant
-                {
-                    (
-                        RuleCategory::collect(&positives),
-                        RuleCategory::collect(&negatives),
-                    )
-                } else {
-                    (Vec::new(), Vec::new())
-                };
+                match e.variant {
+                    ErrorVariant::ParsingError {
+                        positives,
+                        negatives,
+                    } => {
+                        let cause = SyntaxErrorCause {
+                            expected: RuleCategory::collect(&positives),
+                            unexpected: RuleCategory::collect(&negatives),
+                        };
+                        oops!(Syntax { cause }, token)
+                    }
 
-                let cause = SyntaxErrorCause {
-                    expected,
-                    unexpected,
-                };
+                    ErrorVariant::CustomError { message } if message.contains("call limit") => {
+                        oops!(StackOverflow, token)
+                    }
 
-                oops!(Syntax { cause }, token)
+                    _ => oops!(
+                        Syntax {
+                            cause: SyntaxErrorCause {
+                                expected: vec![],
+                                unexpected: vec![]
+                            }
+                        },
+                        token
+                    ),
+                }
             }
         }
     }
@@ -229,6 +236,16 @@ impl From<Rule> for RuleCategory {
             Rule::symbol_eq => Self::Symbol("="),
             Rule::EOL => Self::Symbol("EOL"),
 
+            Rule::break_keyword => Self::Symbol("break"),
+            Rule::return_keyword => Self::Symbol("return"),
+            Rule::for_keyword => Self::Symbol("for"),
+            Rule::in_keyword => Self::Symbol("in"),
+            Rule::do_keyword => Self::Symbol("do"),
+            Rule::if_keyword => Self::Symbol("if"),
+            Rule::else_keyword => Self::Symbol("else"),
+            Rule::then_keyword => Self::Symbol("then"),
+            Rule::match_keyword => Self::Symbol("match"),
+
             Rule::POSTFIX_EMPTYINDEX
             | Rule::del_keyword
             | Rule::POSTFIX_DECORATE
@@ -258,6 +275,8 @@ impl From<Rule> for RuleCategory {
             | Rule::OP_ASSIGN
             | Rule::OP_BOOL_OR
             | Rule::OP_BOOL_AND
+            | Rule::OP_BOOL_SEQ
+            | Rule::OP_BOOL_SNE
             | Rule::OP_BOOL_EQ
             | Rule::OP_BOOL_NE
             | Rule::OP_BOOL_LE
@@ -333,6 +352,7 @@ impl From<Rule> for RuleCategory {
             Rule::currency_suffix | Rule::currency_symbol => Self::CurrencySymbol,
 
             Rule::object_keyvalue_pair
+            | Rule::for_assignment
             | Rule::block_line
             | Rule::for_conditional
             | Rule::switch_case

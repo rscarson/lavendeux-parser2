@@ -2,6 +2,7 @@ use super::Node;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
     functions::{ParserFunction, UserDefinedFunction},
+    pest::NodeExt,
     syntax_tree::traits::IntoNode,
     Error, Rule, Token,
 };
@@ -32,15 +33,21 @@ define_ast!(
             }
         },
 
-        KeywordBreak() {
-            build = (_pairs, token, _state) {
-                Ok(Self { token }.into())
+        KeywordBreak(value: Option<Node<'i>>) {
+            build = (pairs, token, _state) {
+                pairs.next(); // Skip the break keyword
+                let value = pairs.next().map(|p| p.into_node(_state)).transpose()?;
+                Ok(Self { value, token }.into())
             },
-            eval = (this, _state) {
-                oops!(Break, this.token.clone())
+            eval = (this, state) {
+                let value = this.value.clone().map(|v| v.evaluate(state)).transpose()?;
+                oops!(Break { value }, this.token.clone())
             },
             owned = (this) {
-                Self::Owned { token: this.token.into_owned() }
+                Self::Owned {
+                    value: this.value.map(|v| v.into_owned()),
+                    token: this.token.into_owned(),
+                }
             },
             docs = {
                 name: "Break",
@@ -59,96 +66,72 @@ define_ast!(
             condition: Option<Node<'i>>
         ) {
             build = (pairs, token, state) {
-                let condition = match pairs.peek_last() {
-                    Some(p) if p.as_rule() == Rule::for_conditional => {
-                        Some(
-                            unwrap_node!(
-                                unwrap_last!(pairs, token),
-                                state,
-                                token
-                            )?
-                        )
+                pairs.next(); // Skip the for keyword
+
+                // Assignment
+                let variable = match pairs.peek() {
+                    Some(p) if p.as_rule() == Rule::for_assignment => {
+                        let mut p = unwrap_next!(pairs, token);
+                        let p = unwrap_next!(p, token);
+                        Some(p.as_str().to_string())
                     },
                     _ => None,
                 };
 
-                let body = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
-                let iterable = pairs.last_child().unwrap().into_node(state).with_context(&token)?;
-                let variable = pairs.last_child().map(|p| p.as_str().to_string());
+                // The actual iterable
+                let iterable = unwrap_node!(pairs, state, token)?;
+
+                // Do keyword?
+                if let Some(p) = pairs.peek() {
+                    if p.as_rule() == Rule::do_keyword {
+                        pairs.next(); // Skip the do keyword
+                    }
+                }
+
+                // The body
+                let body = unwrap_node!(pairs, state, token)?;
+
+                // Condition?
+                let condition = match pairs.peek() {
+                    Some(p) if p.as_rule() == Rule::for_conditional => {
+                        let mut p = unwrap_next!(pairs, token);
+                        p.next(); // Skip the if keyword
+                        Some(unwrap_node!(p, state, token)?)
+                    },
+                    _ => None,
+                };
 
                 Ok(Self { variable, iterable, body, condition, token }.into())
             },
 
             eval = (this, state) {
                 let iterable = this.iterable.evaluate(state).with_context(this.token())?;
-
-                // An iterator over Into<Value>
-                let iterable = match iterable.own_type() {
+                match iterable.own_type() {
                     ValueType::Range => {
-                        let iterable = iterable.as_a::<Range>().with_context(this.token())?.inner().clone();
-                        let mut values = vec![];
-                        for i in iterable {
-                            values.push(i.into());
-                            state.check_timer().with_context(this.token())?; // Potentially long-running operation
-                        }
-                        values.into_iter()
+                        let iterable = iterable.as_a::<Range>().with_context(this.token())?.into_inner();
+                        let values = iterable.into_iter().map(|i| {
+                            state.check_timer()?;
+                            Ok::<_, Error>(Value::from(i))
+                        }).collect::<Result<Vec<_>, _>>().with_context(this.token())?;
+                        iterate_over(values.into_iter(), state, this)
                     },
 
                     ValueType::Object => {
                         let iterable = iterable.as_a::<Object>().with_context(this.token())?;
-                        iterable.inner().keys().cloned().collect::<Vec<_>>().into_iter()
+                        let iterable = iterable.keys().into_iter().cloned();
+                        iterate_over(iterable, state, this)
                     },
 
                     _ => {
-                        let iterable = iterable.as_a::<polyvalue::types::Array>().with_context(this.token())?;
-                        iterable.inner().clone().into_iter()
-                    }
-                };
-
-                let mut result = vec![];
-                for v in iterable {
-                    state.check_timer().with_context(this.token())?; // Potentially long-running operation
-
-                    state.scope_into().with_context(this.token())?;
-                    if let Some(variable) = &this.variable {
-                        state.set_variable(variable, v);
-                    }
-                    if let Some(condition) = &this.condition {
-                        let condition = condition.evaluate(state).with_context(this.token());
-                        match condition {
-                            Ok(condition) if !condition.is_truthy() => {
-                                state.scope_out();
-                                continue;
-                            },
-                            Err(e) => {
-                                state.scope_out();
-                                return Err(e)
-                            },
-                            _ => {}
-                        }
-                    }
-
-                    let value = this.body.evaluate(state);
-                    state.scope_out();
-                    match value {
-                        Ok(value) => result.push(value),
-                        Err(e) if error_matches!(e, Skip) => {},
-                        Err(e) if error_matches!(e, Break) => {
-                            break;
-                        },
-
-                        Err(e) => {
-                            return Err(e);
-                        }
+                        let iterable = iterable.as_a::<Vec<Value>>().with_context(this.token())?;
+                        iterate_over(iterable.into_iter(), state, this)
                     }
                 }
-
-                Ok(Value::array(result))
             },
 
             owned = (this) {
                 Self::Owned {
-                    variable: this.variable.clone(),
+                    variable: this.variable,
                     iterable: this.iterable.into_owned(),
                     body: this.body.into_owned(),
                     condition: this.condition.map(|c| c.into_owned()),
@@ -180,3 +163,52 @@ define_ast!(
         }
     }
 );
+
+fn iterate_over(
+    iterable: impl Iterator<Item = Value>,
+    state: &mut crate::State,
+    this: &ForLoopExpression,
+) -> Result<Value, Error> {
+    let mut result = vec![];
+    for v in iterable {
+        state.check_timer().with_context(this.token())?; // Potentially long-running operation
+
+        state.scope_into().with_context(this.token())?;
+        if let Some(variable) = &this.variable {
+            state.set_variable(variable, v);
+        }
+        if let Some(condition) = &this.condition {
+            let condition = condition.evaluate(state).with_context(this.token());
+            match condition {
+                Ok(condition) if !condition.is_truthy() => {
+                    state.scope_out();
+                    continue;
+                }
+                Err(e) => {
+                    state.scope_out();
+                    return Err(e);
+                }
+                _ => {}
+            }
+        }
+
+        let value = this.body.evaluate(state);
+        state.scope_out();
+        match value {
+            Ok(value) => result.push(value),
+            Err(e) if error_matches!(e, Skip) => {}
+            Err(e) => {
+                if let ErrorDetails::Break { value } = e.details {
+                    if let Some(value) = value {
+                        result.push(value);
+                    }
+                    break;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+    }
+
+    Ok(Value::array(result))
+}

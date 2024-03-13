@@ -5,7 +5,7 @@ use crate::{
 use polyvalue::{
     operations::{IndexingMutationExt, IndexingOperationExt},
     types::{Array, Object},
-    Value, ValueType,
+    InnerValue, Value, ValueType,
 };
 
 /**********************************************
@@ -485,6 +485,59 @@ define_stdfunction!(
     handler = (state, _reference) {
         let input = required_arg!(state::input).as_a::<Array>()?;
         Ok(Value::bool(input.iter().any(|v| v.is_truthy())))
+    },
+);
+
+define_stdfunction!(
+    find {
+        input: Standard::Collection,
+        value: Standard::Any
+    },
+    returns = Array,
+    docs = {
+        category: "Collections",
+        description: "Returns the indices of all occurrences of the given value in the given collection",
+        ext_description: "
+            For arrays, returns the indicies of the  occurrences of the given value in the array.
+            For objects, returns the keys for the given value in the object.
+        ",
+        examples: "
+            a = [1, 2, 3, 2, 1]
+            assert(a.find(2) == [1, 3])
+
+            o = {'a': 1, 'b': 2, 'c': 2}
+            assert_eq(o.find(2).sort(), ['b', 'c'])
+        ",
+    },
+    handler = (state, _reference) {
+        let input = required_arg!(state::input);
+        let value = required_arg!(state::value);
+        match input.inner() {
+            InnerValue::Array(input) => {
+                let result = input.iter().enumerate().filter(|(_, v)| *v == &value).map(|(i, _)| i as i64).collect::<Vec<_>>();
+                Ok(Value::from(result))
+            }
+
+            InnerValue::Object(input) => {
+                let result = input.iter().filter(|(_, v)| *v == &value).map(|(k, _)| k.clone()).collect::<Vec<_>>();
+                Ok(Value::from(result))
+            }
+
+            InnerValue::Range(input) => {
+                let value = value.as_a::<i64>()?;
+                if value < *input.start() || value > *input.end() {
+                    Ok(Value::array(Vec::<Value>::new()))
+                } else {
+                    Ok(Value::from(vec![value - input.start()]))
+                }
+            }
+
+            _ => if input == value {
+                Ok(Value::from(vec![Value::from(0)]))
+            } else {
+                Ok(Value::array(Vec::<Value>::new()))
+            }
+        }
     },
 );
 

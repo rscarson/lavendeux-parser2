@@ -33,13 +33,13 @@
 
 
 // assert(any) -> any : Throws an error if the condition is false          
-_assert(cond) = cond ? cond : ("Assertion failed: " + cond).throw()
+__assert(cond) = cond ? cond : ("Assertion failed: " + cond).throw()
 
 // assert_eq(any, any) -> any : Throws an error if the two values are not equal  
-_assert_eq(a, b) = a == b ? a : ("Assertion failed: " + a + " != " + b).throw()     
+__assert_eq(a, b) = a == b ? a : ("Assertion failed: " + a + " != " + b).throw()     
 
 // typeof(any) -> string : Returns the type of its input
-_typeof(a) = {
+__typeof(a) = {
     if a is bool then "bool"
     else if a is float then "float"
     else if a is fixed then "fixed"
@@ -56,6 +56,6 @@ _typeof(a) = {
     else if a is range then "range"
     else "undefined"
 }
-assert_eq(_typeof(1), "i64")
-assert_eq(_typeof(1.0), "float")
-assert_eq(_typeof(1.0f), "fixed")
+assert_eq(__typeof(1), "i64")
+assert_eq(__typeof(1.0), "float")
+assert_eq(__typeof(1.0f), "fixed")

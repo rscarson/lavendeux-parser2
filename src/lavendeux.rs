@@ -4,8 +4,6 @@ use crate::pest::LavendeuxParser;
 use crate::syntax_tree::traits::NodeExt;
 use crate::syntax_tree::Node;
 use crate::{Error, Rule, State, Value};
-use polyvalue::types::Array;
-use polyvalue::ValueTrait;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
@@ -80,23 +78,23 @@ impl Lavendeux {
         LavendeuxParser::compile_ast(root, state)
     }
 
-    /// Run the parser on the given file
-    /// Returns an array of values, one for each line in the input
-    pub fn run(&mut self, filename: &str) -> Result<Vec<Value>, Error> {
-        let input = std::fs::read_to_string(filename)?;
-        self.parse(&input)
-    }
-
     /// Parses the given input
     /// Returns an array of values, one for each line in the input
     pub fn parse(&mut self, input: &str) -> Result<Vec<Value>, Error> {
         self.state.sanitize_scopes();
         pest::set_call_limit(NonZeroUsize::new(self.options.pest_call_limit));
-
         self.state.start_timer();
+
         let value = Self::eval(input, &mut self.state)?.evaluate(&mut self.state)?;
-        let lines = value.as_a::<Array>()?.inner().clone();
+        let lines = value.as_a::<Vec<Value>>()?;
         Ok(lines)
+    }
+
+    /// Run the parser on the given file
+    /// Returns an array of values, one for each line in the input
+    pub fn run(&mut self, filename: &str) -> Result<Vec<Value>, Error> {
+        let input = std::fs::read_to_string(filename)?;
+        self.parse(&input)
     }
 
     /// Generates markdown formatted documentation for the parser

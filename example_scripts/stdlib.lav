@@ -11,7 +11,7 @@
  * will show the location the throw() inside the assert function
  */
 
-// Unfortunatly, the dev and network libraries currently require a bit of compiler magic
+// Unfortunately, the dev and network libraries currently require a bit of compiler magic
 // to work, so they are not implemented here
 
 // We will also skip a few deep-math functions, as they are not very useful for testing

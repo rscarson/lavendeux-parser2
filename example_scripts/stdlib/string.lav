@@ -30,18 +30,18 @@
  */
 
 // concat(array) -> string : Treats the argument as an array of strings and concatenates them
-_concat(a) = {
+__concat(a) = {
     out = ''
     for s in a do {
         out += s
     }
     out
 }
-assert_eq(_concat(["Hello", ", ", "World!"]), "Hello, World!")
+assert_eq(__concat(["Hello", ", ", "World!"]), "Hello, World!")
 
 // lowercase(string) -> string : Returns a lowercase version of a string
-_lowercase(s) = {
-    _concat(for c in s.chars() do {
+__lowercase(s) = {
+    __concat(for c in s.chars() do {
         if ('A'..'Z') contains c then {
             chr(ord(c) + 32)
         } else {
@@ -49,34 +49,34 @@ _lowercase(s) = {
         }
     })
 }
-assert_eq(_lowercase("Hello, World!"), "hello, world!")
-assert_eq(_lowercase("HELLO, WORLD!"), "hello, world!")
+assert_eq(__lowercase("Hello, World!"), "hello, world!")
+assert_eq(__lowercase("HELLO, WORLD!"), "hello, world!")
 
 // repeat(string, int) -> string : Repeats a string a specified number of times
-_repeat(s, n) = {
+__repeat(s, n) = {
     if n == 0 then {
         ''
     } else {
-        _concat(for _ in 0..(n-1) {
+        __concat(for _ in 0..(n-1) {
             s
         })
     }
 }
-assert_eq(_repeat('a', 5), 'aaaaa')
+assert_eq(__repeat('a', 5), 'aaaaa')
 
 // prettyjson(any) -> string : Returns a pretty-printed JSON string
-_prettyjson(s) = {
+__prettyjson(s) = {
     indent = 0
     pretty = ""
     for c in s.chars() do {
         if c == '{' || c == '[' then {
             indent += 1
-            pretty += c + "\n" + _repeat('  ', indent)
+            pretty += c + "\n" + __repeat('  ', indent)
         } else if c == '}' || c == ']' then {
             indent -= 1
-            pretty += "\n" + _repeat('  ', indent) + c
+            pretty += "\n" + __repeat('  ', indent) + c
         } else if c == ',' then {
-            pretty += c + "\n" + _repeat('  ', indent)
+            pretty += c + "\n" + __repeat('  ', indent)
         } else if c == ' ' || c == '\t' then {
             // ignore whitespace
             continue
@@ -89,11 +89,11 @@ _prettyjson(s) = {
 
     pretty
 }
-assert_eq(_prettyjson('{"a": 1, "b": [1, 2, 3]}'), "{\n  \"a\": 1,\n  \"b\": [\n    1,\n    2,\n    3\n  ]\n}")
+assert_eq(__prettyjson('{"a": 1, "b": [1, 2, 3]}'), "{\n  \"a\": 1,\n  \"b\": [\n    1,\n    2,\n    3\n  ]\n}")
 
 // uppercase(string) -> string : Returns an uppercase version of a string
-_uppercase(s) = {
-    _concat(for c in s.chars() do {
+__uppercase(s) = {
+    __concat(for c in s.chars() do {
         if ('a'..'z') contains c then {
             chr(ord(c) - 32)
         } else {
@@ -101,5 +101,5 @@ _uppercase(s) = {
         }
     })
 }
-assert_eq(_uppercase("Hello, World!"), "HELLO, WORLD!")
-assert_eq(_uppercase("hello, world!"), "HELLO, WORLD!")
+assert_eq(__uppercase("Hello, World!"), "HELLO, WORLD!")
+assert_eq(__uppercase("hello, world!"), "HELLO, WORLD!")

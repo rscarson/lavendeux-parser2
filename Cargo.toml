@@ -4,17 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["all-functions", "debug_scopes"]
+default = ["all-functions"]
 
 all-functions = ["encoding-functions", "network-functions", "crypto-functions"]
-
-debug_scopes = []
 
 encoding-functions = ["base64", "urlencoding"]
 network-functions = ["reqwest"]
 crypto-functions = ["md-5", "sha2", "rand"]
 
 [dependencies]
+
+# For stack protection
+stacker = "=0.1.15"
 
 # PEST Parser dependencies, for tokenization
 pest = "2.7.5"

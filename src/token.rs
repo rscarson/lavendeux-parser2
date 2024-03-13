@@ -71,6 +71,7 @@ impl std::fmt::Display for Token<'_> {
         let lines = self
             .input
             .lines()
+            .take(3)
             .map(|l| format!("| {l}"))
             .collect::<Vec<_>>();
         if lines.len() == 1 {

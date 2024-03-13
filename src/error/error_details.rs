@@ -67,7 +67,10 @@ pub enum ErrorDetails {
 
     /// An error used to skip a value from a loop
     #[error("Break called from outside a loop")]
-    Break,
+    Break {
+        /// Value being returned
+        value: Option<Value>,
+    },
 
     ///////////////////////////////////////////////////////////////////////////
     // Syntax Errors

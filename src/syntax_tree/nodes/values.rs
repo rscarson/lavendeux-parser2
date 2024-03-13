@@ -39,7 +39,7 @@ define_ast!(
             },
 
             eval = (this, state) {
-                Ok(this.target.get_value(state).with_context(this.token())?.clone())
+                Ok(this.target.get_value(state).with_context(this.token())?)
             },
 
             owned = (this) {

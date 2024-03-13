@@ -11,6 +11,7 @@ define_ast!(
     Functions {
         KeywordReturn(value: Node<'i>) {
             build = (pairs, token, state) {
+                pairs.next(); // Skip the return keyword
                 let value = unwrap_node!(pairs, state, token)?;
                 Ok(Self { value, token }.into())
             },
@@ -135,6 +136,10 @@ define_ast!(
                 description: "
                     Calls a function with the given arguments.
                     The help() will list all available functions, and can filter by category or function name.
+
+                    Functions can be called as `name(arg1, arg2, ...)` or `arg1.func(arg2, arg3, ...)`.
+                    Some stdlib functions such as `push`, `pop`, etc take the 1st argument as a reference.
+                    In every other case, all arguments are passed by value.
                 ",
                 examples: "
                     arr = []

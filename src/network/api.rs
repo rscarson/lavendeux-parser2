@@ -62,8 +62,7 @@ impl TryFrom<Value> for ApiDefinition {
                 .unwrap_or(&Value::from(""))
                 .to_string(),
 
-            auth_key: value
-                .get(&("auth_key".into())).map(|v| v.to_string()),
+            auth_key: value.get(&("auth_key".into())).map(|v| v.to_string()),
 
             additional_headers: value
                 .get(&("additional_headers".into()))

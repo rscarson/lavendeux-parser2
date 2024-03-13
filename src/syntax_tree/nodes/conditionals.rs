@@ -2,7 +2,10 @@ use super::Node;
 use crate::{
     error::{ErrorDetails, WrapExternalError},
     functions::{ParserFunction, UserDefinedFunction},
-    syntax_tree::traits::{IntoNode, IntoOwned},
+    syntax_tree::{
+        pair::Reiterate,
+        traits::{IntoNode, IntoOwned},
+    },
     Error, Rule, Token,
 };
 use polyvalue::{
@@ -18,6 +21,13 @@ define_ast!(
             else_branch: Node<'i>
         ) {
             build = (pairs, token, state) {
+                let parts = pairs.filter(|p| {
+                    p.as_rule() != Rule::if_keyword &&
+                    p.as_rule() != Rule::else_keyword &&
+                    p.as_rule() != Rule::then_keyword
+                }).collect::<Vec<_>>();
+                let mut pairs = parts.reiterate();
+
                 if pairs.len() % 2 == 0 {
                     // We parse as a set of (if, then) pairs ending with an else
                     // if the number of children is even, we have no else
@@ -91,6 +101,7 @@ define_ast!(
             cases: Vec<SwitchCase<'i>>
         ) {
             build = (pairs, token, state) {
+                pairs.next(); // Skip the match keyword
                 let match_on = unwrap_node!(pairs, state, token)?;
                 let mut cases = vec![];
 

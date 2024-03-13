@@ -17,7 +17,7 @@
  * ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
  */
 
-_unsized_not(i) = {
+__unsized_not(i) = {
     match typeof(i) {
         'u8' => 0xFFu8 & ~i,
         'u16' => 0xFFFFu16 & ~i,
@@ -32,6 +32,6 @@ _unsized_not(i) = {
         _ => throw("unsized_not: invalid type")
     }
 }
-assert_eq(_unsized_not(0x0Au8), 0xF5u8)
-assert_eq(_unsized_not(0xF0u8), 0x0Fu8)
-assert_eq(_unsized_not(0x0A0Au16), 0xF5F5u16)
+assert_eq(__unsized_not(0x0Au8), 0xF5u8)
+assert_eq(__unsized_not(0xF0u8), 0x0Fu8)
+assert_eq(__unsized_not(0x0A0Au16), 0xF5F5u16)

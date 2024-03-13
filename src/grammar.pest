@@ -77,7 +77,7 @@ EXPR = {
     // Prefix
     prefix_op = _{PREFIX_DEL | prefix_arith | PREFIX_BOOL_NOT | PREFIX_BIT_NOT}
         PREFIX_DEL = @{del_keyword ~ (WHITESPACE* ~ symbol_at)?}
-            del_keyword = _{("delete" | "del" | "unset") ~ !ASCII_ALPHA}
+            del_keyword = _{("delete" | "del" | "unset") ~ !("_"|ASCII_ALPHANUMERIC)}
         PREFIX_BOOL_NOT = {"!" ~ !"="}
         PREFIX_BIT_NOT = {"~" ~ !"="}
         prefix_arith = _{PREFIX_INC | PREFIX_DEC | PREFIX_NEG}
@@ -112,9 +112,11 @@ EXPR = {
 
         //
         // Boolean
-        bool_infix_op = _{OP_BOOL_OR | OP_BOOL_AND | OP_BOOL_EQ | OP_BOOL_NE | OP_BOOL_LE | OP_BOOL_GE | OP_BOOL_LT | OP_BOOL_GT}
+        bool_infix_op = _{OP_BOOL_OR | OP_BOOL_AND | OP_BOOL_SEQ | OP_BOOL_SNE | OP_BOOL_EQ | OP_BOOL_NE | OP_BOOL_LE | OP_BOOL_GE | OP_BOOL_LT | OP_BOOL_GT}
             OP_BOOL_OR = {"||"}
             OP_BOOL_AND = {"&&"}
+            OP_BOOL_SEQ = {"==="}
+            OP_BOOL_SNE = {"!=="}
             OP_BOOL_EQ = {"=="}
             OP_BOOL_NE = {"!="}
             OP_BOOL_LE = {"<="}
@@ -144,16 +146,16 @@ EXPR = {
         //
         // Match
         match_infix_op = _{OP_MATCH_CONTAINS | OP_MATCH_MATCHES | OP_MATCH_IS | OP_MATCH_STARTSWITH | OP_MATCH_ENDSWITH}
-            OP_MATCH_CONTAINS = @{"contains" ~ !ASCII_ALPHA}
-            OP_MATCH_MATCHES = @{"matches" ~ !ASCII_ALPHA}
-            OP_MATCH_IS = @{"is" ~ !ASCII_ALPHA}
-            OP_MATCH_STARTSWITH = @{("startswith" | "starts_with") ~ !ASCII_ALPHA}
-            OP_MATCH_ENDSWITH = @{("endswith" | "ends_with") ~ !ASCII_ALPHA}
+            OP_MATCH_CONTAINS = @{"contains" ~ !("_"|ASCII_ALPHANUMERIC)}
+            OP_MATCH_MATCHES = @{"matches" ~ !("_"|ASCII_ALPHANUMERIC)}
+            OP_MATCH_IS = @{"is" ~ !("_"|ASCII_ALPHANUMERIC)}
+            OP_MATCH_STARTSWITH = @{("startswith" | "starts_with") ~ !("_"|ASCII_ALPHANUMERIC)}
+            OP_MATCH_ENDSWITH = @{("endswith" | "ends_with") ~ !("_"|ASCII_ALPHANUMERIC)}
             
         //
         // Other
         OP_RANGE = {".."}
-        OP_CAST = @{"as" ~ !ASCII_ALPHA}
+        OP_CAST = @{"as" ~ !("_"|ASCII_ALPHANUMERIC)}
         OP_TERNARY = {symbol_questionmark ~ EOL* ~ EXPR ~ EOL* ~ symbol_colon}
 
 //
@@ -186,27 +188,49 @@ KEYWORD_EXPRESSION = _ {
     | FOR_LOOP_EXPRESSION | SWITCH_EXPRESSION | IF_EXPRESSION
 }
 
-    SKIP_KEYWORD = {"skip" | "continue"}
-    BREAK_KEYWORD = {"break"}
+    SKIP_KEYWORD = @{("skip" | "continue") ~ !("_"|ASCII_ALPHANUMERIC)}
+    BREAK_KEYWORD = {break_keyword ~ BLOCK?}
+        break_keyword = @{"break" ~ !("_"|ASCII_ALPHANUMERIC)}
 
-    RETURN_EXPRESSION = { "return" ~ EOL* ~ BLOCK }
+    RETURN_EXPRESSION = { return_keyword ~ EOL* ~ BLOCK | return_keyword ~ "(" ~ EOL* ~ BLOCK ~ EOL* ~ ")" }
+        return_keyword = @{"return" ~ !("_"|ASCII_ALPHANUMERIC)}
 
-    FOR_LOOP_EXPRESSION = { "for" ~ EOL* ~ (identifier ~ EOL* ~ "in" ~ EOL*)? ~ EXPR ~ EOL* ~ ("do" | &symbol_opencurly) ~ EOL* ~ BLOCK ~ (for_conditional)? }
-        for_conditional = {"if" ~ EOL* ~ EXPR}
+    FOR_LOOP_EXPRESSION = { for_keyword ~ EOL* ~ (for_assignment ~ EOL*)? ~ EXPR ~ EOL* ~ (do_keyword | &symbol_opencurly) ~ EOL* ~ BLOCK ~ (for_conditional)? }
+        for_assignment = {identifier ~ EOL* ~ in_keyword}
+        for_conditional = {if_keyword ~ EOL* ~ EXPR}
+        for_keyword = @{"for" ~ !("_"|ASCII_ALPHANUMERIC)}
+        in_keyword = @{"in" ~ !("_"|ASCII_ALPHANUMERIC)}
+        do_keyword = @{"do" ~ !("_"|ASCII_ALPHANUMERIC)}
 
-    SWITCH_EXPRESSION = { "match" ~ EOL* ~ EXPR ~ EOL* ~ symbol_opencurly ~ EOL* ~ (switch_case ~ EOL* ~ symbol_comma ~ EOL*)* ~ switch_case ~ EOL* ~ symbol_comma? ~ EOL* ~ symbol_closecurly }
+    SWITCH_EXPRESSION = { match_keyword ~ EOL* ~ EXPR ~ EOL* ~ symbol_opencurly ~ EOL* ~ (switch_case ~ EOL* ~ symbol_comma ~ EOL*)* ~ switch_case ~ EOL* ~ symbol_comma? ~ EOL* ~ symbol_closecurly }
         switch_case = _{ ATOMIC_VALUE ~ EOL* ~ symbol_arrow ~ EOL* ~ BLOCK }
+        match_keyword = @{"match" ~ !("_"|ASCII_ALPHANUMERIC)}
 
-    IF_EXPRESSION = { if_block ~ EOL* ~ ("else" ~ EOL* ~ if_block ~ EOL*)* ~ ("else" ~ EOL* ~ BLOCK)? }
-        if_block = _{ "if" ~ EXPR ~ EOL* ~ ("then" | &symbol_opencurly) ~ EOL* ~ BLOCK }
+    IF_EXPRESSION = { if_block ~ EOL* ~ (else_keyword ~ EOL* ~ if_block ~ EOL*)* ~ (else_keyword ~ EOL* ~ BLOCK)? }
+        if_block = _{ if_keyword ~ EXPR ~ EOL* ~ (then_keyword | &symbol_opencurly) ~ EOL* ~ BLOCK }
+        if_keyword = @{"if" ~ !("_"|ASCII_ALPHANUMERIC)}
+        then_keyword = @{"then" ~ !("_"|ASCII_ALPHANUMERIC)}
+        else_keyword = @{"else" ~ !("_"|ASCII_ALPHANUMERIC)}
 
-    ARRAY_TERM = { array_symbol_opensquare ~ EOL* ~ ((EXPR) ~ (EOL* ~ symbol_comma ~ EOL* ~ (EXPR) ~ EOL*)* ~ symbol_comma? ~ EOL*)? ~ symbol_closesquare }
+    ARRAY_TERM = { 
+        array_symbol_opensquare ~ EOL* ~ (
+            (ARRAY_TERM|EXPR) ~ (
+                EOL* ~ symbol_comma ~ EOL* ~ (ARRAY_TERM|EXPR) ~ EOL*
+            )* ~ symbol_comma? ~ EOL*
+        )? ~ 
+        symbol_closesquare 
+    }
         array_symbol_opensquare = {"["}
     OBJECT_TERM = {
-        symbol_opencurly ~ EOL* ~ ((object_keyvalue_pair ~ EOL* ~ symbol_comma ~ EOL*)* ~ object_keyvalue_pair ~ EOL*)? ~ symbol_comma? ~ EOL* ~ symbol_closecurly
+        symbol_opencurly ~ EOL* ~ (
+            (object_keyvalue_pair ~ EOL* ~ symbol_comma ~ EOL*)* ~ 
+            object_keyvalue_pair?
+        )? ~ EOL* ~ 
+        symbol_closecurly
+        
         | symbol_opencurly ~ EOL* ~ symbol_closecurly
     }
-        object_keyvalue_pair = _{(EXPR) ~ symbol_colon ~ (EXPR)}
+        object_keyvalue_pair = _{(OBJECT_TERM|EXPR) ~ symbol_colon ~ (OBJECT_TERM|EXPR)}
 
 //
 // Value Literals
@@ -224,7 +248,7 @@ ATOMIC_VALUE = _{
 }
 
     fixed_literal = @{
-        ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ~ ("D" | "d" | "F" | "f")
+        ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ~ (^"D" | ^"F")
     }
 
     // Fixed-point currency values
@@ -251,7 +275,7 @@ ATOMIC_VALUE = _{
     sci_literal = @{(float_literal | dec_literal) ~ ^"e" ~ ("+"|"-")? ~ ASCII_DIGIT+}
     float_literal = @{dec_literal? ~ "." ~ ASCII_DIGIT+}
 
-    const_literal = @{"pi" | "e" | "tau" | "nil"}
+    const_literal = @{("pi" | "e" | "tau" | "nil") ~ !("_"|ASCII_ALPHANUMERIC)}
 
     // Integer literals
     int_literal = {(hex_literal | bin_literal | oct_literal | dec_literal) ~ sized_literal_suffix?}
@@ -269,7 +293,7 @@ ATOMIC_VALUE = _{
             intsize_u64 = {"u64"} intsize_i64 = {"i64"}
 
     // Other literals
-    bool_literal = @{^"true" | ^"false"}
+    bool_literal = @{(^"true" | ^"false") ~ !("_"|ASCII_ALPHANUMERIC)}
     string_literal = @{("\"" ~ ("\\"~ANY | (!"\"" ~ ANY))* ~ "\"") | ("\'" ~ ("\\"~ANY | (!"\'" ~ ANY))* ~ "\'")}
 
     regex_literal = @{
@@ -278,11 +302,13 @@ ATOMIC_VALUE = _{
 
     identifier = @{!reserved_words ~ (ASCII_ALPHA|"_") ~ (ASCII_ALPHANUMERIC|"_")*}
         reserved_words = {
-            ("pi" | "e" | "tau" | "nil" | "true" | "false"
-            | "if" | "then" | "else" | "for" | "in" | "do" | "match"
-            | "return"
-            | prefix_op | infix_op
-            | SKIP_KEYWORD | BREAK_KEYWORD) ~ !(ASCII_ALPHANUMERIC|"_")
+            (
+                "if" | "then" | "else" | "for" | "in" | "do" | "match"
+                | "return" | "skip" | "continue" | "break"
+                | "delete" | "del" | "unset"
+                | "as" | "contains" | "matches" | "is" | "startswith" | "starts_with" | "endswith" | "ends_with"
+                | "pi" | "e" | "tau" | "nil" | "true" | "false"
+            ) ~ !(ASCII_ALPHANUMERIC|"_")
         }
 
 //

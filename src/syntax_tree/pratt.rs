@@ -132,7 +132,12 @@ pub const PRECEDENCE_MAP: &[&[PrattOperator]] = &[
     &[infix!(OP_BIT_AND, Left)],
     //
     // == and !=, followed by <, <=, >, >=
-    &[infix!(OP_BOOL_EQ, Left), infix!(OP_BOOL_NE, Left)],
+    &[
+        infix!(OP_BOOL_EQ, Left),
+        infix!(OP_BOOL_NE, Left),
+        infix!(OP_BOOL_SEQ, Left),
+        infix!(OP_BOOL_SNE, Left),
+    ],
     &[
         infix!(OP_BOOL_LT, Left),
         infix!(OP_BOOL_LE, Left),

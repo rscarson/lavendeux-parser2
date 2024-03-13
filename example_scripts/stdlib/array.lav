@@ -1,25 +1,25 @@
-_len(a) = {
+__len(a) = {
     i = 0; for a do i += 1; i
 }
 
-_insert(a, i, b) = {
+__insert(a, i, b) = {
     if a is object then {
         a[i] = b
         a
     } else {
         if i == 0 then {
             [b] + a
-        } else if i == _len(a) then {
+        } else if i == __len(a) then {
             a + [b]
         } else {
-            a[0..(i-1)] + [b] + a[i..(_len(a)-1)]
+            a[0..(i-1)] + [b] + a[i..(__len(a)-1)]
         }
     }
 }
-assert_eq(_insert([1, 2, 3], 1, 4), [1, 4, 2, 3])
-assert_eq(_insert([1], 0, 4), [4, 1])
-assert_eq(_insert([1], 1, 4), [1, 4])
-assert_eq(_insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
+assert_eq(__insert([1, 2, 3], 1, 4), [1, 4, 2, 3])
+assert_eq(__insert([1], 0, 4), [4, 1])
+assert_eq(__insert([1], 1, 4), [1, 4])
+assert_eq(__insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
 
 /*
  * This file contains implementations of the stdlib's array functions
@@ -57,122 +57,122 @@ assert_eq(_insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
  */
  
 // all(array) -> bool : Returns true if all elements in the given array are true      
-_all(array) = {
+__all(array) = {
     for a in array do {
         if !a then return false else continue
     }
     true
 };
-assert_eq(_all([true, true, true]), true)
-assert_eq(_all([true, false, true]), false)
+assert_eq(__all([true, true, true]), true)
+assert_eq(__all([true, false, true]), false)
  
 // any(array) -> bool : Returns true if any elements in the given array are true                                       
-_any(array) = {
+__any(array) = {
     for a in array do {
         if a then return true else continue
     }
     false
 }
-assert_eq(_any([true, true, true]), true)
-assert_eq(_any([true, false, true]), true)
-assert_eq(_any([false, false, false]), false)
+assert_eq(__any([true, true, true]), true)
+assert_eq(__any([true, false, true]), true)
+assert_eq(__any([false, false, false]), false)
 
 // len(any) -> int : Returns the length of the given array or object                                                   
-_len(a) = {
+__len(a) = {
     i = 0; for a do i += 1; i
 }
-assert_eq(_len([]), 0)
-assert_eq(_len([1]), 1)
-assert_eq(_len([1, 2, 3]), 3)
+assert_eq(__len([]), 0)
+assert_eq(__len([1]), 1)
+assert_eq(__len([1, 2, 3]), 3)
 
 // deque(array) -> any : Removes and returns the first element of the given array                                      
-_deque(a) = del a[0]
-assert_eq(_deque([1, 2, 3]), 1)
-assert_eq(_deque([1]), 1)
+__deque(a) = del a[0]
+assert_eq(__deque([1, 2, 3]), 1)
+assert_eq(__deque([1]), 1)
 
 // enque(array, any) -> array : Adds the given element to the beginning of the given array, then returns the array     
-_enque(a, b) = [b] + a
-assert_eq(_enque([1, 2, 3], 4), [4, 1, 2, 3])
-assert_eq(_enque([], 4), [4])
+__enque(a, b) = [b] + a
+assert_eq(__enque([1, 2, 3], 4), [4, 1, 2, 3])
+assert_eq(__enque([], 4), [4])
 
 // first(array) -> any : Returns the first element of the given array                                                  
-_first(a) = a[0]
-assert_eq(_first([1, 2, 3]), 1)
-assert_eq(_first([1]), 1)
+__first(a) = a[0]
+assert_eq(__first([1, 2, 3]), 1)
+assert_eq(__first([1]), 1)
 
 // insert(compound, int, any) -> any : Inserts the given element at the given index in the given array or object       
-_insert(a, i, b) = {
+__insert(a, i, b) = {
     if a is object then {
         a[i] = b
         a
     } else {
         if i == 0 then {
             [b] + a
-        } else if i == _len(a) then {
+        } else if i == __len(a) then {
             a + [b]
         } else {
-            a[0..(i-1)] + [b] + a[i..(_len(a)-1)]
+            a[0..(i-1)] + [b] + a[i..(__len(a)-1)]
         }
     }
 }
-assert_eq(_insert([1, 2, 3], 1, 4), [1, 4, 2, 3])
-assert_eq(_insert([1], 0, 4), [4, 1])
-assert_eq(_insert([1], 1, 4), [1, 4])
-assert_eq(_insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
+assert_eq(__insert([1, 2, 3], 1, 4), [1, 4, 2, 3])
+assert_eq(__insert([1], 0, 4), [4, 1])
+assert_eq(__insert([1], 1, 4), [1, 4])
+assert_eq(__insert({"a": 1, "b": 2, "c": 3}, "b", 4), {"a": 1, "b": 4, "c": 3})
 
 // is_empty(any) -> bool : Returns true if the given array or object is empty                                          
-_is_empty(a) = _len(a) == 0
-assert_eq(_is_empty([]), true)
-assert_eq(_is_empty([1]), false)
-assert_eq(_is_empty([1, 2, 3]), false)
+__is_empty(a) = __len(a) == 0
+assert_eq(__is_empty([]), true)
+assert_eq(__is_empty([1]), false)
+assert_eq(__is_empty([1, 2, 3]), false)
 
 // keys(object) -> array : Returns the keys of the given object                                                        
-_keys(o) = for k in o do k
-assert_eq(_keys({"a": 1, "b": 2, "c": 3}).sort(), ["a", "b", "c"])
-assert_eq(_keys({}), [])
+__keys(o) = for k in o do k
+assert_eq(__keys({"a": 1, "b": 2, "c": 3}).sort(), ["a", "b", "c"])
+assert_eq(__keys({}), [])
 
 // last(array) -> any : Returns the last element of the given array                                                    
-_last(a) = a[-1]
-assert_eq(_last([1, 2, 3]), 3)
-assert_eq(_last([1]), 1)
+__last(a) = a[-1]
+assert_eq(__last([1, 2, 3]), 3)
+assert_eq(__last([1]), 1)
  
 // merge(compound, compound) -> compound : Merges the given arrays or objects         
-_merge(a, b) = a + b
-assert_eq(_merge([1, 2, 3], [4, 5, 6]), [1, 2, 3, 4, 5, 6])
-assert_eq(_merge({"a": 1, "b": 2}, {"c": 3, "d": 4}), {"a": 1, "b": 2, "c": 3, "d": 4})                                 
+__merge(a, b) = a + b
+assert_eq(__merge([1, 2, 3], [4, 5, 6]), [1, 2, 3, 4, 5, 6])
+assert_eq(__merge({"a": 1, "b": 2}, {"c": 3, "d": 4}), {"a": 1, "b": 2, "c": 3, "d": 4})                                 
 
 
 // pop(array) -> any : Removes and returns the last element of the given array                                         
-_pop(a) = del a[-1]
-assert_eq(_pop([1, 2, 3]), 3)
-assert_eq(_pop([1]), 1)
+__pop(a) = del a[-1]
+assert_eq(__pop([1, 2, 3]), 3)
+assert_eq(__pop([1]), 1)
 
 // push(array, any) -> array : Adds the given element to the end of the given array, then returns the array          
-_push(a, b) = a + [b]
-assert_eq(_push([1, 2, 3], 4), [1, 2, 3, 4])
-assert_eq(_push([], 4), [4])
+__push(a, b) = a + [b]
+assert_eq(__push([1, 2, 3], 4), [1, 2, 3, 4])
+assert_eq(__push([], 4), [4])
 
 // remove(compound, int) -> any : Removes the element at the given index from the given array or object and returns it 
-_remove(a, i) = del a[i]
-assert_eq(_remove([1, 2, 3], 1), 2)
-assert_eq(_remove([1], 0), 1)
-assert_eq(_remove({"a": 1, "b": 2, "c": 3}, "b"), 2)
+__remove(a, i) = del a[i]
+assert_eq(__remove([1, 2, 3], 1), 2)
+assert_eq(__remove([1], 0), 1)
+assert_eq(__remove({"a": 1, "b": 2, "c": 3}, "b"), 2)
 
 // split(array, int) -> array : Splits the given array at the given index                                              
-_split(a, i) = [a[0..i], a[(i+1)..(_len(a)-1)]]
-assert_eq(_split([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]])
-assert_eq(_split([1, 2, 3, 4, 5], 0), [[1], [2, 3, 4, 5]])
+__split(a, i) = [a[0..i], a[(i+1)..(__len(a)-1)]]
+assert_eq(__split([1, 2, 3, 4, 5], 2), [[1, 2, 3], [4, 5]])
+assert_eq(__split([1, 2, 3, 4, 5], 0), [[1], [2, 3, 4, 5]])
 
 // values(object) -> array : Returns the values of the given object         
-_values(o) = for k in o do o[k]
-assert_eq(_values({"a": 1, "b": 2, "c": 3}).sort(), [1, 2, 3])
-assert_eq(_values({}), [])
+__values(o) = for k in o do o[k]
+assert_eq(__values({"a": 1, "b": 2, "c": 3}).sort(), [1, 2, 3])
+assert_eq(__values({}), [])
 
 // chunks(array, int) -> array : Splits the given array into chunks of the given size                                  
-_chunks(a, s) = {
+__chunks(a, s) = {
     chunks = [[]]
     for v in a do {
-        if _len(chunks[]) == s then {
+        if __len(chunks[]) == s then {
             chunks[] = [v]
         } else {
             chunks[][] = v
@@ -181,6 +181,6 @@ _chunks(a, s) = {
     chunks
 }
 assert_eq(
-    _chunks([1, 2, 3, 4, 5, 6, 7, 8, 9], 3), 
+    __chunks([1, 2, 3, 4, 5, 6, 7, 8, 9], 3), 
     [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
 )
